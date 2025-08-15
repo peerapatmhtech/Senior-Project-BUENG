@@ -1,9 +1,9 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App.jsx";
-import { AuthProvider } from "./firebase/Authcontext";
-import { EventProvider } from "./context/eventcontext";
-import { ThemeProvider } from "./context/themecontext";
+import { AuthProvider } from "../backend/src/firebase/Authcontext.jsx";
+import { EventProvider } from "../frontend/src/context/eventcontext.jsx";
+import { ThemeProvider } from "../frontend/src/context/themecontext.jsx";
 // import App from './test/testtheconcert.jsx'
 // import App from './test/test2.jsx'
 import "./index.css";

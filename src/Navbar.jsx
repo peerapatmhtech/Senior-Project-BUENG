@@ -2,11 +2,11 @@ import React, { useState } from "react";
 import { FiMenu, FiX } from "react-icons/fi";
 import { Link, useLocation, useParams } from "react-router-dom";
 import "./Navbar.css";
-import { useAuth } from "./firebase/Authcontext";
+import { useAuth } from "../backend/src/firebase/Authcontext";
 import { FaUsers, FaUser, FaUserFriends, FaCog } from "react-icons/fa";
 import { BsFillChatLeftDotsFill } from "react-icons/bs";
 import { BsRobot } from "react-icons/bs";
-import { useTheme } from "./context/themecontext";
+import { useTheme } from "../frontend/src/context/themecontext";
 
 
 const Navbar = () => {

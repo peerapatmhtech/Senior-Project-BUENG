@@ -6,28 +6,23 @@ import bodyParser from "body-parser";
 import dotenv from "dotenv";
 import http from "http";
 import { Server } from "socket.io";
-import userRoutes from "./routes/gmail.js";
-import friendRoutes from "./routes/friend.js";
-import roomRoutes from "./routes/room.js";
-import infoRoutes  from "./routes/info.js";
-import eventRoutes from "./routes/event.js";
-import likeRoutes from "./routes/like.js"; // Routes from "./routes/like.js";
-import roommatchRoutes  from "./routes/eventmatch.js"; // Routes from "./routes/room.js";
+import userRoutes from "./backend/src/routes/gmail.js";
+import friendRoutes from "./backend/src/routes/friend.js";
+import roomRoutes from "./backend/src/routes/room.js";
+import infoRoutes  from "./backend/src/routes/info.js";
+import eventRoutes from "./backend/src/routes/event.js";
+import likeRoutes from "./backend/src/routes/like.js"; // Routes from "./routes/like.js";
+import roommatchRoutes  from "./backend/src/routes/eventmatch.js"; // Routes from "./routes/room.js";
 import mongoose from "mongoose";
-import { Filter } from "./src/model/filter.js";
+import { Filter } from "./backend/src/model/filter.js";
 import axios from "axios";
 
 // Import new routes (ES Modules style)
-import friendRequestRoutes from "./routes/friendRequest.js";
-import friendApiRoutes from "./routes/friendApi.js";
-import userPhotoRoutes from "./routes/userPhoto.js";
-import infoMatchRoutes from "./routes/infomatch.js"; // Import info match routes
-
-// Debug routes
-console.log("Registered routes:");
-console.log("- friendRequestRoutes:", Object.keys(friendRequestRoutes).length > 0 ? "Loaded" : "Empty");
-console.log("- userPhotoRoutes:", Object.keys(userPhotoRoutes).length > 0 ? "Loaded" : "Empty");
-console.log("- infoMatchRoutes:", Object.keys(infoMatchRoutes).length > 0 ? "Loaded" : "Empty");
+import friendRequestRoutes from "./backend/src/routes/friendRequest.js";
+import friendApiRoutes from "./backend/src/routes/friendApi.js";
+import userPhotoRoutes from "./backend/src/routes/userPhoto.js";
+import infoMatchRoutes from "./backend/src/routes/infomatch.js"; // Import info match routes
+import verifyFirebaseToken from "./backend/src/middleware/verifyToken.js"; // Import token verification middleware
 
 
 
@@ -285,6 +280,9 @@ app.use("/api", roommatchRoutes);
 app.use("/api", likeRoutes);
 app.use("/api", infoMatchRoutes); // ใช้งาน info match routes
 
+// Secure routes (ต้องมี token)
+app.use("/api/secure", verifyFirebaseToken);
+
 // ลงทะเบียน friendRequest routes โดยตรงเพื่อแก้ปัญหาเรื่อง 404
 // Log API requests for debugging
 app.use((req, res, next) => {
@@ -295,6 +293,36 @@ app.use((req, res, next) => {
 app.use("/api", friendRequestRoutes);
 app.use("/api", friendApiRoutes);
 app.use("/api", userPhotoRoutes);
+
+// Test secure endpoint
+app.get("/api/secure/me", (req, res) => {
+  res.json({ 
+    success: true, 
+    message: "Token valid", 
+    user: req.user 
+  });
+});
+
+// Endpoint เฉพาะสำหรับ BU students (@bumail.net)
+app.get("/api/secure/bu-student", (req, res) => {
+  if (!req.user.email.endsWith('@bumail.net')) {
+    return res.status(403).json({
+      success: false,
+      message: 'Access restricted to @bumail.net email addresses only'
+    });
+  }
+  
+  res.json({
+    success: true,
+    message: 'Welcome BU student!',
+    user: req.user,
+    studentInfo: {
+      email: req.user.email,
+      domain: '@bumail.net',
+      verified: true
+    }
+  });
+});
 
 // Fallback route to check if API is working
 app.get("/api-status", (req, res) => {
