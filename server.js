@@ -1,4 +1,3 @@
-
 // ✅ Import libraries และตั้งค่าเบื้องต้น
 import express from "express";
 import cors from "cors";
@@ -274,11 +273,11 @@ app.get('/api/debug/routes', (req, res) => {
 app.use("/api", userRoutes);
 app.use("/api", friendRoutes);
 app.use("/api", roomRoutes);
-app.use("/api", eventRoutes);
+app.use("/api", eventRoutes(io));
 app.use("/api", infoRoutes);
 app.use("/api", roommatchRoutes);
 app.use("/api", likeRoutes);
-app.use("/api", infoMatchRoutes); // ใช้งาน info match routes
+app.use("/api", infoMatchRoutes(io));
 
 // Secure routes (ต้องมี token)
 app.use("/api/secure", verifyFirebaseToken);

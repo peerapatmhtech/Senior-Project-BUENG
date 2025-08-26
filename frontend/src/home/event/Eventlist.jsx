@@ -1,7 +1,8 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import axios from "axios";
 import "./Eventlist.css";
 import { useTheme } from "../../context/themecontext";
+import { useSocket } from "../../context/socketcontext"; // Import useSocket
 import { MdFavorite, MdFavoriteBorder } from "react-icons/md";
 import { FiCalendar, FiX } from "react-icons/fi";
 
@@ -11,31 +12,54 @@ const EventList = () => {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const email = localStorage.getItem("userEmail");
-  const { isDarkMode, setIsDarkMode } = useTheme();
-  const [favoriteEvents, setFavoriteEvents] = useState([]); // Store array of favorited event IDs
-  // เก็บ action ที่เพิ่งกด (batch)
-  const [pendingFavorites, setPendingFavorites] = useState([]);
-  const debounceRef = useRef(null);
+  const { isDarkMode } = useTheme();
+  const [favoriteEvents, setFavoriteEvents] = useState([]);
+  const socket = useSocket(); // Get socket instance
 
   const user = { email };
 
-  const fetchimage = async () => {
+  const fetchEvents = useCallback(async () => {
+    try {
+      const res = await axios.get(
+        `${import.meta.env.VITE_APP_API_BASE_URL}/api/events/${user.email}`
+      );
+      setEvents(res.data);
+    } catch (error) {
+      console.error("❌ Error fetching events:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [user.email]);
+
+  const fetchImage = useCallback(async () => {
     try {
       const res = await axios.get(
         `${import.meta.env.VITE_APP_API_BASE_URL}/api/get-image-genres`
       );
-
-      const imageList = res.data.imageGenres;
-
-      imageList.forEach((item) => {
-
-      });
-      // หรือถ้าจะเก็บใน state:
-      setEventsImage(imageList);
+      setEventsImage(res.data.imageGenres);
     } catch (err) {
       console.error("❌ Error fetching images:", err);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchEvents();
+    fetchImage();
+  }, [fetchEvents, fetchImage]);
+
+  useEffect(() => {
+    if (!socket) return;
+
+    socket.on('events_updated', () => {
+      console.log("Received events_updated event. Refetching data...");
+      fetchEvents();
+      fetchImage();
+    });
+
+    return () => {
+      socket.off('events_updated');
+    };
+  }, [socket, fetchEvents, fetchImage]);
 
   const handleDelete = async (id) => {
     const confirm = window.confirm("คุณแน่ใจว่าต้องการลบกิจกรรมนี้หรือไม่?");
@@ -45,11 +69,11 @@ const EventList = () => {
       await axios.delete(
         `${import.meta.env.VITE_APP_API_BASE_URL}/api/detele-events/${id}`
       );
-      setEvents((prevEvents) => prevEvents.filter((event) => event._id !== id));
     } catch (error) {
       console.error("❌ Error deleting event:", error);
     }
   };
+
   const handleDeleteAll = async () => {
     const confirm = window.confirm(
       "คุณแน่ใจว่าต้องการลบกิจกรรมทั้งหมดหรือไม่?"
@@ -59,46 +83,13 @@ const EventList = () => {
 
     try {
       await axios.delete(
-        `${
-          import.meta.env.VITE_APP_API_BASE_URL
-        }/api/delete-all-events/${userEmail}`
+        `${import.meta.env.VITE_APP_API_BASE_URL}/api/delete-all-events/${userEmail}`
       );
-
-      setEvents([]); // ล้าง state
     } catch (error) {
       console.error("❌ Error deleting all events:", error);
     }
   };
-  const handleDeleteAllLikes = async () => {
-    try {
-      await axios.delete(
-        `${import.meta.env.VITE_APP_API_BASE_URL}/api/like/${email}`
-      );
-      setFavoriteEvents([]); // ล้าง state favorite
-    } catch (error) {
-      console.error("❌ Error deleting all likes:", error);
-    }
-  };
 
-  useEffect(() => {
-    const fetchEvents = async () => {
-      try {
-        const res = await axios.get(
-          `${import.meta.env.VITE_APP_API_BASE_URL}/api/events/${
-            user.email
-          }`
-        );
-        setEvents(res.data);
-      } catch (error) {
-        console.error("❌ Error fetching events:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchEvents();
-    fetchimage();
-  }, []);
   const fetchFavoriteEvents = async () => {
     try {
       const res = await axios.get(
@@ -140,29 +131,8 @@ const EventList = () => {
     }
   };
 
-  // ส่ง batch ที่ pending ไป webhook แล้วล้าง state
-  const sendPendingFavoritesToWebhook = async (pendingArr) => {
-    if (!Array.isArray(pendingArr) || pendingArr.length === 0) return;
-    await axios.post(import.meta.env.VITE_APP_MAKE_WEBHOOK_MATCH_URL, {
-      email: email,
-      actions: pendingArr.map(({ event }) => ({ event })), // [{event}]
-    });
-  };
-
-  // Debounce: หลังจากกดหัวใจ batch ใด batch นั้นจะถูกส่งไป webhook หลัง delay แล้วล้าง state
-  useEffect(() => {
-    if (!pendingFavorites.length) return;
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      sendPendingFavoritesToWebhook(pendingFavorites);
-      setPendingFavorites([]); // ล้าง batch หลังส่ง
-    }, 5000);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pendingFavorites]);
-
   if (loading) return <p className="loading-text">กำลังโหลด...</p>;
 
-  // Event List Content Component
   const EventListContent = () => (
     <div className={`event-container ${isDarkMode ? "dark-mode" : ""}`}>
       {events.length === 0 ? (
@@ -204,12 +174,8 @@ const EventList = () => {
                       favoriteEvents.includes(event._id);
                     if (isFav) {
                       handleUnlike(event._id, event.title);
-                      // ไม่ต้องส่ง unlike ไป webhook
                     } else {
                       handleLike(event._id, event.title);
-                      // เวลากด like
-                      setPendingFavorites((prev) => [...prev, { event: event.title }]);
-
                     }
                     setFavoriteEvents((prev) => {
                       if (!Array.isArray(prev)) return [event._id];
@@ -220,13 +186,13 @@ const EventList = () => {
                   }}
                   aria-label={
                     Array.isArray(favoriteEvents) &&
-                    favoriteEvents.includes(event._id)
+                      favoriteEvents.includes(event._id)
                       ? "Unfavorite"
                       : "Favorite"
                   }
                 >
                   {Array.isArray(favoriteEvents) &&
-                  favoriteEvents.includes(event._id) ? (
+                    favoriteEvents.includes(event._id) ? (
                     <MdFavorite size={30} color="red" />
                   ) : (
                     <MdFavoriteBorder size={30} />
@@ -234,23 +200,23 @@ const EventList = () => {
                 </button>
               </div>
               <div className="event-info">
-                <p>🎵 genre: {event.genre}</p>
-                <p>📍 location: {event.location}</p>
-                <p>🗓️ date: {event.date}</p>
+                <p>🎵 Category: {event.genre}</p>
+                <p>📍 Location: {event.location}</p>
+                <p>🗓️ Date: {event.date}</p>
               </div>
               <p className="event-description">{event.description}</p>
-              {/* <a
+              <a
                 href={event.link}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="event-link"
               >
                 Info more
-              </a> */}
+              </a>
               <button
                 onClick={() => {
                   handleDelete(event._id);
-                  handleUnlike(event._id); // <-- เพิ่มลบ like ของ event นี้ด้วย
+                  handleUnlike(event._id);
                 }}
                 className="delete-button"
               >
@@ -262,7 +228,6 @@ const EventList = () => {
             <button
               onClick={() => {
                 handleDeleteAll();
-                handleDeleteAllLikes(); // <-- เพิ่มลบ likes ด้วย
               }}
               className="delete-button-all"
               title="ลบกิจกรรมทั้งหมด"
@@ -280,8 +245,7 @@ const EventList = () => {
 
   return (
     <>
-      {/* Mobile Toggle Button (visible only on screens < 990px) */}
-      <button 
+      <button
         className="eventlist-modal-toggle-btn"
         onClick={() => setIsModalOpen(true)}
         aria-label="Open Events"
@@ -289,17 +253,15 @@ const EventList = () => {
         <FiCalendar />
       </button>
 
-      {/* Desktop View (hidden on screens < 990px) */}
       <div className="eventlist-desktop-view">
         <EventListContent />
       </div>
 
-      {/* Modal Sheet (visible only on screens < 990px) */}
       <div className={`eventlist-modal-overlay ${isModalOpen ? 'active' : ''}`} onClick={() => setIsModalOpen(false)}>
         <div className={`eventlist-modal-sheet ${isModalOpen ? 'active' : ''}`} onClick={(e) => e.stopPropagation()}>
           <div className="eventlist-modal-header">
             <div className="eventlist-modal-handle"></div>
-            <button 
+            <button
               className="eventlist-modal-close"
               onClick={() => setIsModalOpen(false)}
               aria-label="Close Events"

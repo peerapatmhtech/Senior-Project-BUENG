@@ -3,8 +3,7 @@ import EventList from "./event/Eventlist";
 import RequireLogin from "../ui/RequireLogin";
 import { useTheme } from "../context/themecontext";
 import RoomMatch from "../community/roommatch";
-import { useState, useEffect } from "react";
-import axios from "axios";
+import { useState } from "react";
 import AccordionList from "./cardmatch/AccordionList";
 import HeaderProfile from "../ui/HeaderProfile";
 

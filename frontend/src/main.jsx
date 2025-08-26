@@ -4,6 +4,7 @@ import App from "../../src/App.jsx";
 import { AuthProvider } from "./firebase/Authcontext.jsx";
 import { EventProvider } from "./context/eventcontext.jsx";
 import { ThemeProvider } from "./context/themecontext.jsx";
+import { SocketProvider } from "./context/socketcontext.jsx";
 // import App from './test/testtheconcert.jsx'
 // import App from './test/test2.jsx'
 import "./index.css";
@@ -32,14 +33,16 @@ if (import.meta.env.DEV) {
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <ThemeProvider>
-      <EventProvider>
-        <BrowserRouter>
-          <AuthProvider>
-            <App />
-          </AuthProvider>
-        </BrowserRouter>
-      </EventProvider>
-    </ThemeProvider>
+    <SocketProvider>
+      <ThemeProvider>
+        <EventProvider>
+          <BrowserRouter>
+            <AuthProvider>
+              <App />
+            </AuthProvider>
+          </BrowserRouter>
+        </EventProvider>
+      </ThemeProvider>
+    </SocketProvider>
   </React.StrictMode>
 );

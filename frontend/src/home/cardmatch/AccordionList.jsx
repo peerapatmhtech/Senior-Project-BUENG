@@ -3,6 +3,9 @@ import "./AccordionList.css";
 import { FaChevronDown, FaChevronRight } from "react-icons/fa";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import axios from "axios";
+
+// Default tab options if none are provided in the items
 const DEFAULT_TAB_OPTIONS = ["Option 1", "Option 2", "Option 3"];
 
 const AccordionList = ({ items }) => {
@@ -313,7 +316,7 @@ const AccordionList = ({ items }) => {
                                 },
                             );
 
-                           
+
 
                             if (response.ok) {
                                 toast.success("บันทึกการเลือกสำเร็จ");
@@ -353,6 +356,10 @@ const AccordionList = ({ items }) => {
                                         updatedAt: new Date().toISOString(),
                                     }),
                                 }
+                            );
+                            await axios.delete(
+                                `${import.meta.env.VITE_APP_API_BASE_URL
+                                }/api/delete-all-events/${email}`
                             );
                             if (response.ok) {
                                 toast.success("ลบตัวเลือกทั้งหมดสำเร็จ");

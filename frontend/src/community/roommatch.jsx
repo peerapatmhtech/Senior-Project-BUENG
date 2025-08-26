@@ -1,17 +1,14 @@
 import React, { useEffect, useState, useRef, createRef } from "react";
-import axios from "axios";
 import api from "../lib/axiosSecure";
 import { useNavigate } from "react-router-dom";
 import TinderCard from "react-tinder-card";
 import { useTheme } from "../context/themecontext";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { MdOutlineRefresh } from "react-icons/md";
-import { FiHeart, FiX } from "react-icons/fi";
+import { FiX } from "react-icons/fi";
 import { FaHeart } from "react-icons/fa";
-
 import "./css/roommatch.css";
-// import "./chance-badge.css";
+import { useSocket } from "../context/socketcontext";
 
 const RoomMatch = ({ accordionComponent }) => {
   const userEmail = localStorage.getItem("userEmail");
@@ -26,6 +23,7 @@ const RoomMatch = ({ accordionComponent }) => {
   const [loading, setLoading] = useState(true);
   const [showMatchModal, setShowMatchModal] = useState(false);
   const [matchedRoom, setMatchedRoom] = useState(null);
+  const socket = useSocket(); // Get socket instance
 
   // ตรวจสอบขนาดหน้าจอ
   useEffect(() => {
@@ -36,11 +34,9 @@ const RoomMatch = ({ accordionComponent }) => {
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
-  useEffect(() => {
-    const fetchRooms = async () => {
+  const fetchRooms = async () => {
       setLoading(true);
       try {
-        const res = await api.get(`/api/events-match/${userEmail}`);
         const matchInfo = await api.get(`/api/infomatch/all`);
         setRooms(matchInfo.data.data);
 
@@ -50,8 +46,21 @@ const RoomMatch = ({ accordionComponent }) => {
       }
       setLoading(false);
     };
+  useEffect(() => {
     fetchRooms();
-  }, [userEmail]);
+  }, []);
+  useEffect(() => {
+    if(!socket) return;
+
+    socket.on('match_updated', () => {
+      console.log("Received match_updated event. Refetching data...");
+      fetchRooms();
+    });
+
+    return () => {
+      socket.off('match_updated');
+    };
+  }, [socket, fetchRooms]);
   const filteredRooms = Array.isArray(rooms)
     ? rooms.filter((room) => {
       // เช็คว่า email ของเราอยู่ใน usermatch หรือ email
@@ -170,7 +179,7 @@ const RoomMatch = ({ accordionComponent }) => {
         try {
           await fetch(
             `${import.meta.env.VITE_APP_API_BASE_URL}/api/infomatch/${currentRoom._id}`,
-            { 
+            {
               method: "DELETE",
               headers: {
                 'Authorization': `Bearer ${localStorage.getItem('idToken')}`
@@ -346,7 +355,7 @@ const RoomMatch = ({ accordionComponent }) => {
                   try {
                     await fetch(
                       `${import.meta.env.VITE_APP_API_BASE_URL}/api/infomatch/${currentRoom._id}`,
-                      { 
+                      {
                         method: "DELETE",
                         headers: {
                           'Authorization': `Bearer ${localStorage.getItem('idToken')}`
