@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import  { useState } from "react";
 import { FiMenu, FiX } from "react-icons/fi";
 import { Link, useLocation, useParams } from "react-router-dom";
 import "./Navbar.css";
@@ -8,7 +8,6 @@ import { BsFillChatLeftDotsFill } from "react-icons/bs";
 import { BsRobot } from "react-icons/bs";
 import { useTheme } from "../frontend/src/context/themecontext";
 
-
 const Navbar = () => {
   const [click, setClick] = useState(false);
   const location = useLocation(); // <-- ตรงนี้สำคัญ!
@@ -16,7 +15,7 @@ const Navbar = () => {
   const { roomId } = useParams();
   const handleClick = () => setClick(!click);
   const closeMobileMenu = () => setClick(false);
-  const { isDarkMode, setIsDarkMode } = useTheme();
+  const { isDarkMode } = useTheme();
 
   const handleLogout = async () => {
     if (user && user.email) {
@@ -42,7 +41,6 @@ const Navbar = () => {
   return (
     <div className={`navbar-container ${isDarkMode ? "dark-mode" : ""}`}>
       {/* // <div className="navbar-con"> */}
-
 
       <ul className={click ? "menu active" : "menu-bar"}>
         <Link to="/home">
@@ -93,31 +91,10 @@ const Navbar = () => {
             <span className="text-nav">Chat</span>
           </li>
         </Link>
-        {/* <Link
-          to="/ai-chat"
-          onClick={closeMobileMenu}
-          className={`menu-link ${isActive("/ai-chat")}`}
-        >
-          <li>
-            <BsRobot className="icon-nav" />
-            <span className="text-nav">AI Chat</span>
-          </li>
-        </Link> */}
-        <Link
-          to="/setup"
-          onClick={closeMobileMenu}
-          className={`menu-link ${isActive("/setup")}`}
-        >
-          <li>
-            <FaCog className="icon-nav" />
-            <span className="text-nav">Setup</span>
-          </li>
-        </Link>
+
 
         {user ? (
-          <li className="logout-link"
-            onClick={handleLogout}
-          >
+          <li className="logout-link" onClick={handleLogout}>
             <span className="text-nav">LOGOUT</span>
           </li>
         ) : (

@@ -32,7 +32,7 @@ const RoomList = ({
         const res = await axios.get(
           `${import.meta.env.VITE_APP_API_BASE_URL}/api/allrooms`
         );
-        setRooms(res.data);
+        
         // ดึงห้องที่ user join แล้ว
         const filterjoinedRooms = await axios.get(
           `${import.meta.env.VITE_APP_API_BASE_URL}/api/user-rooms/${userEmail}`
@@ -42,6 +42,7 @@ const RoomList = ({
           ? filterjoinedRooms.data.roomIds.filter((id) => !!id)
           : [];
         setJoinedRoomIds(joinedIds);
+        setRooms(res.data);
 
         // ดึงห้องทั้งหมด
       } catch (error) {

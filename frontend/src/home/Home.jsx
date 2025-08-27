@@ -8,8 +8,7 @@ import AccordionList from "./cardmatch/AccordionList";
 import HeaderProfile from "../ui/HeaderProfile";
 
 const Newcommu = () => {
-  const userPhoto = localStorage.getItem("userPhoto");
-  const { isDarkMode, setIsDarkMode } = useTheme();
+  const { isDarkMode } = useTheme();
   const [selectedRooms, setSelectedRooms] = useState([]);
 
 
@@ -18,7 +17,6 @@ const Newcommu = () => {
       <div className={`main-con-home ${isDarkMode ? "dark-mode" : ""}`}>
         <header className="header-home">
           <HeaderProfile 
-            userPhoto={userPhoto} 
             className="profile-section-home" 
           />
         </header>

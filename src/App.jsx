@@ -1,11 +1,9 @@
-import React from "react";
 import "./App.css";
 import Navbar from "./Navbar";
 import Profile from "../frontend/src/profile/Profile";
 import Freind from "../frontend/src/friend/friend";
 import LoginForm from "../frontend/src/login/NewLogin";
 import Community from "../frontend/src/community/community";
-import Setup from "../frontend/src/setting/setup";
 import Home from "../frontend/src/home/Home";
 import Chat from "../frontend/src/chat/chat";
 import ChatContainerAI from "../frontend/src/chat/components/javascript/ChatContainerAI";
@@ -41,8 +39,6 @@ function App() {
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<LoginForm />} />
             <Route path="/friend" element={<Freind />} />
-            <Route path="/setup" element={<Setup />} />
-            {/* <Route path="/chat" element={<Chat />} /> */}
             <Route path="/profile" element={<Profile />} />
             <Route path="/community" element={<Community />} />
             <Route path="/chat/:roomId" element={<Chat />} />
