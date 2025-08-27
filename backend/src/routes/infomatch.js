@@ -10,12 +10,13 @@ export default function (io) {
       const { detail, email, chance, usermatch, emailjoined, usermatchjoined } = req.body;
 
       // ตรวจสอบข้อมูลที่จำเป็น
-      if (!detail || !email) {
+      if (!detail || !email || !usermatch ) {
         return res.status(400).json({
           success: false,
-          message: "กรุณากรอกข้อมูล info และ email"
+          message: "กรุณากรอกข้อมูลที่จำเป็น"
         });
       }
+
 
       const newInfoMatch = new InfoMatch({
         detail,

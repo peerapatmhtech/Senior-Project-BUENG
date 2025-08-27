@@ -2,7 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App.jsx";
 import { AuthProvider } from "../backend/src/firebase/Authcontext.jsx";
-import { EventProvider } from "../frontend/src/context/eventcontext.jsx";
+import { SocketProvider } from "../frontend/src/context/socketcontext.jsx";
 import { ThemeProvider } from "../frontend/src/context/themecontext.jsx";
 // import App from './test/testtheconcert.jsx'
 // import App from './test/test2.jsx'
@@ -33,13 +33,13 @@ if (import.meta.env.DEV) {
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <ThemeProvider>
-      <EventProvider>
+      <SocketProvider>
         <BrowserRouter>
           <AuthProvider>
             <App />
           </AuthProvider>
         </BrowserRouter>
-      </EventProvider>
+      </SocketProvider>
     </ThemeProvider>
   </React.StrictMode>
 );

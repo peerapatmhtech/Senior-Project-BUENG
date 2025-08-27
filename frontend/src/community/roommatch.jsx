@@ -8,7 +8,7 @@ import "react-toastify/dist/ReactToastify.css";
 import { FiX } from "react-icons/fi";
 import { FaHeart } from "react-icons/fa";
 import "./css/roommatch.css";
-import { useSocket } from "../context/socketcontext";
+import { useSocket } from "../context/socketfriend";
 
 const RoomMatch = ({ accordionComponent }) => {
   const userEmail = localStorage.getItem("userEmail");

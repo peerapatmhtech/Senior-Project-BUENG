@@ -14,7 +14,7 @@ const EventList = () => {
   const email = localStorage.getItem("userEmail");
   const { isDarkMode } = useTheme();
   const [favoriteEvents, setFavoriteEvents] = useState([]);
-  const socket = useSocket(); // Get socket instance
+  const { socket } = useSocket();
 
   const user = { email };
 
@@ -45,13 +45,12 @@ const EventList = () => {
   useEffect(() => {
     fetchEvents();
     fetchImage();
-  }, [fetchEvents, fetchImage]);
+  }, []);
 
   useEffect(() => {
     if (!socket) return;
 
     socket.on('events_updated', () => {
-      console.log("Received events_updated event. Refetching data...");
       fetchEvents();
       fetchImage();
     });
@@ -200,28 +199,35 @@ const EventList = () => {
                 </button>
               </div>
               <div className="event-info">
-                <p>🎵 Category: {event.genre}</p>
-                <p>📍 Location: {event.location}</p>
-                <p>🗓️ Date: {event.date}</p>
+                <p>🎵 <span class="category-label">Category:</span>
+                  <span class="genre-border">{event.genre}</span>
+                </p>
+                <p>📍 <span className="category-label">Location:</span>
+                  <span> {event.location}</span>
+                </p>
+                <p>🗓️ <span className="category-label">Date:</span>
+                  <span> {event.date}</span></p>
               </div>
               <p className="event-description">{event.description}</p>
-              <a
-                href={event.link}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="event-link"
-              >
-                Info more
-              </a>
-              <button
-                onClick={() => {
-                  handleDelete(event._id);
-                  handleUnlike(event._id);
-                }}
-                className="delete-button"
-              >
-                🗑️ Delete
-              </button>
+              <div className="bottom-event">
+                <a
+                  href={event.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="event-link"
+                >
+                  Info more
+                </a>
+                <button
+                  onClick={() => {
+                    handleDelete(event._id);
+                    handleUnlike(event._id);
+                  }}
+                  className="delete-button"
+                >
+                  🗑️ Delete
+                </button>
+              </div>
             </div>
           ))}
           <div className="btn-delete-all">
