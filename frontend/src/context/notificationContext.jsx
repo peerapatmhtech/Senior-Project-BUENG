@@ -1,4 +1,10 @@
-import React, { createContext, useState, useContext, useEffect } from "react";
+import React, {
+  createContext,
+  useState,
+  useContext,
+  useEffect,
+  useCallback,
+} from "react";
 import io from "socket.io-client";
 import axios from "axios";
 import { toast } from "react-toastify";
@@ -13,7 +19,7 @@ const socket = io(import.meta.env.VITE_APP_API_BASE_URL, {
   transports: ["websocket", "polling"],
   autoConnect: true,
   forceNew: false,
-  query: { clientId: 'notification-context-' + Date.now() }
+  query: { clientId: "notification-context-" + Date.now() },
 });
 
 // สร้าง Context
@@ -22,32 +28,138 @@ const NotificationContext = createContext();
 export const NotificationProvider = ({ children }) => {
   const [notifications, setNotifications] = useState([]);
   const [newFriendRequest, setNewFriendRequest] = useState(null);
-  const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
-  
+  const [showNotificationDropdown, setShowNotificationDropdown] =
+    useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
   // ข้อมูลผู้ใช้จาก localStorage
   const userEmail = localStorage.getItem("userEmail");
   const displayName = localStorage.getItem("userName");
   const photoURL = localStorage.getItem("userPhoto");
 
-  // โหลดการแจ้งเตือนจาก localStorage เมื่อเริ่มต้น
-  useEffect(() => {
-    if (userEmail) {
-      const savedNotifications = localStorage.getItem(`notifications_${userEmail}`);
-      if (savedNotifications) {
-        try {
-          const parsedNotifications = JSON.parse(savedNotifications);
-          setNotifications(parsedNotifications);
-        } catch (error) {
-          console.error("Error parsing notifications from localStorage:", error);
-        }
+  ///////functions call friend request///////
+  const fetchNotifications = useCallback(async () => {
+
+    setIsLoading(true);
+    try {
+      console.log("🔄 Fetching notifications for:", userEmail);
+
+      // ดึงข้อมูลคำขอเพื่อนล่าสุดผ่าน REST API
+      const response = await axios.get(
+        `${
+          import.meta.env.VITE_APP_API_BASE_URL
+        }/api/friend-requests/${userEmail}`
+      );
+
+      console.log("📨 API Response:", response.data);
+
+      // ถ้าไม่มีคำขอเพื่อน
+      if (
+        !response.data ||
+        !response.data.requests ||
+        response.data.requests.length === 0
+      ) {
+        console.log("📭 No friend requests found");
+        // ยังคง update state เพื่อล้างข้อมูลเก่า
+        setNotifications([]);
+        setNewFriendRequest(null);
+        return;
       }
+
+      // แปลงข้อมูล API เป็น notification format
+      const notificationData = response.data.requests.map((request) => ({
+        id: request.requestId || `${request.from?.email}-${Date.now()}`,
+        type: "friend-request",
+        from: request.from,
+        to: request.to,
+        timestamp: request.timestamp,
+        read: false, // ตั้งเป็น false ทุกครั้งที่ fetch ใหม่
+      }));
+
+      console.log("📋 Processed notifications:", notificationData);
+
+      // อัพเดตการแจ้งเตือนใน state
+      setNotifications(notificationData);
+      console.log(notificationData)
+
+      // ตั้งค่า newFriendRequest เป็นคำขอล่าสุด
+      if (notificationData.length > 0) {
+        const latestRequest = notificationData[0];
+        setNewFriendRequest(latestRequest);
+
+        // แสดง toast notification เฉพาะเมื่อมี notification ใหม่
+        toast.info(
+          <div className="friend-request-toast">
+            <img
+              src={latestRequest.from?.photoURL}
+              alt={latestRequest.from?.displayName}
+              className="toast-profile-img"
+              style={{
+                width: "40px",
+                height: "40px",
+                borderRadius: "50%",
+                marginRight: "8px",
+              }}
+            />
+            <div className="toast-content">
+              <strong>{latestRequest.from?.displayName}</strong>{" "}
+              ได้ส่งคำขอเป็นเพื่อนถึงคุณ
+            </div>
+          </div>,
+          {
+            autoClose: 8000,
+            position: "bottom-right",
+          }
+        );
+      }
+    } catch (error) {
+      console.error("❌ Error fetching notifications:", error);
+      // อย่า toast error ทุกครั้ง เพราะอาจเป็น 404 (ไม่มี notifications)
+      if (error.response && error.response.status !== 404) {
+        toast.error("ไม่สามารถโหลดการแจ้งเตือนได้");
+      }
+    } finally {
+      setIsLoading(false);
     }
   }, [userEmail]);
 
+  // โหลด notifications เมื่อเริ่มต้น
+  useEffect(() => {
+    if (userEmail) {
+      // โหลดจาก localStorage ก่อน
+      const savedNotifications = localStorage.getItem(
+        `notifications_${userEmail}`
+      );
+      if (savedNotifications) {
+        try {
+          const parsedNotifications = JSON.parse(savedNotifications);
+          console.log(
+            "💾 Loaded notifications from localStorage:",
+            parsedNotifications
+          );
+          setNotifications(parsedNotifications);
+        } catch (error) {
+          console.error(
+            "❌ Error parsing notifications from localStorage:",
+            error
+          );
+        }
+      }
+
+      // จากนั้น fetch ข้อมูลล่าสุดจาก API
+      fetchNotifications();
+    }
+  }, [userEmail, fetchNotifications]);
+
   // บันทึกการแจ้งเตือนลงใน localStorage ทุกครั้งที่มีการเปลี่ยนแปลง
   useEffect(() => {
-    if (userEmail && notifications.length > 0) {
-      localStorage.setItem(`notifications_${userEmail}`, JSON.stringify(notifications));
+    if (userEmail && notifications.length >= 0) {
+      // เปลี่ยนจาก > 0 เป็น >= 0 เพื่อบันทึก array ว่างด้วย
+      console.log("💾 Saving notifications to localStorage:", notifications);
+      localStorage.setItem(
+        `notifications_${userEmail}`,
+        JSON.stringify(notifications)
+      );
     }
   }, [notifications, userEmail]);
 
@@ -59,120 +171,121 @@ export const NotificationProvider = ({ children }) => {
         (n) => n.type === "friend-request" && !n.read
       );
 
+      console.log("🔍 Checking unread requests:", unreadFriendRequest);
+
       // ถ้ามีคำขอเพื่อนที่ยังไม่ได้อ่าน ให้แสดงใน newFriendRequest
-      if (unreadFriendRequest && !newFriendRequest) {
+      if (
+        unreadFriendRequest &&
+        (!newFriendRequest || newFriendRequest.id !== unreadFriendRequest.id)
+      ) {
         setNewFriendRequest({
           ...unreadFriendRequest,
           id: unreadFriendRequest.id,
         });
       }
     }
-  }, [notifications, newFriendRequest, userEmail]);
+  }, [notifications, userEmail]);
 
   // Socket connection handling
   useEffect(() => {
     if (!userEmail) return;
 
+    console.log("🔌 Setting up socket listeners for:", userEmail);
+
+    // Join user's room สำหรับรับ notifications
+    socket.emit("join-user-room", userEmail);
+
     // ฟังการแจ้งเตือนเมื่อมีคนส่งคำขอเพื่อนใหม่
-    socket.on("notify-friend-request", async () => {
-      try {
-        // ดึงข้อมูลคำขอเพื่อนล่าสุดผ่าน REST API
-        const response = await axios.get(
-          `${import.meta.env.VITE_APP_API_BASE_URL}/api/friend-requests/${userEmail}`
-        );
+    const handleNotifyFriendRequest = async (data) => {
+      console.log("🔔 Received notify-friend-request:", data);
 
-        // ถ้าไม่มีคำขอเพื่อนใหม่
-        if (!response.data || !response.data.requests || response.data.requests.length === 0) {
-          return;
-        }
-
-        // หาคำขอเพื่อนล่าสุด
-        const latestRequest = response.data.requests[0];
-
-        // สร้าง ID สำหรับคำขอ
-        const requestId = latestRequest.requestId || Date.now();
-
-        // เซ็ตข้อมูลคำขอใหม่พร้อม ID
-        setNewFriendRequest({
-          from: latestRequest.from,
-          to: latestRequest.to,
-          timestamp: latestRequest.timestamp,
-          id: requestId,
-        });
-
-        // อัพเดตการแจ้งเตือนใน state
-        setNotifications(prevNotifications => {
-          const newNotification = {
-            id: requestId,
-            type: "friend-request",
-            from: latestRequest.from,
-            timestamp: latestRequest.timestamp,
-            read: false
-          };
-
-          // กรองคำขอเพื่อนที่ซ้ำกันออกไป
-          const filteredNotifications = prevNotifications.filter(n =>
-            n.type !== "friend-request" ||
-            (n.type === "friend-request" && n.from.email !== latestRequest.from.email)
-          );
-
-          // สร้างรายการแจ้งเตือนใหม่
-          return [newNotification, ...filteredNotifications];
-        });
-
-        // แสดง toast notification
-        toast.info(
-          <div className="friend-request-toast">
-            <img
-              src={latestRequest.from.photoURL}
-              alt={latestRequest.from.displayName}
-              className="toast-profile-img"
-            />
-            <div className="toast-content">
-              <strong>{latestRequest.from.displayName}</strong>{" "}
-              ได้ส่งคำขอเป็นเพื่อนถึงคุณ
-            </div>
-          </div>,
-          {
-            autoClose: 8000,
-            position: "bottom-right",
-          }
-        );
-      } catch (error) {
-        console.error("Error handling friend request notification:", error);
+      // ตรวจสอบว่า notification นี้เป็นของผู้ใช้ปัจจุบันหรือไม่
+      if (data.to === userEmail || data.targetEmail === userEmail) {
+        // Fetch notifications ใหม่เมื่อได้รับ socket event
+        await fetchNotifications();
       }
+    };
+
+    // ฟังการแจ้งเตือนเมื่อมีการยอมรับคำขอเพื่อน
+    const handleNotifyFriendAccept = async (data) => {
+      console.log("✅ Received notify-friend-accept:", data);
+
+      if (data.to === userEmail || data.targetEmail === userEmail) {
+        // Refresh notifications
+        await fetchNotifications();
+
+        toast.success("คำขอเป็นเพื่อนของคุณได้รับการยอมรับแล้ว!", {
+          position: "bottom-right",
+          autoClose: 3000,
+        });
+      }
+    };
+
+    // ตั้งค่า socket listeners
+    socket.on("notify-friend-request", handleNotifyFriendRequest);
+    socket.on("notify-friend-accept", handleNotifyFriendAccept);
+
+    // ตรวจสอบการเชื่อมต่อ socket
+    socket.on("connect", () => {
+      console.log("🟢 Socket connected");
+      // Re-join room เมื่อเชื่อมต่อใหม่
+      socket.emit("join-user-room", userEmail);
     });
 
+    socket.on("disconnect", () => {
+      console.log("🔴 Socket disconnected");
+    });
+
+    // Cleanup
     return () => {
-      socket.off("notify-friend-request");
+      console.log("🧹 Cleaning up socket listeners");
+      socket.off("notify-friend-request", handleNotifyFriendRequest);
+      socket.off("notify-friend-accept", handleNotifyFriendAccept);
+      socket.off("connect");
+      socket.off("disconnect");
     };
-  }, [userEmail]);
+  }, [userEmail, fetchNotifications]);
+
 
   // ฟังก์ชันสำหรับการทำเครื่องหมายว่าแจ้งเตือนได้อ่านแล้ว
   const markNotificationAsRead = (notificationId) => {
+
     // หาอินเด็กซ์ของการแจ้งเตือนที่จะทำเครื่องหมายว่าอ่านแล้ว
-    const notificationElement = document.querySelector(`[data-notification-id="${notificationId}"]`);
+    const notificationElement = document.querySelector(
+      `[data-notification-id="${notificationId}"]`
+    );
+    try {
+      axios.put(
+        `${import.meta.env.VITE_APP_API_BASE_URL}/api/mark-notification-read/${notificationId}`,
+        { read: true },
+        { headers: { "Content-Type": "application/json" } }
+      );
+    } catch (error) {
+      console.error("❌ Error marking notification as read:", error);
+      toast.error("ไม่สามารถทำเครื่องหมายว่าอ่านแล้วได้");
+      return;
+    }
+
     if (notificationElement) {
       // เพิ่มคลาสสำหรับแอนิเมชันการอ่าน
-      notificationElement.classList.add('just-read');
+      notificationElement.classList.add("just-read");
 
       // รอให้แอนิเมชันเสร็จก่อนที่จะอัพเดต state
       setTimeout(() => {
-        setNotifications(prevNotifications => {
-          const updatedNotifications = prevNotifications.map(notification => {
+        setNotifications((prevNotifications) => {
+          const updatedNotifications = prevNotifications.map((notification) => {
             if (notification.id === notificationId) {
               return { ...notification, read: true };
             }
             return notification;
           });
-
           return updatedNotifications;
         });
-      }, 500); // รอครึ่งวินาที
+      }, 500);
     } else {
       // ถ้าไม่พบ element ให้อัพเดต state ทันที
-      setNotifications(prevNotifications => {
-        return prevNotifications.map(notification => {
+      setNotifications((prevNotifications) => {
+        return prevNotifications.map((notification) => {
           if (notification.id === notificationId) {
             return { ...notification, read: true };
           }
@@ -204,6 +317,7 @@ export const NotificationProvider = ({ children }) => {
 
   // ฟังก์ชันสำหรับจัดการกับการตอบกลับคำขอเป็นเพื่อน
   const handleFriendRequestResponse = async (requestId, response, roomId) => {
+
     // ทำเครื่องหมายว่าอ่านแล้ว
     markNotificationAsRead(requestId);
 
@@ -218,7 +332,9 @@ export const NotificationProvider = ({ children }) => {
 
           // ส่งการตอบกลับคำขอเพื่อนผ่าน REST API
           const responseData = await axios.post(
-            `${import.meta.env.VITE_APP_API_BASE_URL}/api/friend-request-response`,
+            `${
+              import.meta.env.VITE_APP_API_BASE_URL
+            }/api/friend-request-response`,
             {
               requestId: requestId,
               userEmail: userEmail,
@@ -231,7 +347,7 @@ export const NotificationProvider = ({ children }) => {
                 photoURL: photoURL,
               },
               to: notification.from.email,
-              timestamp: new Date().toISOString()
+              timestamp: new Date().toISOString(),
             },
             {
               headers: {
@@ -239,7 +355,7 @@ export const NotificationProvider = ({ children }) => {
               },
             }
           );
-          
+
           await axios.post(
             `${import.meta.env.VITE_APP_API_BASE_URL}/api/add-friend`,
             {
@@ -254,20 +370,32 @@ export const NotificationProvider = ({ children }) => {
             }
           );
 
-          // แจ้ง Toast
-          toast.success(`คุณได้ตอบรับคำขอเป็นเพื่อนจาก ${notification.from.displayName} แล้ว`, {
-            position: "bottom-right",
-            autoClose: 3000,
-          });
-          
-          // Emit socket event
-          if (socket.connected) {
-            socket.emit("notify-friend-accept", { to: notification.from.email });
-          }
+          if (responseData.status === 200) {
+            toast.success(
+              responseData.data.message ||
+                `คุณได้ตอบรับคำขอเป็นเพื่อนจาก ${notification.from.displayName} แล้ว`
+            );
 
-          return true;
+            // ลบ notification ออกจาก state หลังยอมรับ
+            setNotifications((prevNotifications) =>
+              prevNotifications.filter((n) => n.id !== requestId)
+            );
+
+            // Emit socket event
+            if (socket.connected) {
+              socket.emit("notify-friend-accept", {
+                to: notification.from.email,
+                from: userEmail,
+              });
+            }
+
+            // Fetch ข้อมูลใหม่เพื่อให้แน่ใจว่า sync กับ database
+            setTimeout(() => fetchNotifications(), 1000);
+
+            return true;
+          }
         } catch (error) {
-          console.error("เกิดข้อผิดพลาดในการตอบรับคำขอเพื่อน:", error);
+          console.error("❌ Error accepting friend request:", error);
           toast.error("ไม่สามารถตอบรับคำขอเพื่อนได้");
           return false;
         }
@@ -278,6 +406,7 @@ export const NotificationProvider = ({ children }) => {
 
   // ฟังก์ชันสำหรับลบคำขอเพื่อน
   const handleDeleteFriendRequest = async (requestId) => {
+
     // ทำเครื่องหมายว่าอ่านแล้ว
     markNotificationAsRead(requestId);
 
@@ -287,24 +416,32 @@ export const NotificationProvider = ({ children }) => {
       if (notification) {
         // ส่งคำขอไปยัง API เพื่อลบคำขอเพื่อน
         await axios.delete(
-          `${import.meta.env.VITE_APP_API_BASE_URL}/api/friend-request/${requestId}`
+          `${
+            import.meta.env.VITE_APP_API_BASE_URL
+          }/api/friend-request/${requestId}`
         );
 
         // อัพเดต UI โดยการลบคำขอนี้ออกจาก notifications
-        setNotifications(prevNotifications => 
-          prevNotifications.filter(n => n.id !== requestId)
+        setNotifications((prevNotifications) =>
+          prevNotifications.filter((n) => n.id !== requestId)
         );
 
-        toast.info(`คุณได้ปฏิเสธคำขอเป็นเพื่อนจาก ${notification.from.displayName} แล้ว`, {
-          position: "bottom-right",
-          autoClose: 3000,
-        });
+        toast.info(
+          `คุณได้ปฏิเสธคำขอเป็นเพื่อนจาก ${notification.from.displayName} แล้ว`,
+          {
+            position: "bottom-right",
+            autoClose: 3000,
+          }
+        );
+
+        // Fetch ข้อมูลใหม่เพื่อให้แน่ใจว่า sync กับ database
+        setTimeout(() => fetchNotifications(), 1000);
 
         return true;
       }
       return false;
     } catch (error) {
-      console.error("เกิดข้อผิดพลาดในการลบคำขอเพื่อน:", error);
+      console.error("❌ Error deleting friend request:", error);
       toast.error("ไม่สามารถลบคำขอเพื่อนได้");
       return false;
     }
@@ -312,16 +449,24 @@ export const NotificationProvider = ({ children }) => {
 
   // ฟังก์ชันสำหรับล้างการแจ้งเตือนที่อ่านแล้ว
   const clearReadNotifications = () => {
-    setNotifications(prevNotifications => {
+    console.log("🧹 Clearing read notifications");
+
+    setNotifications((prevNotifications) => {
       // กรองเอาเฉพาะการแจ้งเตือนที่ยังไม่ได้อ่าน
-      const unreadNotifications = prevNotifications.filter(n => !n.read);
+      const unreadNotifications = prevNotifications.filter((n) => !n.read);
       return unreadNotifications;
     });
   };
 
   // Toggle notification dropdown
   const toggleNotificationDropdown = (value = null) => {
-    setShowNotificationDropdown(prev => value !== null ? value : !prev);
+    setShowNotificationDropdown((prev) => (value !== null ? value : !prev));
+  };
+
+  // ฟังก์ชันสำหรับ refresh notifications แบบ manual
+  const refreshNotifications = () => {
+    console.log("🔄 Manual refresh notifications");
+    fetchNotifications();
   };
 
   return (
@@ -335,7 +480,11 @@ export const NotificationProvider = ({ children }) => {
         markNotificationAsRead,
         clearReadNotifications,
         handleFriendRequestResponse,
-        handleDeleteFriendRequest
+        fetchNotifications,
+        handleDeleteFriendRequest,
+        refreshNotifications,
+        isLoading,
+        fetchNotifications, // เพิ่ม fetchNotifications สำหรับการเรียกจากภายนอก
       }}
     >
       {children}
@@ -347,7 +496,9 @@ export const NotificationProvider = ({ children }) => {
 export const useNotifications = () => {
   const context = useContext(NotificationContext);
   if (context === undefined) {
-    throw new Error('useNotifications must be used within a NotificationProvider');
+    throw new Error(
+      "useNotifications must be used within a NotificationProvider"
+    );
   }
   return context;
 };

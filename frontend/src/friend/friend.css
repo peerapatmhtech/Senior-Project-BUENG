@@ -770,7 +770,7 @@
 }
 
 .button-friend-item {
-  max-width: 100%;
+  width: 100%;
   margin-left: auto;
   margin-right: auto;
   height: fit-content;

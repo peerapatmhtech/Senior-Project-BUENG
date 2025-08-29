@@ -3,7 +3,6 @@ const router = express.Router();
 import User from '../model/userroom.js';
 import Friend from "../model/Friend.js";
 import FriendRequest from "../model/friendRequest.js";
-import { isValidObjectId } from 'mongoose';
 
 // API สำหรับส่งคำขอเป็นเพื่อน
 router.post('/friend-request', async (req, res) => {
@@ -87,6 +86,23 @@ router.post('/friend-request', async (req, res) => {
     res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการส่งคำขอเพื่อน', error: error.message });
   }
 });
+
+router.put('/mark-friend-requests-read/:requestId', async (req, res) => {
+  try {
+    const { requestId } = req.params;
+    
+    const result = await FriendRequest.updateMany(
+      { requestId: requestId, read: false },
+      { $set: { read: true } }
+    );
+
+    res.status(200).json({ success: true, message: 'ทำเครื่องหมายคำขอเพื่อนว่าอ่านแล้ว', modifiedCount: result.nModified });
+  } catch (error) {
+    console.error('เกิดข้อผิดพลาดในการทำเครื่องหมายคำขอเพื่อนว่าอ่านแล้ว:', error);
+    res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการทำเครื่องหมายคำขอเพื่อนว่าอ่านแล้ว', error: error.message });
+  }
+});
+
 
 // API ดึงข้อมูลคำขอเพื่อนของผู้ใช้
 router.get('/friend-requests/:userEmail', async (req, res) => {

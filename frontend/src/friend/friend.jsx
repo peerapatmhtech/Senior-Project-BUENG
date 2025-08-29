@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useContext  } from "react";
 import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -9,8 +9,10 @@ import { IoMdPersonAdd } from "react-icons/io";
 import RequireLogin from "../ui/RequireLogin";
 import { BsThreeDots } from "react-icons/bs";
 import { useTheme } from "../context/themecontext";
+import "../ui/NotificationBell.css"
 import { useParams } from "react-router-dom";
 import { useSocket } from "../context/socketcontext";
+import { to } from "@react-spring/web";
 
 // แสดงข้อมูลสถานะการเชื่อมต่อ socket อย่างละเอียด
 // socket.on("connect", () => {
@@ -20,25 +22,10 @@ import { useSocket } from "../context/socketcontext";
 // การจัดการสถานะการเชื่อมต่อของ socket ทั้งหมดถูกย้ายไปที่ socketcontext.jsx แล้ว
 
 // ฟังก์ชันเพื่อจัดการกับเวลาที่แสดง last seen
-const formatLastSeen = (timestamp) => {
-  if (!timestamp) return "ไม่มีข้อมูล";
 
-  const now = new Date();
-  const lastSeen = new Date(timestamp);
-  const diffInMinutes = Math.floor((now - lastSeen) / (1000 * 60));
-
-  if (diffInMinutes < 1) return "เมื่อสักครู่";
-  if (diffInMinutes < 60) return `${diffInMinutes} นาทีที่แล้ว`;
-
-  const diffInHours = Math.floor(diffInMinutes / 60);
-  if (diffInHours < 24) return `${diffInHours} ชั่วโมงที่แล้ว`;
-
-  return lastSeen.toLocaleDateString();
-};
 
 const Friend = () => {
   const { socket, onlineUsers } = useSocket(); // ใช้ socket และ onlineUsers จาก context
-
   // รับ roomId จาก URL ถ้ามี เช่น /friend/:roomId
   const { roomId } = useParams();
 
@@ -93,6 +80,7 @@ const Friend = () => {
       }
     }
   }, [userEmail]);
+  console.log("notifications:", notifications);
 
   // บันทึกการแจ้งเตือนลงใน localStorage ทุกครั้งที่มีการเปลี่ยนแปลง
   useEffect(() => {
@@ -123,38 +111,8 @@ const Friend = () => {
     }
   }, [notifications, newFriendRequest, userEmail]);
 
-  // ทดสอบเพิ่มข้อมูลแจ้งเตือนจำลอง (สำหรับการทดสอบเท่านั้น)
-  // useEffect(() => {
-  //   if (userEmail) {
-  //     // สร้างข้อมูลจำลองเพื่อทดสอบการแสดงผล
-  //     const testNotification = {
-  //       id: Date.now(),
-  //       type: "friend-request",
-  //       from: {
-  //         email: "test@example.com",
-  //         displayName: "ผู้ใช้ทดสอบ",
-  //         photoURL: "https://via.placeholder.com/40"
-  //       },
-  //       timestamp: new Date().toISOString(),
-  //       read: false
-  //     };
-
-  //     // ตั้งเวลาเพิ่มข้อมูลทดสอบหลังจากโหลดหน้า 3 วินาที
-  //     const timer = setTimeout(() => {
-  //       console.log("กำลังเพิ่มข้อมูลแจ้งเตือนทดสอบ:", testNotification);
-  //       setNotifications(prev => [testNotification, ...prev]);
-
-  //       // ทดสอบการแสดง newFriendRequest
-  //       setNewFriendRequest({
-  //         ...testNotification,
-  //         id: testNotification.id
-  //       });
-  //     }, 3000);
-
-  //     return () => clearTimeout(timer);
-  //   }
-  // }, [userEmail]);
-
+  
+  ///////Mounting///////
   useEffect(() => {
     fetchGmailUser();
   }, []);
@@ -552,6 +510,9 @@ const Friend = () => {
           },
         }
       );
+      if (response.status !== 400) {
+        toast.error(response.data.message || "ไม่สามารถเพิ่มเพื่อนได้");
+      }
 
       console.log("ส่งคำขอเพื่อนสำเร็จ:", response.data);
 
@@ -724,30 +685,6 @@ const Friend = () => {
     }
   };
 
-  // Function to toggle notification dropdown
-  const toggleNotificationDropdown = () => {
-    setShowNotificationDropdown((prev) => !prev);
-
-    // แสดงข้อมูลการแจ้งเตือนปัจจุบัน
-    console.log("ข้อมูลการแจ้งเตือนทั้งหมด:", notifications);
-    console.log(
-      "การแจ้งเตือนคำขอเพื่อน:",
-      notifications.filter((n) => n.type === "friend-request")
-    );
-
-    // ไม่ต้องทำเครื่องหมายว่าอ่านแล้วโดยอัตโนมัติสำหรับคำขอเพื่อน
-    // เพื่อให้ผู้ใช้สามารถยอมรับหรือปฏิเสธคำขอได้
-    // แต่จะทำเครื่องหมายเฉพาะการแจ้งเตือนประเภทอื่น (ถ้ามี)
-    if (!showNotificationDropdown) {
-      setTimeout(() => {
-        setNotifications((prev) =>
-          prev.map((notif) =>
-            notif.type !== "friend-request" ? { ...notif, read: true } : notif
-          )
-        );
-      }, 3000);
-    }
-  };
 
   useEffect(() => {
     if (!userEmail) {
@@ -844,14 +781,6 @@ const Friend = () => {
           const finalRoomId = roomId || generateRoomId();
 
           // ส่งการตอบกลับคำขอเพื่อนผ่าน REST API
-          console.log("requestId:", requestId);
-          console.log("userEmail:", userEmail);
-          console.log("friendEmail:", notification.from.email);
-          console.log("roomId:", finalRoomId);
-          console.log("from:", userEmail, displayName, photoURL);
-          console.log("to:", notification.from.email);
-          console.log("timestamp:", new Date().toISOString());
-
           const responseData = await axios.post(
             `${import.meta.env.VITE_APP_API_BASE_URL
             }/api/friend-request-response`,
