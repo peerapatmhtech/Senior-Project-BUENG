@@ -16,7 +16,6 @@ const NotificationBell = () => {
 
   const notificationDropdownRef = useRef(null);
   const bellButtonRef = useRef(null);
-  const navigate = useNavigate();
 
   // Close the notification dropdown when clicking outside
   useEffect(() => {

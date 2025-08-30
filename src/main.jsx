@@ -23,7 +23,6 @@ if (import.meta.env.DEV) {
     if (message.includes('google-analytics.com') || 
         message.includes('gtag') || 
         message.includes('dataLayer')) {
-      console.log('Analytics error ignored in development:', message);
       return;
     }
     originalError.apply(console, args);

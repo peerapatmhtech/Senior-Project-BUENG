@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useContext  } from "react";
+import React, { useEffect, useState, useRef, useContext } from "react";
 import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -10,6 +10,7 @@ import RequireLogin from "../ui/RequireLogin";
 import { BsThreeDots } from "react-icons/bs";
 import { useTheme } from "../context/themecontext";
 import "../ui/NotificationBell.css"
+import { useNotifications } from "../context/notificationContext";
 import { useParams } from "react-router-dom";
 import { useSocket } from "../context/socketcontext";
 import { to } from "@react-spring/web";
@@ -25,7 +26,8 @@ import { to } from "@react-spring/web";
 
 
 const Friend = () => {
-  const { socket, onlineUsers } = useSocket(); // ใช้ socket และ onlineUsers จาก context
+  // const { socket, onlineUsers } = useSocket(); // ใช้ socket และ onlineUsers จาก context
+  const { socket } = useNotifications();
   // รับ roomId จาก URL ถ้ามี เช่น /friend/:roomId
   const { roomId } = useParams();
 
@@ -56,7 +58,7 @@ const Friend = () => {
   const [newFriendRequest, setNewFriendRequest] = useState(null);
   const [showNotificationDropdown, setShowNotificationDropdown] =
     useState(false);
-  
+
   // States for list view toggle
   const [showFriendList, setShowFriendList] = useState(false);
   const [showOnlineUsersList, setShowOnlineUsersList] = useState(false);
@@ -80,7 +82,6 @@ const Friend = () => {
       }
     }
   }, [userEmail]);
-  console.log("notifications:", notifications);
 
   // บันทึกการแจ้งเตือนลงใน localStorage ทุกครั้งที่มีการเปลี่ยนแปลง
   useEffect(() => {
@@ -111,7 +112,7 @@ const Friend = () => {
     }
   }, [notifications, newFriendRequest, userEmail]);
 
-  
+
   ///////Mounting///////
   useEffect(() => {
     fetchGmailUser();
@@ -177,87 +178,82 @@ const Friend = () => {
 
     // ฟังการแจ้งเตือนเมื่อมีคนส่งคำขอเพื่อนใหม่
     socket.on("notify-friend-request", async () => {
-      console.log("📩 ได้รับแจ้งเตือนมีคำขอเป็นเพื่อนใหม่");
+      // try {
+      //   // ดึงข้อมูลคำขอเพื่อนล่าสุดผ่าน REST API
+      //   const response = await axios.get(
+      //     `${import.meta.env.VITE_APP_API_BASE_URL
+      //     }/api/friend-requests/${userEmail}`
+      //   );
 
-      try {
-        // ดึงข้อมูลคำขอเพื่อนล่าสุดผ่าน REST API
-        const response = await axios.get(
-          `${import.meta.env.VITE_APP_API_BASE_URL
-          }/api/friend-requests/${userEmail}`
-        );
+      //   // ถ้าไม่มีคำขอเพื่อนใหม่
+      //   if (
+      //     !response.data ||
+      //     !response.data.requests ||
+      //     response.data.requests.length === 0
+      //   ) {
+      //     console.log("ไม่พบคำขอเพื่อนใหม่จาก API");
+      //     return;
+      //   }
 
-        // ถ้าไม่มีคำขอเพื่อนใหม่
-        if (
-          !response.data ||
-          !response.data.requests ||
-          response.data.requests.length === 0
-        ) {
-          console.log("ไม่พบคำขอเพื่อนใหม่จาก API");
-          return;
-        }
+      //   // หาคำขอเพื่อนล่าสุด
+      //   const latestRequest = response.data.requests[0];
+      //   console.log("คำขอเพื่อนล่าสุดจาก API:", latestRequest);
 
-        // หาคำขอเพื่อนล่าสุด
-        const latestRequest = response.data.requests[0];
-        console.log("คำขอเพื่อนล่าสุดจาก API:", latestRequest);
+      //   // สร้าง ID สำหรับคำขอ (ใช้ ID จาก API ถ้ามี หรือสร้างใหม่)
+      //   const requestId = latestRequest.requestId || Date.now();
 
-        // สร้าง ID สำหรับคำขอ (ใช้ ID จาก API ถ้ามี หรือสร้างใหม่)
-        const requestId = latestRequest.requestId || Date.now();
+      //   // เซ็ตข้อมูลคำขอใหม่พร้อม ID
+      //   setNewFriendRequest({
+      //     from: latestRequest.from,
+      //     to: latestRequest.to,
+      //     timestamp: latestRequest.timestamp,
+      //     id: requestId,
+      //   });
 
-        // เซ็ตข้อมูลคำขอใหม่พร้อม ID
-        setNewFriendRequest({
-          from: latestRequest.from,
-          to: latestRequest.to,
-          timestamp: latestRequest.timestamp,
-          id: requestId,
-        });
+      //   // อัพเดตการแจ้งเตือนใน state
+      //   setNotifications((prevNotifications) => {
+      //     const newNotification = {
+      //       id: requestId,
+      //       type: "friend-request",
+      //       from: latestRequest.from,
+      //       timestamp: latestRequest.timestamp,
+      //       read: false,
+      //     };
 
-        // อัพเดตการแจ้งเตือนใน state
-        setNotifications((prevNotifications) => {
-          const newNotification = {
-            id: requestId,
-            type: "friend-request",
-            from: latestRequest.from,
-            timestamp: latestRequest.timestamp,
-            read: false,
-          };
+      //     // กรองคำขอเพื่อนที่ซ้ำกันออกไป
+      //     const filteredNotifications = prevNotifications.filter(
+      //       (n) =>
+      //         n.type !== "friend-request" ||
+      //         (n.type === "friend-request" &&
+      //           n.from.email !== latestRequest.from.email)
+      //     );
 
-          // กรองคำขอเพื่อนที่ซ้ำกันออกไป
-          const filteredNotifications = prevNotifications.filter(
-            (n) =>
-              n.type !== "friend-request" ||
-              (n.type === "friend-request" &&
-                n.from.email !== latestRequest.from.email)
-          );
+      //     // สร้างรายการแจ้งเตือนใหม่
+      //     return [newNotification, ...filteredNotifications];
+      //   });
 
-          // สร้างรายการแจ้งเตือนใหม่
-          return [newNotification, ...filteredNotifications];
-        });
-
-        console.log(
-          "💾 การแจ้งเตือนจะถูกบันทึกลงใน localStorage โดยอัตโนมัติผ่าน useEffect"
-        );
-
-        // แสดง toast notification
-        toast.info(
-          <div className="friend-request-toast">
-            <img
-              src={latestRequest.from.photoURL}
-              alt={latestRequest.from.displayName}
-              className="toast-profile-img"
-            />
-            <div className="toast-content">
-              <strong>{latestRequest.from.displayName}</strong>{" "}
-              ได้ส่งคำขอเป็นเพื่อนถึงคุณ
-            </div>
-          </div>,
-          {
-            autoClose: 8000,
-            position: "bottom-right",
-          }
-        );
-      } catch (error) {
-        console.error("เกิดข้อผิดพลาดในการดึงข้อมูลคำขอเพื่อน:", error);
-      }
+      //   // แสดง toast notification
+      //   toast.info(
+      //     <div className="friend-request-toast">
+      //       <img
+      //         src={latestRequest.from.photoURL}
+      //         alt={latestRequest.from.displayName}
+      //         className="toast-profile-img"
+      //       />
+      //       <div className="toast-content">
+      //         <strong>{latestRequest.from.displayName}</strong>{" "}
+      //         ได้ส่งคำขอเป็นเพื่อนถึงคุณ
+      //       </div>
+      //     </div>,
+      //     {
+      //       autoClose: 8000,
+      //       position: "bottom-right",
+      //     }
+      //   );
+      // } catch (error) {
+      //   console.error("เกิดข้อผิดพลาดในการดึงข้อมูลคำขอเพื่อน:", error);
+      // }
+      console.log("ได้รับการแจ้งเตือนคำขอเพื่อนใหม่ผ่าน WebSocket");
     });
 
     // ฟังการแจ้งเตือนเมื่อมีคนยอมรับคำขอเป็นเพื่อน
@@ -514,44 +510,6 @@ const Friend = () => {
         toast.error(response.data.message || "ไม่สามารถเพิ่มเพื่อนได้");
       }
 
-      console.log("ส่งคำขอเพื่อนสำเร็จ:", response.data);
-
-      // เราจะยังคงใช้ socket เพื่อแจ้งเตือนแบบ real-time ไปยังผู้ใช้ปลายทาง
-      // แต่การจัดการข้อมูลจริงจะทำผ่าน REST API
-      if (socket.connected) {
-        // แจ้งเตือนแบบ real-time เท่านั้น ไม่มีการจัดการข้อมูล
-        socket.emit("notify-friend-request", { to: friendEmail });
-      }
-
-      // จากนั้นเพิ่มเพื่อนในฐานข้อมูล
-      // await axios.post(
-      //   `${import.meta.env.VITE_APP_API_BASE_URL}/api/add-friend`,
-      //   {
-      //     userEmail,
-      //     friendEmail,
-      //     roomId: finalRoomId,
-      //   },
-      //   {
-      //     headers: {
-      //       "Content-Type": "application/json",
-      //     },
-      //   }
-      // );
-
-      // const addedUser = users.find((user) => user.email === friendEmail);
-      // if (addedUser) {
-      //   setFriends((prev) =>
-      //     [
-      //       ...prev,
-      //       {
-      //         photoURL: addedUser.photoURL,
-      //         email: addedUser.email,
-      //         displayName: addedUser.displayName,
-      //         isOnline: addedUser.isOnline || false,
-      //       },
-      //     ].sort((a, b) => a.displayName.localeCompare(b.displayName))
-      //   );
-      // }
 
       toast.success("เพิ่มเพื่อนสำเร็จ! กรุณารอการตอบกลับจาก " + friendEmail);
     } catch (error) {
@@ -913,7 +871,7 @@ const Friend = () => {
   // ฟังก์ชันสำหรับแปลงเวลา lastSeen
   const formatLastSeen = (lastSeen) => {
     if (!lastSeen) return "ไม่ทราบ";
-    
+
     const now = new Date();
     const lastSeenDate = new Date(lastSeen);
     const diffMs = now - lastSeenDate;
@@ -925,7 +883,7 @@ const Friend = () => {
     if (diffMinutes < 60) return `${diffMinutes} นาทีที่แล้ว`;
     if (diffHours < 24) return `${diffHours} ชั่วโมงที่แล้ว`;
     if (diffDays < 7) return `${diffDays} วันที่แล้ว`;
-    
+
     return lastSeenDate.toLocaleDateString("th-TH");
   };
 
@@ -1023,10 +981,7 @@ const Friend = () => {
                                       <button
                                         className="accept-btn"
                                         onClick={() => {
-                                          console.log(
-                                            "กำลังยอมรับคำขอเพื่อน ID:",
-                                            notif.id
-                                          );
+
                                           handleFriendRequestResponse(
                                             notif.id,
                                             "accept"
@@ -1225,7 +1180,7 @@ const Friend = () => {
               </div>
             </div>
           </div>
-          
+
           <div className="list-section">
             <div className="list-header" onClick={() => setShowOnlineUsersList(!showOnlineUsersList)}>
               <h2>Online Users ({filteredUsers.filter(
@@ -1401,7 +1356,7 @@ const Friend = () => {
                       )}`
                       : "ออฟไลน์"}
                 </p>
-                
+
               </div>
             </div>
           </div>

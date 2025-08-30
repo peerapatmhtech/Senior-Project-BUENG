@@ -17,7 +17,6 @@ export const AuthProvider = ({ children }) => {
           const token = await currentUser.getIdToken();
           setIdToken(token);
           localStorage.setItem('idToken', token);
-          console.log('✅ ID Token refreshed');
         } catch (error) {
           console.error('❌ Error getting ID token:', error);
           setIdToken(null);

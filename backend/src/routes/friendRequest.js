@@ -87,14 +87,21 @@ router.post('/friend-request', async (req, res) => {
   }
 });
 
+///////// Mark friend requests as read//////////
 router.put('/mark-friend-requests-read/:requestId', async (req, res) => {
   try {
     const { requestId } = req.params;
-    
+    if (!requestId) {
+      return res.status(400).json({ success: false, message: 'Request ID is required' });
+    }
+
     const result = await FriendRequest.updateMany(
       { requestId: requestId, read: false },
       { $set: { read: true } }
     );
+    if (result.nModified === 0) {
+      return res.status(404).json({ success: false, message: 'ไม่พบคำขอเพื่อนที่ยังไม่ได้อ่าน' });
+    }
 
     res.status(200).json({ success: true, message: 'ทำเครื่องหมายคำขอเพื่อนว่าอ่านแล้ว', modifiedCount: result.nModified });
   } catch (error) {

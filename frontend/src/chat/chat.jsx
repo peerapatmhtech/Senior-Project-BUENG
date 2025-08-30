@@ -356,6 +356,9 @@ const Chat = () => {
     if (!userEmail) return;
     fetchCurrentUserAndFriends();
 
+     socket.on("notify-friend-request", async () => {
+       console.log("ได้รับการแจ้งเตือนคำขอเพื่อนใหม่ผ่าน WebSocket");
+     });
     // เมื่อเข้าสู่หน้า chat ส่งข้อมูลว่าผู้ใช้ออนไลน์
     socket.emit("user-online", { displayName, photoURL, email: userEmail });
 

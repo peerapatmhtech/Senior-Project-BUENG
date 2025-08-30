@@ -1,10 +1,12 @@
 import React, { useRef, useState, useEffect } from "react";
 import { useTheme } from "../context/themecontext";
+import axios from "axios";
 import { useNotifications } from "../context/notificationContext";
+import { useSocket } from "../context/socketcontext";
 import "./HeaderProfile.css";
 import { useAuth } from "../../../backend/src/firebase/Authcontext";
 import { Bell, User, Settings, LogOut, Sun, Moon, Globe, X, Check, UserPlus } from 'lucide-react';
-
+import { use } from "react";
 /**
  * HeaderProfile - รูปโปรไฟล์และปุ่มแจ้งเตือนที่สามารถใช้ร่วมกันในหลาย component
  * @param {Object} props - Props ของ component
@@ -27,6 +29,24 @@ const HeaderProfile = ({
   notificationDropdownRef: externalDropdownRef,
   isFriend,
 }) => {
+  //////////Notification/////
+
+  // ใช้ข้อมูลจาก notification context
+  const {
+    notifications,
+    showNotificationDropdown,
+    toggleNotificationDropdown,
+    fetchNotifications,
+    markNotificationAsRead,
+    handleNotifyFriendAccept,
+    handleNotifyFriendRequest,
+    clearReadNotifications,
+    handleFriendRequestResponse,
+    handleDeleteFriendRequest,
+  } = useNotifications();
+  const { socket } = useSocket();
+
+  
   const userPhoto = localStorage.getItem("userPhoto");
   const displayName = localStorage.getItem("userName");
   const userEmail = localStorage.getItem("userEmail");
@@ -53,29 +73,59 @@ const HeaderProfile = ({
   const bellButtonRef = externalBellButtonRef || localBellButtonRef;
   const notificationDropdownRef = externalDropdownRef || localDropdownRef;
 
-  //////////Notification/////
 
-  // ใช้ข้อมูลจาก notification context
-  const {
-    notifications,
-    newFriendRequest,
-    showNotificationDropdown,
-    toggleNotificationDropdown,
-    fetchNotifications,
-    markNotificationAsRead,
-    clearReadNotifications,
-    handleFriendRequestResponse,
-    handleDeleteFriendRequest,
-  } = useNotifications();
+
+
 
   ////////Change Language///////
   const changeLanguage = (lang) => {
     setLanguage(lang);
   };
 
+  ///////Mounting////////
   useEffect(() => {
     fetchNotifications();
   }, []);
+
+  useEffect(() => {
+    socket.on("notify-friend-request", async () => {
+      console.log("ได้รับการแจ้งเตือนคำขอเพื่อนใหม่ผ่าน WebSocket");
+    });
+
+  }, []);
+
+  // Socket connection handling
+  useEffect(() => {
+    if (!userEmail) return;
+
+
+    socket.on("notify-friend-request", async () => {
+      console.log("ได้รับการแจ้งเตือนคำขอเพื่อนใหม่ผ่าน WebSocket");
+    });
+
+    socket.on("notify-friend-accept", () => {
+      handleNotifyFriendAccept();
+      console.log("Received notify-friend-accept");
+    });
+    console.log("Socket in HeaderProfile:", socket);
+
+    // ตรวจสอบการเชื่อมต่อ socket
+    socket.on("connect", () => {
+      // Re-join room เมื่อเชื่อมต่อใหม่
+      socket.emit("join-user-room", userEmail);
+    });
+
+    // Cleanup
+    return () => {
+      socket.off("notify-friend-request");
+      socket.off("notify-friend-accept");
+      socket.off("connect");
+      socket.off("disconnect");
+    };
+  }, [socket, userEmail, handleNotifyFriendRequest, handleNotifyFriendAccept]);
+
+
+
   // useEffect สำหรับตรวจจับการคลิกนอก profile modal
   useEffect(() => {
     function handleClickOutside(event) {
@@ -84,11 +134,12 @@ const HeaderProfile = ({
         !containerRef.current.contains(event.target)
       ) {
         setProfileModalOpen(false);
+        toggleNotificationDropdown(false);
       }
     }
 
     // เพิ่ม event listener เมื่อ profile modal เปิดอยู่
-    if (profileModal) {
+    if (profileModal || showNotificationDropdown) {
       document.addEventListener("mousedown", handleClickOutside);
     }
 
@@ -96,7 +147,7 @@ const HeaderProfile = ({
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [profileModal]); // เพิ่ม profileModal เป็น dependency
+  }, [profileModal, showNotificationDropdown]); // เพิ่ม profileModal เป็น dependency
 
   ////////Logout////////
   const handleLogout = async () => {
@@ -126,7 +177,10 @@ const HeaderProfile = ({
               ref={bellButtonRef}
               className="bell-btn-home"
               aria-label="Notifications"
-              onClick={() => toggleNotificationDropdown()}
+              onClick={() => {
+                toggleNotificationDropdown()
+                setProfileModalOpen(false);
+              }}
             >
               <Bell className="w-5 h-5" />
               {notifications.filter((n) => !n.read).length > 0 && (
@@ -158,7 +212,7 @@ const HeaderProfile = ({
                 }}
               >
                 {/* Header */}
-                <div 
+                <div
                   style={{
                     padding: '16px',
                     borderBottom: `1px solid ${isDarkMode ? '#374151' : '#f3f4f6'}`
@@ -196,7 +250,7 @@ const HeaderProfile = ({
                       <X style={{ width: '16px', height: '16px' }} />
                     </button>
                   </div>
-                  
+
                   <div style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -235,15 +289,15 @@ const HeaderProfile = ({
                           style={{
                             padding: '16px',
                             borderBottom: `1px solid ${isDarkMode ? '#374151' : '#f3f4f6'}`,
-                            backgroundColor: notif.read 
-                              ? (isDarkMode ? '#1f2937' : '#f9fafb') 
+                            backgroundColor: notif.read
+                              ? (isDarkMode ? '#1f2937' : '#f9fafb')
                               : (isDarkMode ? '#1e3a8a20' : '#dbeafe'),
                             cursor: 'pointer',
                             transition: 'all 0.3s ease'
                           }}
                           onMouseEnter={(e) => e.target.style.backgroundColor = isDarkMode ? '#374151' : '#f3f4f6'}
-                          onMouseLeave={(e) => e.target.style.backgroundColor = notif.read 
-                            ? (isDarkMode ? '#1f2937' : '#f9fafb') 
+                          onMouseLeave={(e) => e.target.style.backgroundColor = notif.read
+                            ? (isDarkMode ? '#1f2937' : '#f9fafb')
                             : (isDarkMode ? '#1e3a8a20' : '#dbeafe')}
                           onClick={() => markNotificationAsRead(notif.id)}
                         >
@@ -271,7 +325,7 @@ const HeaderProfile = ({
                                 }}></div>
                               )}
                             </div>
-                            
+
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                                 <p style={{
@@ -299,7 +353,7 @@ const HeaderProfile = ({
                                   {isFriend && isFriend(notif.from?.email) ? "เพื่อนแล้ว" : "คำขอเพื่อน"}
                                 </span>
                               </div>
-                              
+
                               <p style={{
                                 fontSize: '14px',
                                 color: '#6b7280',
@@ -309,7 +363,7 @@ const HeaderProfile = ({
                                   ? "เป็นเพื่อนกันแล้ว"
                                   : "ส่งคำขอเป็นเพื่อน"}
                               </p>
-                              
+
                               <p style={{
                                 fontSize: '12px',
                                 color: '#9ca3af',
@@ -389,7 +443,7 @@ const HeaderProfile = ({
               </div>
             )}
           </div>
-          
+
           {/* Language Selector with improved styling */}
           <select
             onChange={(e) => changeLanguage(e.target.value)}
@@ -413,16 +467,18 @@ const HeaderProfile = ({
 
       <div
         className="profile-img-wrapper"
-        onClick={() => setProfileModalOpen(!profileModal)}
+        onClick={() => {
+          toggleNotificationDropdown(false);
+          setProfileModalOpen(!profileModal)
+        }}
       >
         <img src={userPhoto} alt="Profile" className="profile-image" />
       </div>
-      
+
       {/* Profile Modal - ปรับปรุงใหม่ */}
       <div
-        className={`list-profile ${profileModal ? "active" : ""} ${
-          isDarkMode ? "dark-mode" : ""
-        }`}
+        className={`list-profile ${profileModal ? "active" : ""} ${isDarkMode ? "dark-mode" : ""
+          }`}
         style={{
           position: 'absolute',
           top: '100%',
@@ -446,9 +502,9 @@ const HeaderProfile = ({
           borderBottom: `1px solid ${isDarkMode ? '#374151' : '#f3f4f6'}`
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <img 
-              src={userPhoto} 
-              alt="Profile" 
+            <img
+              src={userPhoto}
+              alt="Profile"
               style={{
                 width: '48px',
                 height: '48px',
