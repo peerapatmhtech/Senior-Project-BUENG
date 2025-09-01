@@ -126,6 +126,7 @@ const Profile = () => {
         throw new Error(response.data.message || "Upload failed");
       }
     } catch (err) {
+      console.error("Error uploading photo:", err);
       toast.error(err.message || "Upload failed");
     } finally {
       setUploading(false);
@@ -133,7 +134,6 @@ const Profile = () => {
   };
 
   const handleRemovePhoto = async (photoId) => {
-    if (!window.confirm("Are you sure you want to delete this photo?")) return;
     try {
       const response = await axios.delete(
         `${import.meta.env.VITE_APP_API_BASE_URL}/api/user-photo/${photoId}`,
@@ -144,7 +144,7 @@ const Profile = () => {
         if (activePhotoIndex >= userPhotos.length - 1) {
           setActivePhotoIndex(Math.max(0, userPhotos.length - 2));
         }
-        toast.success("Photo deleted");
+        toast.success(response.data.message || "Photo deleted");
       } else {
         throw new Error(response.data.message || "Deletion failed");
       }
@@ -159,13 +159,33 @@ const Profile = () => {
       const response = await axios.get(
         `${
           import.meta.env.VITE_APP_API_BASE_URL
-        }/api/user-photos/${encodeURIComponent(userEmail)}`
+        }/api/user-photos/${encodeURIComponent(userEmail)}`,
+        {
+          validateStatus: function (status) {
+            // ถือว่า status 200-299 และ 404 เป็น success (ไม่ throw error)
+            return (status >= 200 && status < 300) || status === 404;
+          },
+        }
       );
+
+      if (response.status === 404) {
+        setUserPhotos([]);
+        return;
+      }
+
       if (response.data.success) {
-        setUserPhotos(response.data.photos);
+        setUserPhotos(response.data.data || []);
+      } else {
+        setUserPhotos([]);
+        toast.error(response.data.message || "เกิดข้อผิดพลาด");
       }
     } catch (err) {
-      console.error("Failed to fetch photos:", err);
+      setUserPhotos([]);
+      if (err.request) {
+        toast.error("ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้");
+      } else {
+        toast.error(`เกิดข้อผิดพลาด: ${err.message}`);
+      }
     }
   };
 
@@ -241,7 +261,6 @@ const Profile = () => {
     };
     fetchAll();
   }, [userEmail]);
-
   if (!userEmail) {
     return (
       <div className="container-profile">
@@ -341,7 +360,11 @@ const Profile = () => {
           <div className="profile-photos">
             <div className="main-photo">
               {userPhotos.length > 0 ? (
-                <img src={userPhotos[activePhotoIndex]?.url} alt="Profile" className="profile-image-card"/>
+                <img
+                  src={userPhotos[activePhotoIndex]?.url}
+                  alt="Profile"
+                  className="profile-image-card"
+                />
               ) : (
                 <div
                   className="no-photo-placeholder"
@@ -353,35 +376,37 @@ const Profile = () => {
               )}
             </div>
             <div className="thumbnail-container">
-              {userPhotos.map((photo, index) => (
-                <div
-                  key={photo._id}
-                  className={`thumbnail ${
-                    index === activePhotoIndex ? "active" : ""
-                  } ${
-                    draggedOverPhoto && draggedOverPhoto._id === photo._id
-                      ? "drag-over"
-                      : ""
-                  }`}
-                  onClick={() => setActivePhotoIndex(index)}
-                  draggable
-                  onDragStart={(e) => handleDragStart(e, photo)}
-                  onDragEnter={(e) => handleDragEnter(e, photo)}
-                  onDragEnd={handleDragEnd}
-                  onDrop={(e) => e.preventDefault()}
-                >
-                  <img src={photo.url} alt={`Thumbnail ${index + 1}`} />
-                  <button
-                    className="remove-photo-btn"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleRemovePhoto(photo._id);
-                    }}
+              {userPhotos &&
+                Array.isArray(userPhotos) &&
+                userPhotos.map((photo, index) => (
+                  <div
+                    key={photo._id}
+                    className={`thumbnail ${
+                      index === activePhotoIndex ? "active" : ""
+                    } ${
+                      draggedOverPhoto && draggedOverPhoto._id === photo._id
+                        ? "drag-over"
+                        : ""
+                    }`}
+                    onClick={() => setActivePhotoIndex(index)}
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, photo)}
+                    onDragEnter={(e) => handleDragEnter(e, photo)}
+                    onDragEnd={handleDragEnd}
+                    onDrop={(e) => e.preventDefault()}
                   >
-                    ×
-                  </button>
-                </div>
-              ))}
+                    <img src={photo.url} alt={`Thumbnail ${index + 1}`} />
+                    <button
+                      className="remove-photo-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRemovePhoto(photo._id);
+                      }}
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
               {userPhotos.length < 5 && (
                 <div
                   className="thumbnail add-photo-thumbnail"

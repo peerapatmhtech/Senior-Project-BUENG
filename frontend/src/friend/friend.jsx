@@ -17,7 +17,6 @@ import HeaderProfile from "../ui/HeaderProfile";
 // แสดงข้อมูลสถานะการเชื่อมต่อ socket อย่างละเอียด
 // socket.on("connect", () => {
 
-//   console.log("Socket connected to URL:", import.meta.env.VITE_APP_API_BASE_URL);
 
 // การจัดการสถานะการเชื่อมต่อของ socket ทั้งหมดถูกย้ายไปที่ socketcontext.jsx แล้ว
 
@@ -25,7 +24,7 @@ import HeaderProfile from "../ui/HeaderProfile";
 
 const Friend = () => {
   // const { socket, onlineUsers } = useSocket(); // ใช้ socket และ onlineUsers จาก context
-  const { socket } = useNotifications();
+  const { socket, noti } = useNotifications();
   // รับ roomId จาก URL ถ้ามี เช่น /friend/:roomId
   const { roomId } = useParams();
 
@@ -105,7 +104,6 @@ const Friend = () => {
           ...unreadFriendRequest,
           id: unreadFriendRequest.id,
         });
-        console.log("แสดงคำขอเพื่อนที่ยังไม่ได้อ่าน:", unreadFriendRequest);
       }
     }
   }, [notifications, newFriendRequest, userEmail]);
@@ -120,15 +118,23 @@ const Friend = () => {
     setError("");
     try {
       const encodedEmail = encodeURIComponent(userEmail);
-      const userRes = await axios.get(
-        `${import.meta.env.VITE_APP_API_BASE_URL}/api/users/${encodedEmail}`
-      );
-      const currentUser = userRes.data;
+
+      ////////Fetch Online Users////////
       const allUsersRes = await axios.get(
         `${import.meta.env.VITE_APP_API_BASE_URL}/api/users`
       );
       const allUsers = allUsersRes.data;
+
+      /////////Set Online Users////////
       setUsers(allUsers);
+
+      //////////Fetch  Favorites////////
+      const userRes = await axios.get(
+        `${import.meta.env.VITE_APP_API_BASE_URL}/api/users/${encodedEmail}`
+      );
+      const currentUser = userRes.data;
+
+      /////////Set Favorites////////
       if (Array.isArray(currentUser.friends)) {
         // ดึง email จาก friends array (object)
         const friendEmails = currentUser.friends.map((f) => f.email);
@@ -140,7 +146,7 @@ const Friend = () => {
             displayName: user.displayName,
             isOnline: user.isOnline || false,
           }))
-          .sort((a, b) => a.displayName.localeCompare(b.displayName));
+          .sort((a, b) => a.displayName.localeCompare(b.displayName)); // เรียงตามชื่อ
         setFriends(filteredFriends);
       } else {
         setFriends([]);
@@ -157,11 +163,11 @@ const Friend = () => {
     fetchCurrentUserAndFriends();
 
     // แจ้งสถานะออนไลน์เมื่อเริ่มต้น
-    socket.emit("user-online", {
-      displayName,
-      photoURL,
-      email: userEmail,
-    });
+    // socket.emit("user-online", {
+    //   displayName,
+    //   photoURL,
+    //   email: userEmail,
+    // });
 
     // ลองเช็คการเชื่อมต่อของ socket ทุกๆ 10 วินาที
     const socketCheckInterval = setInterval(() => {
@@ -169,90 +175,88 @@ const Friend = () => {
         console.warn("⚠️ Socket ไม่ได้เชื่อมต่อ! กำลังลองเชื่อมต่อใหม่...");
         socket.connect();
       } else {
-        console.log("✓ Socket ยังคงเชื่อมต่ออยู่:", socket.id);
       }
     }, 10000);
-
     // ฟังการแจ้งเตือนเมื่อมีคนส่งคำขอเพื่อนใหม่
-    socket.on("notify-friend-request", async () => {
-      try {
-        // ดึงข้อมูลคำขอเพื่อนล่าสุดผ่าน REST API
-        const response = await axios.get(
-          `${
-            import.meta.env.VITE_APP_API_BASE_URL
-          }/api/friend-requests/${userEmail}`
-        );
+    // socket.on("notify-friend-request", async () => {
+    //   try {
+    //     // ดึงข้อมูลคำขอเพื่อนล่าสุดผ่าน REST API
+    //     const response = await axios.get(
+    //       `${
+    //         import.meta.env.VITE_APP_API_BASE_URL
+    //       }/api/friend-requests/${userEmail}`
+    //     );
 
-        // ถ้าไม่มีคำขอเพื่อนใหม่
-        if (
-          !response.data ||
-          !response.data.requests ||
-          response.data.requests.length === 0
-        ) {
-          console.log("ไม่พบคำขอเพื่อนใหม่จาก API");
-          return;
-        }
+    //     // ถ้าไม่มีคำขอเพื่อนใหม่
+    //     if (
+    //       !response.data ||
+    //       !response.data.requests ||
+    //       response.data.requests.length === 0
+    //     ) {
+    //       console.log("ไม่พบคำขอเพื่อนใหม่จาก API");
+    //       return;
+    //     }
 
-        // หาคำขอเพื่อนล่าสุด
-        const latestRequest = response.data.requests[0];
-        console.log("คำขอเพื่อนล่าสุดจาก API:", latestRequest);
+    //     // หาคำขอเพื่อนล่าสุด
+    //     const latestRequest = response.data.requests[0];
+    //     console.log("คำขอเพื่อนล่าสุดจาก API:", latestRequest);
 
-        // สร้าง ID สำหรับคำขอ (ใช้ ID จาก API ถ้ามี หรือสร้างใหม่)
-        const requestId = latestRequest.requestId || Date.now();
+    //     // สร้าง ID สำหรับคำขอ (ใช้ ID จาก API ถ้ามี หรือสร้างใหม่)
+    //     const requestId = latestRequest.requestId || Date.now();
 
-        // เซ็ตข้อมูลคำขอใหม่พร้อม ID
-        setNewFriendRequest({
-          from: latestRequest.from,
-          to: latestRequest.to,
-          timestamp: latestRequest.timestamp,
-          id: requestId,
-        });
+    //     // เซ็ตข้อมูลคำขอใหม่พร้อม ID
+    //     setNewFriendRequest({
+    //       from: latestRequest.from,
+    //       to: latestRequest.to,
+    //       timestamp: latestRequest.timestamp,
+    //       id: requestId,
+    //     });
 
-        // อัพเดตการแจ้งเตือนใน state
-        setNotifications((prevNotifications) => {
-          const newNotification = {
-            id: requestId,
-            type: "friend-request",
-            from: latestRequest.from,
-            timestamp: latestRequest.timestamp,
-            read: false,
-          };
+    //     // อัพเดตการแจ้งเตือนใน state
+    //     setNotifications((prevNotifications) => {
+    //       const newNotification = {
+    //         id: requestId,
+    //         type: "friend-request",
+    //         from: latestRequest.from,
+    //         timestamp: latestRequest.timestamp,
+    //         read: false,
+    //       };
 
-          // กรองคำขอเพื่อนที่ซ้ำกันออกไป
-          const filteredNotifications = prevNotifications.filter(
-            (n) =>
-              n.type !== "friend-request" ||
-              (n.type === "friend-request" &&
-                n.from.email !== latestRequest.from.email)
-          );
+    //       // กรองคำขอเพื่อนที่ซ้ำกันออกไป
+    //       const filteredNotifications = prevNotifications.filter(
+    //         (n) =>
+    //           n.type !== "friend-request" ||
+    //           (n.type === "friend-request" &&
+    //             n.from.email !== latestRequest.from.email)
+    //       );
 
-          // สร้างรายการแจ้งเตือนใหม่
-          return [newNotification, ...filteredNotifications];
-        });
+    //       // สร้างรายการแจ้งเตือนใหม่
+    //       return [newNotification, ...filteredNotifications];
+    //     });
 
-        // แสดง toast notification
-        toast.info(
-          <div className="friend-request-toast">
-            <img
-              src={latestRequest.from.photoURL}
-              alt={latestRequest.from.displayName}
-              className="toast-profile-img"
-            />
-            <div className="toast-content">
-              <strong>{latestRequest.from.displayName}</strong>{" "}
-              ได้ส่งคำขอเป็นเพื่อนถึงคุณ
-            </div>
-          </div>,
-          {
-            autoClose: 8000,
-            position: "bottom-right",
-          }
-        );
-      } catch (error) {
-        console.error("เกิดข้อผิดพลาดในการดึงข้อมูลคำขอเพื่อน:", error);
-      }
-      console.log("ได้รับการแจ้งเตือนคำขอเพื่อนใหม่ผ่าน WebSocket");
-    });
+    //     // แสดง toast notification
+    //     toast.info(
+    //       <div className="friend-request-toast">
+    //         <img
+    //           src={latestRequest.from.photoURL}
+    //           alt={latestRequest.from.displayName}
+    //           className="toast-profile-img"
+    //         />
+    //         <div className="toast-content">
+    //           <strong>{latestRequest.from.displayName}</strong>{" "}
+    //           ได้ส่งคำขอเป็นเพื่อนถึงคุณ
+    //         </div>
+    //       </div>,
+    //       {
+    //         autoClose: 8000,
+    //         position: "bottom-right",
+    //       }
+    //     );
+    //   } catch (error) {
+    //     console.error("เกิดข้อผิดพลาดในการดึงข้อมูลคำขอเพื่อน:", error);
+    //   }
+    //   console.log("ได้รับการแจ้งเตือนคำขอเพื่อนใหม่ผ่าน WebSocket");
+    // });
 
     // ฟังการแจ้งเตือนเมื่อมีคนยอมรับคำขอเป็นเพื่อน
     socket.on("notify-friend-accept", async () => {
@@ -388,7 +392,7 @@ const Friend = () => {
     // ฟังเมื่อเราถูกลบออกจากรายการเพื่อน
     socket.on("notify-friend-removed", async (data) => {
       if (data.to === userEmail) {
-        console.log(`คุณถูกลบออกจากรายการเพื่อนโดย: ${data.from}`);
+    
 
         // ดึงข้อมูลเพื่อนใหม่
         await fetchCurrentUserAndFriends();
@@ -412,7 +416,7 @@ const Friend = () => {
       socket.off("notify-friend-accept");
       socket.off("notify-friend-removed");
     };
-  }, [userEmail]);
+  }, [socket, userEmail]);
 
   // ฟังก์ชันสำหรับการทำเครื่องหมายว่าแจ้งเตือนได้อ่านแล้ว
   const markNotificationAsRead = (notificationId) => {
@@ -580,6 +584,28 @@ const Friend = () => {
       handleCloseModal();
     }
   };
+  useEffect(() => {
+    if (!noti) return;
+    try {
+      const friendEmail = noti.from.email;
+      const addedUser = users.find((user) => user.email === friendEmail);
+
+      // เพิ่มเพื่อนใหม่ในรายการ UI
+      if (addedUser) {
+        setFriends((prev) =>
+          [
+            ...prev,
+            {
+              photoURL: addedUser.photoURL,
+              email: addedUser.email,
+              displayName: addedUser.displayName,
+              isOnline: addedUser.isOnline || false,
+            },
+          ].sort((a, b) => a.displayName.localeCompare(b.displayName))
+        );
+      }
+    } catch (err) {}
+  }, [noti]);
 
   useEffect(() => {
     document.addEventListener("mousedown", handleClickOutside);
@@ -698,19 +724,6 @@ const Friend = () => {
   const filteredFriends = friends.filter((friend) =>
     friend.displayName.toLowerCase().includes(searchTerm.toLowerCase())
   );
-  // ฟังก์ชันสำหรับล้างการแจ้งเตือนที่อ่านแล้ว
-  const clearReadNotifications = () => {
-    console.log("🧹 กำลังล้างการแจ้งเตือนที่อ่านแล้ว");
-
-    setNotifications((prevNotifications) => {
-      // กรองเอาเฉพาะการแจ้งเตือนที่ยังไม่ได้อ่าน
-      const unreadNotifications = prevNotifications.filter((n) => !n.read);
-      console.log(
-        `✅ เหลือการแจ้งเตือนที่ยังไม่ได้อ่าน ${unreadNotifications.length} รายการ`
-      );
-      return unreadNotifications;
-    });
-  };
 
   const fetchFollowInfo = async (targetEmail) => {
     try {
@@ -726,102 +739,7 @@ const Friend = () => {
     }
   };
 
-  // ฟังก์ชันสำหรับจัดการกับการตอบกลับคำขอเป็นเพื่อน
-  const handleFriendRequestResponse = async (requestId, response) => {
-    // ทำเครื่องหมายว่าอ่านแล้ว
-    markNotificationAsRead(requestId);
 
-    // ถ้าตอบรับเป็นเพื่อน
-    if (response === "accept") {
-      // แจ้งกลับไปยังผู้ส่งคำขอว่าได้ตอบรับแล้ว
-      const notification = notifications.find((n) => n.id === requestId);
-      if (notification) {
-        try {
-          // ใช้ roomId จาก useParams ถ้ามี ถ้าไม่มีให้ gen ใหม่
-          const finalRoomId = roomId || generateRoomId();
-
-          // ส่งการตอบกลับคำขอเพื่อนผ่าน REST API
-          const responseData = await axios.post(
-            `${
-              import.meta.env.VITE_APP_API_BASE_URL
-            }/api/friend-request-response`,
-            {
-              requestId: requestId,
-              userEmail: userEmail,
-              friendEmail: notification.from.email,
-              response: "accept",
-              roomId: finalRoomId,
-              from: {
-                email: userEmail,
-                displayName: displayName,
-                photoURL: photoURL,
-              },
-              to: notification.from.email,
-              timestamp: new Date().toISOString(),
-            },
-            {
-              headers: {
-                "Content-Type": "application/json",
-              },
-            }
-          );
-          await axios.post(
-            `${import.meta.env.VITE_APP_API_BASE_URL}/api/add-friend`,
-            {
-              userEmail: notification.from.email,
-              friendEmail: userEmail,
-              roomId: requestId,
-            },
-            {
-              headers: {
-                "Content-Type": "application/json",
-              },
-            }
-          );
-
-          console.log("การตอบรับคำขอเพื่อนสำเร็จ:", responseData.data);
-
-          // เพิ่มเพื่อนใหม่ในรายการ UI
-          const addedUser = users.find(
-            (user) => user.email === notification.from.email
-          );
-
-          if (addedUser) {
-            setFriends((prev) =>
-              [
-                ...prev,
-                {
-                  photoURL: addedUser.photoURL,
-                  email: addedUser.email,
-                  displayName: addedUser.displayName,
-                  isOnline: addedUser.isOnline || false,
-                },
-              ].sort((a, b) => a.displayName.localeCompare(b.displayName))
-            );
-          }
-
-          // ส่งการแจ้งเตือนแบบ real-time ไปยังผู้ใช้ปลายทางเพื่อแสดงผลทันที
-          // แต่การอัปเดตข้อมูลจริงอยู่ใน API แล้ว
-          if (socket.connected) {
-            socket.emit("notify-friend-accept", {
-              to: notification.from.email,
-            });
-          }
-
-          // รีเซ็ตคำขอที่กำลังแสดง
-          setNewFriendRequest(null);
-
-          toast.success(
-            `คุณได้ตอบรับคำขอเป็นเพื่อนจาก ${notification.from.displayName}`
-          );
-        } catch (error) {
-          console.error("เกิดข้อผิดพลาดในการยอมรับคำขอเพื่อน:", error);
-          toast.error("ไม่สามารถเพิ่มเพื่อนได้");
-        }
-      }
-    }
-    // ส่วนของการปฏิเสธคำขอเพื่อนถูกย้ายไปใช้ handleDeleteFriendRequest โดยตรงแทน
-  };
   useEffect(() => {
     const getNickNameF = async () => {
       try {
@@ -836,41 +754,6 @@ const Friend = () => {
     getNickNameF();
   }, []);
 
-  // ฟังก์ชันสำหรับลบคำขอเพื่อน
-  const handleDeleteFriendRequest = async (requestId) => {
-    // ทำเครื่องหมายว่าอ่านแล้ว
-    markNotificationAsRead(requestId);
-
-    try {
-      // ค้นหาข้อมูลการแจ้งเตือนคำขอเพื่อน
-      const notification = notifications.find((n) => n.id === requestId);
-      if (notification) {
-        // ลองใช้ endpoint แรก (ด้วย requestId)
-
-        await axios.delete(
-          `${
-            import.meta.env.VITE_APP_API_BASE_URL
-          }/api/friend-request/${requestId}`,
-          {
-            headers: {
-              "Content-Type": "application/json",
-            },
-          }
-        );
-
-        // ลบคำขอที่แสดงอยู่ออกจาก UI
-        setNotifications((prevNotifications) =>
-          prevNotifications.filter((notif) => notif.id !== requestId)
-        );
-
-        // แสดงข้อความยืนยัน
-        toast.success("ลบคำขอเพื่อนเรียบร้อยแล้ว");
-      }
-    } catch (error) {
-      console.error("เกิดข้อผิดพลาดในการลบคำขอเพื่อน:", error);
-      toast.error("ไม่สามารถลบคำขอเพื่อนได้");
-    }
-  };
 
   // ฟังก์ชันสำหรับแปลงเวลา lastSeen
   const formatLastSeen = (lastSeen) => {

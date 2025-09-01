@@ -22,6 +22,12 @@ export const NotificationProvider = ({ children }) => {
     useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
+  /////////////เก็บสถานะผู้ใช้ออนไลน์///////////
+  const [onlineUsers, setOnlineUsers] = useState({});
+
+  ///////////สถานะการเชื่อมต่อ socket///////////
+  const [isConnected, setIsConnected] = useState(false);
+
   // ข้อมูลผู้ใช้จาก localStorage
   const userEmail = localStorage.getItem("userEmail");
   const displayName = localStorage.getItem("userName");
@@ -64,35 +70,33 @@ export const NotificationProvider = ({ children }) => {
       setNotifications(notificationData);
 
       // ตั้งค่า newFriendRequest เป็นคำขอล่าสุด
-      if (notificationData.length > 0) {
-        const latestRequest = notificationData[0];
-        setNewFriendRequest(latestRequest);
+      const latestRequest = notificationData[0];
+      setNewFriendRequest(latestRequest);
 
-        // แสดง toast notification เฉพาะเมื่อมี notification ใหม่
-        toast.info(
-          <div className="friend-request-toast">
-            <img
-              src={latestRequest.from?.photoURL}
-              alt={latestRequest.from?.displayName}
-              className="toast-profile-img"
-              style={{
-                width: "40px",
-                height: "40px",
-                borderRadius: "50%",
-                marginRight: "8px",
-              }}
-            />
-            <div className="toast-content">
-              <strong>{latestRequest.from?.displayName}</strong>{" "}
-              ได้ส่งคำขอเป็นเพื่อนถึงคุณ
-            </div>
-          </div>,
-          {
-            autoClose: 8000,
-            position: "bottom-right",
-          }
-        );
-      }
+      // แสดง toast notification เฉพาะเมื่อมี notification ใหม่
+      toast.info(
+        <div className="friend-request-toast">
+          <img
+            src={latestRequest.from?.photoURL}
+            alt={latestRequest.from?.displayName}
+            className="toast-profile-img"
+            style={{
+              width: "40px",
+              height: "40px",
+              borderRadius: "50%",
+              marginRight: "8px",
+            }}
+          />
+          <div className="toast-content">
+            <strong>{latestRequest.from?.displayName}</strong>{" "}
+            ได้ส่งคำขอเป็นเพื่อนถึงคุณ
+          </div>
+        </div>,
+        {
+          autoClose: 8000,
+          position: "bottom-right",
+        }
+      );
     } catch (error) {
       console.error("❌ Error fetching notifications:", error);
       // อย่า toast error ทุกครั้ง เพราะอาจเป็น 404 (ไม่มี notifications)
@@ -221,67 +225,65 @@ export const NotificationProvider = ({ children }) => {
   useEffect(() => {
     // ตั้งค่า Socket Event Listeners
     if (socket && userEmail) {
-      console.log("🔌 Setting up socket listeners for:", userEmail);
-
+      ////////ฟังก์ชันตั้งค่า listener///////////
+      setupSocketListeners(socket);
       // ฟัง event เมื่อมีคำขอเพื่อนใหม่
       const handleFriendRequestEvent = async (data) => {
-        console.log("📨 Received notify-friend-request:", data);
         await handleNotifyFriendRequest(data);
       };
 
       // ฟัง event เมื่อมีการยอมรับคำขอเพื่อน
       const handleFriendAcceptEvent = async (data) => {
-        console.log("✅ Received notify-friend-accept:", data);
         await handleNotifyFriendAccept(data);
       };
 
+      // เมื่อเชื่อมต่อสำเร็จ
+      socket.on("connect", () => {
+        setIsConnected(true);
+        // แจ้งเซิร์ฟเวอร์ว่าผู้ใช้ออนไลน์
+        socket.emit("user-online", { displayName, photoURL, email: userEmail });
+      });
+
+      ////////ผู้ใช้ขาดการเชื่อมต่อ///////////
+      socket.on("disconnect", () => {
+        setIsConnected(false);
+      });
+
+      // ตั้งค่า ping interval
+      const pingInterval = setInterval(() => {
+        if (socket.connected) {
+          socket.emit("user-ping", { email: userEmail });
+        }
+      }, 30000);
+
+      // จัดการเมื่อปิดแอป
+      const handleBeforeUnload = () => {
+        socket.emit("user-offline", { email: userEmail });
+      };
+
+      window.addEventListener("beforeunload", handleBeforeUnload);
       // Register event listeners
       socket.on("notify-friend-request", handleFriendRequestEvent);
       socket.on("notify-friend-accept", handleFriendAcceptEvent);
 
-      // เพิ่ม event สำหรับ connection status
-      socket.on("connect", () => {
-        console.log("✅ Socket connected:", socket.id);
-      });
-
-      socket.on("disconnect", () => {
-        console.log("❌ Socket disconnected");
-      });
-
       // Cleanup function
       return () => {
-        console.log("🧹 Cleaning up socket listeners");
+        window.removeEventListener("beforeunload", handleBeforeUnload);
+        clearInterval(pingInterval);
+        socket.close();
+        // Unregister event listeners
         socket.off("notify-friend-request", handleFriendRequestEvent);
         socket.off("notify-friend-accept", handleFriendAcceptEvent);
-        socket.off("connect");
-        socket.off("disconnect");
       };
     }
-  }, [userEmail, handleNotifyFriendRequest, handleNotifyFriendAccept]);
-
-  useEffect(() => {
-    const handleConnect = () => {
-      if (userEmail) {
-        console.log(`Emitting user-online for ${userEmail}`);
-        socket.emit("user-online", {
-          email: userEmail,
-          displayName: displayName,
-          photoURL: photoURL,
-        });
-      }
-    };
-
-    socket.on("connect", handleConnect);
-
-    // also emit when userEmail becomes available
-    if (socket.connected && userEmail) {
-      handleConnect();
-    }
-
-    return () => {
-      socket.off("connect", handleConnect);
-    };
-  }, [socket, userEmail, displayName, photoURL]);
+  }, [
+    socket,
+    displayName,
+    photoURL,
+    userEmail,
+    handleNotifyFriendRequest,
+    handleNotifyFriendAccept,
+  ]);
 
   // ฟังก์ชันสำหรับการทำเครื่องหมายว่าแจ้งเตือนได้อ่านแล้ว
   const markNotificationAsRead = (notificationId) => {
@@ -353,10 +355,9 @@ export const NotificationProvider = ({ children }) => {
   }
 
   // ฟังก์ชันสำหรับจัดการกับการตอบกลับคำขอเป็นเพื่อน
-  const handleFriendRequestResponse = async (requestId, response, roomId) => {
+  const handleFriendRequestResponse = async (requestId, response) => {
     // ทำเครื่องหมายว่าอ่านแล้ว
     markNotificationAsRead(requestId);
-    console.log("Response:", response, "RoomId:", roomId);
     // ถ้าตอบรับเป็นเพื่อน
     if (response === "accept") {
       // แจ้งกลับไปยังผู้ส่งคำขอว่าได้ตอบรับแล้ว
@@ -364,7 +365,7 @@ export const NotificationProvider = ({ children }) => {
       if (notification) {
         try {
           // ใช้ roomId ที่ส่งเข้ามา ถ้าไม่มีให้ gen ใหม่
-          const finalRoomId = roomId || generateRoomId();
+          const finalRoomId = generateRoomId();
 
           // ส่งการตอบกลับคำขอเพื่อนผ่าน REST API
           const responseData = await axios.post(
@@ -416,7 +417,6 @@ export const NotificationProvider = ({ children }) => {
             setNotifications((prevNotifications) =>
               prevNotifications.filter((n) => n.id !== requestId)
             );
-
             // Emit socket event
             if (socket.connected) {
               socket.emit("notify-friend-accept", {
@@ -429,6 +429,54 @@ export const NotificationProvider = ({ children }) => {
             setTimeout(() => fetchNotifications(), 1000);
 
             return true;
+          }
+
+          const addedUser = users.find(
+            (user) => user.email === notification.from.email
+          );
+
+          // เพิ่มเพื่อนใหม่ในรายการ UI
+          if (addedUser) {
+            setFriends((prev) =>
+              [
+                ...prev,
+                {
+                  photoURL: addedUser.photoURL,
+                  email: addedUser.email,
+                  displayName: addedUser.displayName,
+                  isOnline: addedUser.isOnline || false,
+                },
+              ].sort((a, b) => a.displayName.localeCompare(b.displayName))
+            );
+          }
+          // ต้องดึงข้อมูลจาก API เพื่อดูว่าใครยอมรับคำขอเพื่อนเรา
+          const response = await axios.get(
+            `${
+              import.meta.env.VITE_APP_API_BASE_URL
+            }/api/friend-accepts/${userEmail}`
+          );
+
+          if (response.data && response.data.latestAccept) {
+            const acceptInfo = response.data.latestAccept;
+
+            // แสดง toast notification
+            toast.success(
+              <div className="friend-request-toast">
+                <img
+                  src={acceptInfo.photoURL}
+                  alt={acceptInfo.displayName}
+                  className="toast-profile-img"
+                />
+                <div className="toast-content">
+                  <strong>{acceptInfo.displayName}</strong>{" "}
+                  ได้ตอบรับคำขอเป็นเพื่อนของคุณแล้ว
+                </div>
+              </div>,
+              {
+                autoClose: 5000,
+                position: "bottom-right",
+              }
+            );
           }
         } catch (error) {
           console.error("❌ Error accepting friend request:", error);
@@ -500,6 +548,82 @@ export const NotificationProvider = ({ children }) => {
     fetchNotifications();
   };
 
+  // ฟังก์ชันตั้งค่า onlineUsers จากข้อมูลที่ได้รับจากเซิร์ฟเวอร์
+  const setupSocketListeners = (socket) => {
+    // รับข้อมูลการอัปเดตสถานะผู้ใช้
+    socket.on("update-users", (data) => {
+      if (Array.isArray(data)) {
+        const updatedUsers = {};
+        data.forEach((user) => {
+          if (user && user.email) {
+            updatedUsers[user.email] = {
+              online: true,
+              lastActive: Date.now(),
+              ...user,
+            };
+          }
+        });
+        setOnlineUsers(updatedUsers);
+      } else if (data && Array.isArray(data.onlineUsers)) {
+        setOnlineUsers((prev) => {
+          const updatedUsers = { ...prev };
+
+          // อัปเดตผู้ใช้ออนไลน์
+          data.onlineUsers.forEach((email) => {
+            if (email) {
+              updatedUsers[email] = {
+                ...updatedUsers[email],
+                online: true,
+                lastActive: Date.now(),
+              };
+            }
+          });
+
+          // อัปเดต lastSeenTimes สำหรับผู้ใช้ออฟไลน์
+          if (data.lastSeenTimes) {
+            Object.entries(data.lastSeenTimes).forEach(([email, time]) => {
+              if (updatedUsers[email] && !updatedUsers[email].online) {
+                updatedUsers[email] = {
+                  ...updatedUsers[email],
+                  lastActive: time,
+                };
+              }
+            });
+          }
+
+          return updatedUsers;
+        });
+      }
+    });
+
+    // ฟังเมื่อมีผู้ใช้ออฟไลน์
+    socket.on("user-offline", (userData) => {
+      if (userData && userData.email) {
+        setOnlineUsers((prev) => ({
+          ...prev,
+          [userData.email]: {
+            ...prev[userData.email],
+            online: false,
+            lastActive: userData.lastSeen || Date.now(),
+          },
+        }));
+      }
+    });
+
+    // ฟังเมื่อมีผู้ใช้ออนไลน์
+    socket.on("user-online", (userData) => {
+      if (userData && userData.email) {
+        setOnlineUsers((prev) => ({
+          ...prev,
+          [userData.email]: {
+            ...prev[userData.email],
+            online: true,
+            lastActive: Date.now(),
+          },
+        }));
+      }
+    });
+  };
   return (
     <NotificationContext.Provider
       value={{
@@ -511,9 +635,12 @@ export const NotificationProvider = ({ children }) => {
         markNotificationAsRead,
         socket,
         clearReadNotifications,
+        onlineUsers,
+        isConnected,
         handleFriendRequestResponse,
         setNewFriendRequest,
         fetchNotifications,
+        noti: notifications,
         setNotifications,
         handleNotifyFriendAccept,
         handleDeleteFriendRequest,

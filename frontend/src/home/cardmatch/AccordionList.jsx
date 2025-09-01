@@ -142,7 +142,7 @@ const AccordionList = ({ items }) => {
                                         ))}
                                     </span>
                                 ) : (
-                                    <span className="accordion-title theme-title">Select genres</span>
+                                    <span className="accordion-title theme-title">Select category</span>
                                 )}
                                 <span className="arrow theme-arrow" style={{ marginLeft: 'auto', paddingTop: '8.2px' }}>{openIndex === idx ? <FaChevronDown /> : <FaChevronRight />}</span>
                             </button>

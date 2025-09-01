@@ -53,12 +53,10 @@ const HeaderProfile = ({
         photoURL: userPhoto,
         email: userEmail,
       });
-      const handleFriendRequest = (data) => {
-        console.log("Received notify-friend-request in HeaderProfile:", data);
+      const handleFriendRequest = () => {
         fetchNotifications();
       };
-      const handleFriendAccept = (data) => {
-        console.log("Received notify-friend-accept in HeaderProfile:", data);
+      const handleFriendAccept = () => {
         fetchNotifications();
       };
       socket.on("notify-friend-request", handleFriendRequest);

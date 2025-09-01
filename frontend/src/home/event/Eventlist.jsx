@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef, useCallback } from "react";
 import axios from "axios";
 import "./Eventlist.css";
 import { useTheme } from "../../context/themecontext";
-import { useSocket } from "../../context/socketcontext"; // Import useSocket
+import { useNotifications } from "../../context/notificationContext"; // Import useSocket
 import { MdFavorite, MdFavoriteBorder } from "react-icons/md";
 import { FiCalendar, FiX } from "react-icons/fi";
 
@@ -14,7 +14,7 @@ const EventList = () => {
   const email = localStorage.getItem("userEmail");
   const { isDarkMode } = useTheme();
   const [favoriteEvents, setFavoriteEvents] = useState([]);
-  const { socket } = useSocket();
+  const { socket } = useNotifications();
 
   const user = { email };
 

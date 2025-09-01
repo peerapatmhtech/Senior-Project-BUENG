@@ -671,3 +671,56 @@
     height: 540px;
   }
 }
+
+/* Styles for photo navigation */
+.room-card-match {
+  position: relative;
+}
+
+.photo-nav-overlay-left,
+.photo-nav-overlay-right {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 50%;
+    z-index: 10;
+    cursor: pointer;
+}
+
+.photo-nav-overlay-left {
+    left: 0;
+}
+
+.photo-nav-overlay-right {
+    right: 0;
+}
+
+.photo-dots {
+    position: absolute;
+    top: 10px;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: center;
+    z-index: 10;
+    padding: 0 10px; /* Add some padding */
+    box-sizing: border-box; /* Ensure padding is included in width */
+}
+
+.photo-dots .dot {
+    flex-shrink: 0; /* Prevent dots from shrinking */
+    height: 6px;
+    width: 6px;
+    background-color: rgba(255, 255, 255, 0.5);
+    border-radius: 50%;
+    display: inline-block;
+    margin: 0 3px;
+    transition: all 0.3s ease;
+    flex-grow: 1; /* Make dots fill the space */
+    max-width: 20px; /* Limit dot width */
+}
+
+.photo-dots .dot.active {
+    background-color: white;
+    flex-grow: 2; /* Make active dot wider */
+}
