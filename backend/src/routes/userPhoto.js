@@ -1,17 +1,12 @@
 import express from "express";
-import multer from "multer";
-import path from "path";
-import fs from "fs";
+import { Gmail } from "../model/gmail.js";
 import { UserPhoto } from "../model/userPhoto.js";
+import multer from "multer";
+import fs from "fs";
+import path from "path";
 
 const router = express.Router();
 
-// Test route to check if userPhoto routes are accessible
-router.get("/test-photo-route", (req, res) => {
-  res.json({ success: true, message: "Photo routes are working!" });
-});
-
-// Setup multer for file uploads
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     const uploadDir = path.join(process.cwd(), "uploads", "user-photos");
@@ -25,7 +20,7 @@ const storage = multer.diskStorage({
     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
     const ext = path.extname(file.originalname);
     cb(null, file.fieldname + "-" + uniqueSuffix + ext);
-  }
+  },
 });
 
 // File filter to only allow image files
@@ -37,20 +32,19 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
-const upload = multer({ 
+const upload = multer({
   storage: storage,
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
-  fileFilter: fileFilter
+  fileFilter: fileFilter,
 });
 
-// Upload user photo
 router.post("/upload-user-photo", upload.single("photo"), async (req, res) => {
   console.log("Upload photo API called", req.file, req.body);
   try {
     if (!req.file) {
-      return res.status(400).json({ 
-        success: false, 
-        message: "ไม่พบไฟล์รูปภาพ" 
+      return res.status(400).json({
+        success: false,
+        message: "ไม่พบไฟล์รูปภาพ",
       });
     }
 
@@ -58,19 +52,19 @@ router.post("/upload-user-photo", upload.single("photo"), async (req, res) => {
     if (!email) {
       return res.status(400).json({
         success: false,
-        message: "ไม่พบอีเมลผู้ใช้"
+        message: "ไม่พบอีเมลผู้ใช้",
       });
     }
 
     // Create a URL for the uploaded file
     const fileUrl = `/uploads/user-photos/${req.file.filename}`;
-    
+
     // Create a new user photo record
     const newPhoto = new UserPhoto({
       email,
       url: fileUrl,
       filename: req.file.filename,
-      title: req.body.title || `รูปภาพ ${Date.now()}`
+      title: req.body.title || `รูปภาพ ${Date.now()}`,
     });
 
     await newPhoto.save();
@@ -82,97 +76,72 @@ router.post("/upload-user-photo", upload.single("photo"), async (req, res) => {
         id: newPhoto._id,
         url: newPhoto.url,
         title: newPhoto.title,
-        createdAt: newPhoto.createdAt
-      }
+        createdAt: newPhoto.createdAt,
+      },
     });
   } catch (error) {
     console.error("❌ Error uploading user photo:", error);
     res.status(500).json({
       success: false,
-      message: "เกิดข้อผิดพลาดในการอัปโหลดรูปภาพ"
+      message: "เกิดข้อผิดพลาดในการอัปโหลดรูปภาพ",
     });
   }
 });
-
-// Get user photos
 router.get("/user-photos/:email", async (req, res) => {
+  const { email } = req.params;
   try {
-    const { email } = req.params;
-    if (!email) {
-      return res.status(400).json({
-        success: false,
-        message: "ไม่พบอีเมลผู้ใช้"
-      });
+    if (!email)
+      return res
+        .status(400)
+        .json({ success: false, message: "Email is required" });
+
+    const user = await UserPhoto.find({ email: req.params.email });
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Empty Photo this user" });
     }
-
-    const photos = await UserPhoto.find({ email })
-      .sort({ createdAt: -1 }) // Sort by newest first
-      .select("_id url title createdAt");
-
-    res.status(200).json({
-      success: true,
-      photos: photos.map(photo => ({
-        id: photo._id,
-        url: photo.url,
-        title: photo.title,
-        createdAt: photo.createdAt
-      }))
-    });
+    res.json({ success: true, data: user });
   } catch (error) {
-    console.error("❌ Error fetching user photos:", error);
-    res.status(500).json({
-      success: false,
-      message: "เกิดข้อผิดพลาดในการดึงข้อมูลรูปภาพ"
-    });
+    res.status(500).json({ success: false, message: "Server error" });
   }
 });
 
-// Delete user photo
-router.delete("/user-photo/:id", async (req, res) => {
+router.delete("/user-photo/:photoId", async (req, res) => {
   try {
-    const { id } = req.params;
     const { email } = req.body;
-    
-    if (!id || !email) {
-      return res.status(400).json({
-        success: false,
-        message: "ไม่พบข้อมูลที่จำเป็น"
-      });
+    const { photoId } = req.params;
+
+    const user = await UserPhoto.findOne({ email: email });
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
     }
 
-    // Find the photo first to get the filename
-    const photo = await UserPhoto.findOne({ _id: id, email });
-    
-    if (!photo) {
-      return res.status(404).json({
-        success: false,
-        message: "ไม่พบรูปภาพที่ต้องการลบ"
-      });
-    }
+    await UserPhoto.findByIdAndDelete(photoId);
 
-    // Delete the photo record from the database
-    await UserPhoto.deleteOne({ _id: id, email });
-    
-    // Delete the actual file if exists
-    if (photo.filename) {
-      const filePath = path.join(process.cwd(), "uploads", "user-photos", photo.filename);
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-      }
-    }
-
-    res.status(200).json({
-      success: true,
-      message: "ลบรูปภาพสำเร็จ"
-    });
+    res.json({ success: true, message: "Photo deleted successfully" });
   } catch (error) {
-    console.error("❌ Error deleting user photo:", error);
-    res.status(500).json({
-      success: false,
-      message: "เกิดข้อผิดพลาดในการลบรูปภาพ"
-    });
+    res.status(500).json({ success: false, message: "Server error" });
   }
 });
 
-// Export the router - make sure this line is correct
+router.post("/user-photos/reorder", async (req, res) => {
+  try {
+    const { email, photoIds } = req.body;
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    }
+    user.photos = photoIds;
+    await user.save();
+    res.json({ success: true, message: "Photo order updated" });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
 export default router;

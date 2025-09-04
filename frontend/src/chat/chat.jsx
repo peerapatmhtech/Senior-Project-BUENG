@@ -26,7 +26,7 @@ import "./css/OnlineStatus.css";
 import axios from "axios";
 import "react-toastify/dist/ReactToastify.css";
 import ChatContainerAI from "./components/javascript/ChatContainerAI";
-import { useSocket } from "../context/socketcontext";
+import { useNotifications } from "../context/notificationContext";
 import { useTheme } from "../context/themecontext";
 import ListUser from "./components/javascript/userlist";
 import CommunityList from "./components/javascript/communitylist";
@@ -35,7 +35,7 @@ import MatchList from "./components/javascript/matchlist";
 import ShowTitle from "./components/javascript/showtitle";
 
 const Chat = () => {
-  const { socket, onlineUsers } = useSocket(); // ใช้ socket และ onlineUsers จาก context
+  const { socket, onlineUsers } = useNotifications(); // ใช้ socket และ onlineUsers จาก context
   const { isDarkMode, setIsDarkMode } = useTheme();
   const [isOpencom, setIsOpencom] = useState(false);
   const { roomId } = useParams();
@@ -356,9 +356,7 @@ const Chat = () => {
     if (!userEmail) return;
     fetchCurrentUserAndFriends();
 
-     socket.on("notify-friend-request", async () => {
-       console.log("ได้รับการแจ้งเตือนคำขอเพื่อนใหม่ผ่าน WebSocket");
-     });
+ 
     // เมื่อเข้าสู่หน้า chat ส่งข้อมูลว่าผู้ใช้ออนไลน์
     socket.emit("user-online", { displayName, photoURL, email: userEmail });
 
@@ -628,7 +626,6 @@ const Chat = () => {
   const isOnline = (email) => {
     return email && onlineUsers && onlineUsers[email]?.online;
   };
-
   // ฟังก์ชันสำหรับแสดงสถานะออนไลน์หรือเวลาออฟไลน์ล่าสุด
   const formatOnlineStatus = (user) => {
     if (!user || !user.email) return "";
