@@ -5,19 +5,22 @@ import { Filter } from "../model/filter.js";
 import { Gmail } from "../model/gmail.js";
 import { ImageGenre } from "../model/image.js";
 
-export default function(io) {
+export default function (io) {
     const router = express.Router();
 
     // Save event
     router.post("/save-event", async (req, res) => {
-        const { title, genre, location, date, description, link, isFirst, email } = req.body;
+        const { title, genre, description, link, image, email } = req.body;
         try {
-            if (isFirst) {
-                await Event.deleteMany({});
+            if (!email) {
+                return res.status(400).json({ message: "Email is required" });
             }
-            const newEvent = new Event({ title, genre, location, date, description, link, createdByAI: true, email });
+            if (!title || !genre || !description || !link || !image) {
+                return res.status(404).json({ message: "All fields are required" });
+            }
+            const newEvent = new Event({ title, genre, description, link, image, createdByAI: true, email });
             await newEvent.save();
-            
+
             io.emit('events_updated');
             res.status(201).json({ message: "Event saved", event: newEvent });
         } catch (error) {

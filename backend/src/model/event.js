@@ -6,10 +6,9 @@ const eventSchema = new mongoose.Schema(
   {
     title: String,
     genre: String,
-    location: String,
-    date: String,
     description: String,
     link: String,
+    image: String,
     createdByAI: Boolean,
     email: String,
   },

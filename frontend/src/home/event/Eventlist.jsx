@@ -5,6 +5,7 @@ import { useTheme } from "../../context/themecontext";
 import { useSocket } from "../../context/socketcontext"; // Import useSocket
 import { MdFavorite, MdFavoriteBorder } from "react-icons/md";
 import { FiCalendar, FiX } from "react-icons/fi";
+import { TbFileDescription } from "react-icons/tb";
 
 const EventList = () => {
   const [events, setEvents] = useState([]);
@@ -148,21 +149,12 @@ const EventList = () => {
         <div className="event-list">
           {events.map((event, index) => (
             <div key={event._id} className="event-card">
-              {eventsImage.map((item) => {
-                if (event.genre == item.genres) {
-                  return (
-                    <div key={item._id}>
-                      <img
-                        className="event-image"
-                        src={item.image}
-                        alt={item.genres}
-                        width="200"
-                      />
-                    </div>
-                  );
-                }
-                return null;
-              })}
+              <img
+                className="event-image"
+                src={event.image}
+                alt={event.title}
+                width="200"
+              />
               <div className="row-favorite">
                 <h3 className="event-name">{event.title}</h3>
                 <button
@@ -202,13 +194,8 @@ const EventList = () => {
                 <p>🎵 <span class="category-label">Category:</span>
                   <span class="genre-border">{event.genre}</span>
                 </p>
-                <p>📍 <span className="category-label">Location:</span>
-                  <span> {event.location}</span>
-                </p>
-                <p>🗓️ <span className="category-label">Date:</span>
-                  <span> {event.date}</span></p>
               </div>
-              <p className="event-description">{event.description}</p>
+              <p className="event-description"><TbFileDescription /> <span class="category-label">Description:{event.description}</span></p>
               <div className="bottom-event">
                 <a
                   href={event.link}
