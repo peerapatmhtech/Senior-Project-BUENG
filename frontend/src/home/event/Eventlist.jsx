@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef, useCallback } from "react";
 import axios from "axios";
 import "./Eventlist.css";
 import { useTheme } from "../../context/themecontext";
-import { useNotifications } from "../../context/notificationContext"; // Import useSocket
+import { useSocket } from "../../context/make.com"; // Import useSocket
 import { MdFavorite, MdFavoriteBorder } from "react-icons/md";
 import { FiCalendar, FiX } from "react-icons/fi";
 import { TbFileDescription } from "react-icons/tb";
@@ -15,7 +15,7 @@ const EventList = () => {
   const email = localStorage.getItem("userEmail");
   const { isDarkMode } = useTheme();
   const [favoriteEvents, setFavoriteEvents] = useState([]);
-  const { socket } = useNotifications();
+  const socket = useSocket();
 
   const user = { email };
 
@@ -192,8 +192,9 @@ const EventList = () => {
               </div>
               <div className="event-info">
                 <p>🎵 <span class="category-label">Category:</span>
-                  <span class="genre-border">{event.genre}</span>
-                </p>
+                  {Object.values(event.genre).flat().map((subcategory, index) => (
+                    <span key={index} class="genre-border">{subcategory}</span>
+                  ))}                </p>
               </div>
               <p className="event-description"><TbFileDescription /> <span class="category-label">Description:{event.description}</span></p>
               <div className="bottom-event">

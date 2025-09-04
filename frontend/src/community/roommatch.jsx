@@ -8,7 +8,7 @@ import "react-toastify/dist/ReactToastify.css";
 import { FiX } from "react-icons/fi";
 import { FaHeart } from "react-icons/fa";
 import "./css/roommatch.css";
-import { useNotifications } from "../context/notificationContext";
+import { useSocket } from "../context/make.com";
 import UserCard from "./UserCard";
 
 const RoomMatch = ({ accordionComponent }) => {
@@ -24,7 +24,7 @@ const RoomMatch = ({ accordionComponent }) => {
   const [loading, setLoading] = useState(true);
   const [showMatchModal, setShowMatchModal] = useState(false);
   const [matchedRoom, setMatchedRoom] = useState(null);
-  const { socket } = useNotifications(); // Get socket instance
+  const  socket  = useSocket(); // Get socket instance
 
   // ตรวจสอบขนาดหน้าจอ
   useEffect(() => {
