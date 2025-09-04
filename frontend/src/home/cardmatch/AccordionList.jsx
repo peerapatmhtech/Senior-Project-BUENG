@@ -8,7 +8,7 @@ import axios from "axios";
 // Default tab options if none are provided in the items
 const DEFAULT_TAB_OPTIONS = ["Option 1", "Option 2", "Option 3"];
 
-const AccordionList = ({ items }) => {
+const AccordionList = ({ items, setWaiting }) => {
     const [openIndex, setOpenIndex] = useState(null);
     const [selectedTabs, setSelectedTabs] = useState({});
     const [showTabsKey, setShowTabsKey] = useState(null);
@@ -315,7 +315,8 @@ const AccordionList = ({ items }) => {
                                     }),
                                 },
                             );
-
+                            /////รอการตอบกลับจาก make.com/////
+                            setWaiting(true);
 
 
                             if (response.ok) {
@@ -329,6 +330,7 @@ const AccordionList = ({ items }) => {
                             setError("เกิดข้อผิดพลาดขณะเชื่อมต่อเซิร์ฟเวอร์");
                             toast.error("เกิดข้อผิดพลาดขณะเชื่อมต่อเซิร์ฟเวอร์");
                         }
+
                         setLoading(false);
                     }}
                     disabled={loading}

@@ -20,8 +20,8 @@ export default function (io) {
             }
 
             // ตรวจสอบ required fields
-            if (!title || !description || !link || !image) {
-                return res.status(400).json({ message: "Title, description, link, and image are required" });
+            if (!title || !description || !link ) {
+                return res.status(400).json({ message: "Title, description, link are required" });
             }
 
             // ตรวจสอบและ validate genre

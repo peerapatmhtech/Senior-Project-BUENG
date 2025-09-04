@@ -10,6 +10,8 @@ import HeaderProfile from "../ui/HeaderProfile";
 const Newcommu = () => {
   const { isDarkMode } = useTheme();
   const [selectedRooms, setSelectedRooms] = useState([]);
+  const [waiting, setWaiting] = useState(false);
+
 
 
   return (
@@ -46,9 +48,10 @@ const Newcommu = () => {
                       ]
                     }
                   ]}
+                  setWaiting={setWaiting}
                 />
               </div>
-              <EventList />
+              <EventList setWaiting={setWaiting} waiting={waiting} />
             </div>
             <RoomMatch
               isDeleteMode={isDarkMode}

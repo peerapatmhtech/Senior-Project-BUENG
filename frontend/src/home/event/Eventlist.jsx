@@ -7,7 +7,7 @@ import { MdFavorite, MdFavoriteBorder } from "react-icons/md";
 import { FiCalendar, FiX } from "react-icons/fi";
 import { TbFileDescription } from "react-icons/tb";
 
-const EventList = () => {
+const EventList = ({ setWaiting, waiting }) => {
   const [events, setEvents] = useState([]);
   const [eventsImage, setEventsImage] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -52,6 +52,7 @@ const EventList = () => {
     if (!socket) return;
 
     socket.on('events_updated', () => {
+      setWaiting(false);
       fetchEvents();
       fetchImage();
     });
@@ -130,7 +131,7 @@ const EventList = () => {
       console.error("❌ Error unliking event:", error);
     }
   };
-
+  if (waiting === true) return <span className="loader"></span>;
   if (loading) return <p className="loading-text">กำลังโหลด...</p>;
 
   const EventListContent = () => (
