@@ -27,7 +27,7 @@ import verifyFirebaseToken from "./backend/src/middleware/verifyToken.js"; // Im
 
 
 dotenv.config();
-const allowedOrigins = process.env.VITE_APP_WEB_BASE_URL.split(",").map(origin => origin.trim());
+const allowedOrigins = process.env.VITE_APP_WEB_BASE_URL;
 
 const app = express();
 const server = http.createServer(app);
