@@ -152,7 +152,7 @@ const EventList = ({ setWaiting, waiting }) => {
             <div key={event._id} className="event-card">
               <img
                 className="event-image"
-                src={event.image}
+                src={event.image  || '/frontend/assets/ChatGPT Image 5 ก.ย. 2568 02_30_13.jpg'}
                 alt={event.title}
                 width="200"
               />
@@ -192,12 +192,12 @@ const EventList = ({ setWaiting, waiting }) => {
                 </button>
               </div>
               <div className="event-info">
-                <p>🎵 <span class="category-label">Category:</span>
+                <p> <span class="category-label">Category:</span>
                   {Object.values(event.genre).flat().map((subcategory, index) => (
                     <span key={index} class="genre-border">{subcategory}</span>
                   ))}                </p>
               </div>
-              <p className="event-description"><TbFileDescription /> <span class="category-label">Description:{event.description}</span></p>
+              <p className="event-description"><TbFileDescription /> <span class="category-label">{event.description}</span></p>
               <div className="bottom-event">
                 <a
                   href={event.link}
