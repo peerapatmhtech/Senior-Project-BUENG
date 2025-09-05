@@ -27,13 +27,10 @@ import verifyFirebaseToken from "./backend/src/middleware/verifyToken.js"; // Im
 
 
 dotenv.config();
-
-// Allow multiple origins from a comma-separated string in the environment variable
-const allowedOriginsStr = process.env.VITE_APP_WEB_BASE_URL || "http://localhost:5173";
-const allowedOrigins = allowedOriginsStr.split(',').map(origin => origin.trim());
-
-
-// สร้างเซิร์ฟเวอร์ HTTP และตั้งค่า Socket.IO
+const allowedOrigins = [
+  "https://project-react-mocha-eta.vercel.app", // production frontend
+  "http://localhost:5173", // local dev frontend
+];
 
 const app = express();
 const server = http.createServer(app);
@@ -202,10 +199,6 @@ io.on("connection", (socket) => {
     // ส่ง user list ไปให้ทุก client
     broadcastUserStatus();
   });
-
-  socket.on('error', (err) => {
-    console.error(`❌ Socket Error on ${socket.id}:`, err);
-  });
 });
 // 📌 API บันทึกหมวดหมู่เพลงที่ผู้ใช้เลือก
 app.post("/api/update-genres", async (req, res) => {
@@ -344,5 +337,5 @@ app.get("/api-status", (req, res) => {
 
 // เริ่มต้นเซิร์ฟเวอร์
 server.listen(port, () =>
-  console.log(`🚀 Server is running on port ${port}`)
+  console.log(`🚀 Server is running on port ${(8080, "0.0.0.0")}`)
 );
