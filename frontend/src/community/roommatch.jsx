@@ -36,7 +36,6 @@ const RoomMatch = ({ accordionComponent }) => {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
   const fetchRooms = async () => {
-    console.log("Fetching rooms...");
     setLoading(true);
     try {
       const matchInfo = await api.get(`/api/infomatch/all`);

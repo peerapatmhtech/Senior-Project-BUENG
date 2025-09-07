@@ -1,430 +1,248 @@
+/* === CSS Variables for Theming === */
+:root {
+  --nav-background-light: rgba(255, 255, 255, 0.85);
+  --nav-background-dark: rgba(28, 28, 30, 0.85);
+  --nav-border-light: #e0e0e0;
+  --nav-border-dark: #38383a;
+  --text-primary-light: #333;
+  --text-primary-dark: #f5f5f5;
+  --text-secondary-light: #555;
+  --text-secondary-dark: #aaa;
+  --active-indicator-light: #eef2ff;
+  --active-indicator-dark: #312e81;
+  --active-text-light: #4f46e5;
+  --active-text-dark: #c7d2fe;
+  --hover-bg-light: #f4f4f5;
+  --hover-bg-dark: #3a3a3c;
+  --nav-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  --nav-backdrop-blur: 10px;
+}
+
+/* === Base Navbar Container === */
 .navbar-container {
-  background: rgb(255, 255, 255);
   display: flex;
-  width: 20vh;
-  flex-direction: column;
-  justify-content: flex-start;
-  min-height: 100vh;
-  align-items: center;
-  border-right: 1px solid #ccc;
-  top: 0;
-  position: relative;
+  /* position: fixed; */
+  /* z-index: 1000; */
+  transition: all 0.3s ease-in-out;
+  -webkit-backdrop-filter: blur(var(--nav-backdrop-blur));
+  backdrop-filter: blur(var(--nav-backdrop-blur));
 }
 
-.navbar-notification {
-  position: absolute;
-  top: 15px;
-  right: -50px;
-  z-index: 1000;
+/* Light Mode */
+.navbar-container {
+  background-color: var(--nav-background-light);
+  border: 1px solid var(--nav-border-light);
+  box-shadow: var(--nav-shadow);
 }
 
-/* .dark-mode .navbar-con  {
-  background: rgb(255, 255, 255);
-  display: flex;
-  width: 18vh;
-  flex-direction: column;
-  justify-content: flex-start;
-  min-height: 100vh;
-  align-items: center;
-  border-right: 1px solid #000;
-  top: 0;
-} */
+/* Dark Mode */
+.navbar-container.dark-mode {
+  background-color: var(--nav-background-dark);
+  border: 1px solid var(--nav-border-dark);
+}
 
+/* === Logo === */
 .logo-con {
-  font-size: 20px;
-  margin: 1rem;
-  color: black;
-}
-
-.dark-mode .logo-con h3 {
-  font-size: 20px;
-  margin: 1rem;
-  color: #f5f5f5;
-}
-
-.icon-nav svg {
-  font-size: 20px;
-  margin: 1rem;
-  color: black;
-}
-
-.dark-mode .icon-nav {
-  font-size: 20px;
-  color: #f5f5f5;
-}
-
-.dark-mode .text-nav {
-  color: #f5f5f5;
-}
-
-.menu-bar {
-  display: flex;
-  flex-direction: column;
-  /* ทำให้เมนูแสดงในแนวตั้ง */
-}
-
-.menu-bar li {
-  padding: 0 1rem;
-  margin: 1rem 0;
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.menu-bar li a {
-  font-size: 14px;
+  padding: 1rem;
+  text-align: center;
   font-weight: bold;
-  text-decoration: none;
-  color: black;
   transition: color 0.3s ease;
 }
 
-.menu-bar li a:hover {
-  color: #333;
-  /* เปลี่ยนสีเมื่อ hover */
+.logo-con h3 {
+  margin: 0;
+  font-size: 1.5rem;
+  line-height: 1.2;
+  color: var(--text-primary-light);
 }
 
-.dark-mode .menu-bar li a:hover {
-  color: #706e6e;
+.navbar-container.dark-mode .logo-con h3 {
+  color: var(--text-primary-dark);
 }
 
-.mobile-menu {
-  display: none;
+/* === Menu Bar & Links === */
+.menu-bar {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  display: flex;
+  flex-grow: 1;
 }
-
-
 
 .menu-link {
   display: flex;
   align-items: center;
-  margin: 1rem 0;
-  transition: all 0.3s ease;
-  cursor: pointer;
-  width: 100%;
+  text-decoration: none;
+  color: var(--text-secondary-light);
   border-radius: 12px;
-  position: relative;
+  transition: background-color 0.2s ease, color 0.2s ease;
+  font-weight: 500;
+}
+
+.navbar-container.dark-mode .menu-link {
+  color: var(--text-secondary-dark);
 }
 
 .menu-link:hover {
-  background: transparent;
-  border-radius: 12px;
+  background-color: var(--hover-bg-light);
+  color: var(--text-primary-light);
 }
 
-.dark-mode .menu-link:hover {
-  background: transparent;
-  border-radius: 12px;
-}
-
-.menu-link a,
-.menu-link .logout-link {
-  flex: 1;
-  text-decoration: none;
-  color: inherit;
-}
-
-.menu-link i {
-  margin-right: 12px;
-  width: 20px;
-  transition: color 0.3s ease;
-}
-
-.logout-link:hover {
-  background: rgb(0, 0, 0, 0.1);
-  border-radius: 20px;
-  padding: 1rem 0;
-}
-
-.dark-mode .logout-link:hover {
-  background: #767474;
-  border-radius: 20px;
-  padding: 1rem 0;
+.navbar-container.dark-mode .menu-link:hover {
+  background-color: var(--hover-bg-dark);
+  color: var(--text-primary-dark);
 }
 
 .menu-link.active {
-  background: transparent;
+  background-color: var(--active-indicator-light);
+  color: var(--active-text-light);
+  font-weight: 600;
+}
+
+.navbar-container.dark-mode .menu-link.active {
+  background-color: var(--active-indicator-dark);
+  color: var(--active-text-dark);
+}
+
+.icon-nav {
+  font-size: 1.25rem;
+  transition: transform 0.2s ease;
+}
+
+.text-nav {
+  transition: opacity 0.2s ease;
+}
+
+/* === Logout Link === */
+.logout-link {
+  cursor: pointer;
+  color: var(--text-secondary-light);
+  font-weight: 500;
   border-radius: 12px;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-.dark-mode .menu-link.active {
-  background: transparent;
-  border-radius: 12px;
+.navbar-container.dark-mode .logout-link {
+  color: var(--text-secondary-dark);
 }
 
-.menu-link.active a,
-.menu-link.active i {
-  color: #007bff;
-  /* หรือสีที่ต้องการ */
+.logout-link:hover {
+  background-color: var(--hover-bg-light);
+  color: #ef4444; /* Red for danger action */
 }
 
-/* เปลี่ยนสีไอคอนและข้อความเมื่อ hover */
-/* .menu-link:hover a,
-.menu-link:hover .logout-link,
-.menu-link:hover i {
-  color: #007bff; 
-} */
-
-/* ป้องกัน content ไม่ให้ทับกับ logo */
-@media screen and (max-width: 990px) {
-  .content-wrapper,
-  .main-content {
-    padding-top: 60px; /* เผื่อพื้นที่สำหรับ logo */
-    padding-bottom: 80px; /* เผื่อพื้นที่สำหรับ bottom navbar */
-  }
-
+.navbar-container.dark-mode .logout-link:hover {
+  background-color: var(--hover-bg-dark);
+  color: #f87171;
 }
 
-/* Tablet และ Mobile Responsive - Bottom Navigation */
-@media screen and (max-width: 990px) {
+/* === Mobile Menu (Hamburger) - Hidden by default === */
+.mobile-menu {
+  display: none;
+  cursor: pointer;
+  font-size: 1.5rem;
+  padding: 1rem;
+}
+
+/* =================================== */
+/* === DESKTOP - Vertical Sidebar === */
+/* =================================== */
+@media screen and (min-width: 769px) {
   .navbar-container {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    top: auto;
-    width: 100%;
-    height: fit-content;
-    min-height: auto;
-    justify-content: space-between;
-    align-items: center;
-    border-right: none;
-    border-top: 1px solid #ccc;
-    background: rgb(255, 255, 255);
-    z-index: 1000;
-    padding: 8px 0;
-  }
-
-  .dark-mode .navbar-container {
-    background: #2d2d2d;
-    border-top: 1px solid #555;
-  }
-
-
-  .dark-mode .logo-con {
-    color: #f5f5f5;
-    background: rgba(45, 45, 45, 0.95);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  }
-
-  .navbar-notification {
-    display: none; /* ซ่อน notification ในโหมดโมบาย */
+    flex-direction: column;
+    top: 1rem;
+    left: 1rem;
+    bottom: 1rem;
+    width: 240px;
+    /* border-radius: 24px; */
+    padding: 1rem;
   }
 
   .menu-bar {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .menu-link {
+    padding: 0.85rem 1.25rem;
+    gap: 1rem;
+  }
+
+  .logout-section {
+    margin-top: auto; /* Pushes logout to the bottom */
+    padding: 0.5rem;
+  }
+
+  .logout-link {
     display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.85rem 1.25rem;
+    width: 100%;
+  }
+}
+
+/* ===================================== */
+/* === MOBILE - Bottom Navigation Bar === */
+/* ===================================== */
+@media screen and (max-width: 768px) {
+  /* Adjust content padding to avoid overlap with bottom nav */
+  .content-wrapper,
+  .main-content {
+    padding-bottom: 100px;
+  }
+
+  .navbar-container {
+    flex-direction: row;
+    bottom: 1rem;
+    left: 1rem;
+    right: 1rem;
+    height: 68px;
+    border-radius: 24px;
+    padding: 0.5rem;
+    align-items: center;
+  }
+
+  .logo-con {
+    display: none; /* Hide logo on mobile to save space */
+  }
+
+  .menu-bar {
     flex-direction: row;
     justify-content: space-around;
     align-items: center;
-    width: 100%;
-    margin: 0;
-    padding: 0;
   }
 
-  .menu-bar li {
-    margin: 0;
-    padding: 8px 4px;
-    width: auto;
+  .menu-link {
+    flex: 1;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.25rem;
+    padding: 0.5rem 0;
+    height: 100%;
+  }
+
+  .icon-nav {
+    font-size: 1.4rem;
+  }
+
+  .text-nav {
+    font-size: 0.7rem;
+    font-weight: 500;
+  }
+
+  .logout-section {
+    display: contents; /* Make the logout section part of the flex container */
+  }
+
+  .logout-link {
     flex: 1;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
+    gap: 0.25rem;
+    height: 100%;
   }
-
-  .menu-link {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    margin: 0;
-    padding: 8px 4px;
-    width: 100%;
-    min-height: 50px;
-    border-radius: 8px;
-    position: relative;
-    transition: all 0.3s ease;
-  }
-
-  /* แท่บขีดด้านล่างสำหรับ hover */
-  .menu-link::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 0;
-    height: 3px;
-    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
-    border-radius: 2px 2px 0 0;
-    transition: width 0.3s ease;
-  }
-
-  .menu-link:hover::after {
-    width: 70%;
-  }
-
-  .menu-link.active::after {
-    width: 80%;
-    background: linear-gradient(135deg, #40a9ff 0%, #096dd9 100%);
-  }
-
-  .dark-mode .menu-link::after {
-    background: linear-gradient(135deg, #40a9ff 0%, #096dd9 100%);
-  }
-
-  .dark-mode .menu-link.active::after {
-    background: linear-gradient(135deg, #40a9ff 0%, #096dd9 100%);
-  }
-
-  .menu-link i {
-    margin: 0 0 4px 0;
-    width: auto;
-    font-size: 20px;
-  }
-
-  .menu-link a,
-  .menu-link .logout-link {
-    font-size: 10px;
-    text-align: center;
-    margin: 0;
-    padding: 0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .menu-link:hover {
-    background: transparent;
-    transform: translateY(-2px);
-  }
-
-  .dark-mode .menu-link:hover {
-    background: transparent;
-  }
-
-  .menu-link.active {
-    background: transparent;
-    transform: translateY(-1px);
-  }
-
-  .dark-mode .menu-link.active {
-    background: transparent;
-  }
-
-  .mobile-menu {
-    display: none; /* ซ่อน hamburger menu เพราะใช้ bottom nav แล้ว */
-  }
-}
-
-/* Desktop Responsive - รักษา navbar แบบเดิม */
-@media screen and (min-width: 991px) {
-  .navbar-container {
-    position: relative;
-    bottom: auto;
-    left: auto;
-    right: auto;
-    width: 20vh;
-    height: auto;
-    min-height: 100vh;
-    flex-direction: column;
-    border-right: 1px solid #ccc;
-    border-top: none;
-  }
-
-  .menu-bar {
-    flex-direction: column;
-  }
-
-  .menu-link {
-    flex-direction: row;
-    margin: 1rem 0;
-    position: relative;
-    transition: all 0.3s ease;
-  }
-
-  /* แท่บขีดด้านซ้ายสำหรับ desktop */
-  .menu-link::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 0;
-    height: 60%;
-    background: linear-gradient(180deg, #007bff 0%, #0056b3 100%);
-    border-radius: 0 3px 3px 0;
-    transition: width 0.3s ease;
-  }
-
-  .menu-link:hover::before {
-    width: 4px;
-  }
-
-  .menu-link.active::before {
-    width: 5px;
-    background: linear-gradient(135deg, #40a9ff 0%, #096dd9 100%);
-  }
-
-  .dark-mode .menu-link::before {
-    background: linear-gradient(180deg, #40a9ff 0%, #096dd9 100%);
-  }
-
-  .dark-mode .menu-link.active::before {
-    background: linear-gradient(135deg, #40a9ff 0%, #096dd9 100%);
-  }
-
-  .menu-link:hover {
-    background: transparent;
-    transform: translateX(3px);
-  }
-
-  .dark-mode .menu-link:hover {
-    background: transparent;
-  }
-
-  .menu-link.active {
-    background: transparent;
-    transform: translateX(2px);
-  }
-
-  .dark-mode .menu-link.active {
-    background: transparent;
-  }
-
-  .menu-link i {
-    margin-right: 12px;
-    margin-bottom: 0;
-  }
-}
-@media screen and (min-width: 990px) and (max-width: 1400px) {
-  .navbar-container {
-    max-width: 150px;
-  }
-}
-@media screen and (max-width: 550px) {
-  .text-nav {
-    font-size: 12px;
-  }
-}
-@media screen and (max-width: 400px) {
-  .navbar-container {
-    width: 100%;
-    height: fit-content;
-    min-height: auto;
-    padding: 8px 0;
-  }
-  .logo-con {
-    margin-left: 10px;
-  }
-  .icon-nav svg {
-    font-size: 18px;
-    margin: 0.5rem;
-  }
-  .menu-bar li a {
-    font-size: 12px;
-  } 
-  .text-nav {
-    font-size: 8px;
-  }
-  
 }

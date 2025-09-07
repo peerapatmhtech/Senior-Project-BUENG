@@ -262,12 +262,12 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 320px;
+  min-height: 280px;
   width: 100%;
   background: rgba(255, 255, 255, 0.85);
   border-radius: 18px;
   box-shadow: 0 4px 24px 0 rgba(0, 0, 0, 0.08);
-  margin: 0 auto;
+  margin: 100px auto;
   padding: 32px 0 24px 0;
 }
 
@@ -321,9 +321,9 @@
 }
 
 .event-container {
-  height: calc(100vh - 223px);
+  height: calc(100vh - 230px);
   /* background: linear-gradient(135deg, #f3f4f6 60%, #e0e7ff 100%); */
-  padding: 60px 24px;
+  padding: 0 24px;
   overflow-y: auto;
   scroll-behavior: smooth;
   width: 100%;
@@ -363,7 +363,7 @@
 .dark-mode .event-container {
   height: calc(100vh - 147px);
   background-color: #1e1e1e;
-  padding: 60px 24px;
+  padding: 0 24px;
   overflow-y: auto;
   scroll-behavior: smooth;
 }
@@ -787,8 +787,8 @@
 
 @media screen and (max-width: 1760px) {
   .event-container {
-    height: calc(100vh - 120px);
-    padding: 80px 40px 40px 40px;
+    height: calc(100vh - 100px);
+    padding: 0px 40px 40px 40px;
   }
 
   .event-list {
@@ -796,7 +796,7 @@
     grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
     gap: 40px 32px;
     width: 800px;
-    margin: 0 auto;
+    /* margin: 0 auto; */
   }
 
   .event-card {
@@ -820,7 +820,7 @@
     grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
     gap: 40px 32px;
     width: 500px;
-    margin: 0 auto;
+    /* margin: 0 auto; */
   }
 }
 
@@ -828,7 +828,7 @@
 @media screen and (max-width: 1100px) {
   .event-container {
     height: calc(100vh - 120px);
-    padding: 80px 40px 40px 40px;
+    padding: 0px 40px 40px 40px;
   }
 
   .event-list {
@@ -836,7 +836,7 @@
     grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
     gap: 40px 32px;
     width: 350px;
-    margin: 0 auto;
+    /* margin: 0 auto; */
   }
 
   .event-card {
@@ -858,7 +858,7 @@
 @media screen and (min-width: 991px) and (max-width: 1199px) {
   .event-container {
     height: calc(100vh - 100px);
-    padding: 70px 32px 40px 32px;
+    padding: 0px 32px 40px 32px;
   }
 
   .event-list {
@@ -866,7 +866,7 @@
     grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
     gap: 32px 24px;
     max-width: 800px;
-    margin: 0 auto;
+    /* margin: 0 auto; */
   }
 
   .event-card {
@@ -894,7 +894,7 @@
   .event-container {
     height: calc(100vh - 80px);
     /* ปรับให้เหมาะกับ bottom navbar */
-    padding: 80px 20px 100px 20px;
+    padding: 0px 20px 100px 20px;
     /* เพิ่ม padding bottom สำหรับ navbar */
     background-color: #f3f4f6;
   }
@@ -902,7 +902,7 @@
   .dark-mode .event-container {
     height: calc(100vh - 80px);
     background-color: #1e1e1e;
-    padding: 80px 20px 100px 20px;
+    padding: 0px 20px 100px 20px;
   }
 
   .event-list {
@@ -910,7 +910,7 @@
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
     gap: 24px 20px;
     max-width: 100%;
-    margin: 0 auto;
+    /* margin: 0 auto; */
     padding: 0;
   }
 

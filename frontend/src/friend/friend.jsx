@@ -836,7 +836,7 @@ const Friend = () => {
                           />
                           <div className="friend-detail-friend">
                             <span className="friend-name-friend">
-                              {getnickName.find((n) => n.email === friend.email)
+                              {Array.isArray(getnickName) && getnickName.find((n) => n.email === friend.email)
                                 ?.nickname || friend.displayName}
                             </span>
                             <span className="friend-email">{friend.email}</span>

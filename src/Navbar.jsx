@@ -1,20 +1,18 @@
-import  { useState } from "react";
-import { FiMenu, FiX } from "react-icons/fi";
-import { Link, useLocation, useParams } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import "./Navbar.css";
 import { useAuth } from "../backend/src/firebase/Authcontext";
-import { FaUsers, FaUser, FaUserFriends, FaCog } from "react-icons/fa";
-import { BsFillChatLeftDotsFill } from "react-icons/bs";
-import { BsRobot } from "react-icons/bs";
 import { useTheme } from "../frontend/src/context/themecontext";
+import {
+  FaUsers,
+  FaUserFriends,
+  FaUserCircle,
+} from "react-icons/fa";
+import { BsFillChatLeftDotsFill } from "react-icons/bs";
+import { IoHomeSharp, IoLogOutOutline } from "react-icons/io5";
 
 const Navbar = () => {
-  const [click, setClick] = useState(false);
-  const location = useLocation(); // <-- ตรงนี้สำคัญ!
+  const location = useLocation();
   const { user, logout } = useAuth();
-  const { roomId } = useParams();
-  const handleClick = () => setClick(!click);
-  const closeMobileMenu = () => setClick(false);
   const { isDarkMode } = useTheme();
 
   const handleLogout = async () => {
@@ -25,7 +23,6 @@ const Navbar = () => {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email: user.email }),
         });
-
         localStorage.removeItem("userName");
         localStorage.removeItem("userPhoto");
         logout();
@@ -33,85 +30,57 @@ const Navbar = () => {
         console.error("❌ Logout failed:", error);
       }
     }
-    closeMobileMenu();
   };
 
-  const isActive = (path) => (location.pathname === path ? "active" : "");
+  // Updated isActive function to handle nested routes
+  const isActive = (path) => location.pathname.startsWith(path);
+
+  const menuItems = [
+    { path: "/home", icon: <IoHomeSharp className="icon-nav" />, text: "Home" },
+    { path: "/community", icon: <FaUsers className="icon-nav" />, text: "Community" },
+    { path: "/friend", icon: <FaUserFriends className="icon-nav" />, text: "Friend" },
+    { path: "/chat", icon: <BsFillChatLeftDotsFill className="icon-nav" />, text: "Chat" },
+    { path: "/profile", icon: <FaUserCircle className="icon-nav" />, text: "Profile" },
+  ];
 
   return (
     <div className={`navbar-container ${isDarkMode ? "dark-mode" : ""}`}>
-      {/* // <div className="navbar-con"> */}
+      <Link to="/home" className="logo-con">
+        <h3>Find Friend</h3>
+      </Link>
 
-      <ul className={click ? "menu active" : "menu-bar"}>
-        <Link to="/home">
-          <div className="logo-con">
-            <h3>Find</h3>
-            <h3>Friend</h3>
-          </div>
-        </Link>
-        <Link
-          to="/community"
-          onClick={closeMobileMenu}
-          className={`menu-link ${isActive("/community")}`}
-        >
-          <li>
-            <FaUsers className="icon-nav" />
-            <span className="text-nav">Community</span>
-          </li>
-        </Link>
+      <ul className="menu-bar">
+        {menuItems.map((item) => {
+          // Special handling for chat route to not be active everywhere
+          const chatPath = item.path === '/chat' ? '/chat' : item.path;
+          const activeClass = location.pathname.startsWith(chatPath) && (chatPath !== '/chat' || location.pathname.includes('/chat/')) ? "active" : "";
 
-        <Link
-          to="/friend"
-          onClick={closeMobileMenu}
-          className={`menu-link ${isActive("/friend")}`}
-        >
-          <li>
-            <FaUserFriends className="icon-nav" />
-            <span className="text-nav">Friend</span>
-          </li>
-        </Link>
-        <Link
-          to="/profile"
-          onClick={closeMobileMenu}
-          className={`menu-link ${isActive("/profile")}`}
-        >
-          <li>
-            <FaUser className="icon-nav" />
-            <span className="text-nav">Profile</span>
-          </li>
-        </Link>
+          // For chat, we might not have a generic /chat page, so link to a default/recent room or handle differently
+          const toPath = item.path === '/chat' ? '/chat/some-default-room' : item.path; // Or handle as needed
 
-        <Link
-          to={`/chat/${roomId}`}
-          onClick={closeMobileMenu}
-          className={`menu-link ${isActive("/chat")}`}
-        >
-          <li>
-            <BsFillChatLeftDotsFill className="icon-nav" />
-            <span className="text-nav">Chat</span>
-          </li>
-        </Link>
-
-
-        {user ? (
-          <li className="logout-link" onClick={handleLogout}>
-            <span className="text-nav">LOGOUT</span>
-          </li>
-        ) : (
-          <Link
-            to="/login"
-            onClick={closeMobileMenu}
-            className={`menu-link ${isActive("/login")}`}
-          >
-            <li>
-              <span className="text-nav">LOGIN</span>
+          return (
+            <li key={item.path}>
+              <Link to={toPath} className={`menu-link ${activeClass}`}>
+                {item.icon}
+                <span className="text-nav">{item.text}</span>
+              </Link>
             </li>
-          </Link>
-        )}
+          );
+        })}
       </ul>
 
-      <div className="mobile-menu" onClick={handleClick}>
-        {click ? <FiX /> : <FiMenu />}
+      <div className="logout-section">
+        {user ? (
+          <div className="logout-link" onClick={handleLogout}>
+            <IoLogOutOutline className="icon-nav" />
+            <span className="text-nav">Logout</span>
+          </div>
+        ) : (
+          <Link to="/login" className={`menu-link ${isActive("/login")}`}>
+            <IoLogOutOutline className="icon-nav" />
+            <span className="text-nav">Login</span>
+          </Link>
+        )}
       </div>
     </div>
   );

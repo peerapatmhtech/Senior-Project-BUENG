@@ -32,7 +32,7 @@ const Newcommu = () => {
                       title: "กีฬา",
                       genres: [
                         { title: "Educational and self-development", tabs: ["Art/Craft Workshops", "Seminars / Short Courses", "Talk show/Lecture"] },
-                        { title: "Entertainment and cultural", tabs: ["Art exhibition/Gallery", "Cosplay Event", "Anime Convention", "Comic Con", "Board Game Cafe", "Escape Room", "Interactive Theater", "Stand-up Comedy", "Improv Show", "Art exhibition/Gallery", "Art/Craft Workshops", "Film festival/Musical", "Talk show/Lecture"] },
+                        { title: "Entertainment and cultural", tabs: ["Art exhibition/Gallery", "Cosplay Event", "Anime Convention", "Comic Con", "Board Game Cafe", "Escape Room", "Interactive Theater", "Stand-up Comedy", "Improv Show", "Film festival/Musical"] },
                         { title: "Families and children", tabs: ["Camp", "Kids Fair", "Theme park"] },
                         { title: "Group/Specialized", tabs: ["Carnival/Event", "Volunteer"] },
                         { title: "Sports and health", tabs: ["Skateboarding", "BMX", "Parkour", "Rock Climbing", "Badminton", "Table Tennis", "E-sports", "Dance Sport", "Pilates", "Crossfit", "Martial Arts", "Gymnastics", "Marathon", "Audox Tour", "Yoga", "Swimming", "Cycling", "Walking", "Running", "Fitness", "Gym"] },
