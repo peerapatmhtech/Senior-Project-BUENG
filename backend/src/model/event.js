@@ -5,7 +5,10 @@ import mongoose from "mongoose";
 const eventSchema = new mongoose.Schema(
   {
     title: String,
-    genre: String,
+    genre: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {},
+    },
     description: String,
     link: String,
     image: String,

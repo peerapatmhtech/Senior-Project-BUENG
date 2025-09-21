@@ -51,13 +51,13 @@ const EventList = () => {
   useEffect(() => {
     if (!socket) return;
 
-    socket.on('events_updated', () => {
+    socket.on("events_updated", () => {
       fetchEvents();
       fetchImage();
     });
 
     return () => {
-      socket.off('events_updated');
+      socket.off("events_updated");
     };
   }, [socket, fetchEvents, fetchImage]);
 
@@ -83,7 +83,9 @@ const EventList = () => {
 
     try {
       await axios.delete(
-        `${import.meta.env.VITE_APP_API_BASE_URL}/api/delete-all-events/${userEmail}`
+        `${
+          import.meta.env.VITE_APP_API_BASE_URL
+        }/api/delete-all-events/${userEmail}`
       );
     } catch (error) {
       console.error("❌ Error deleting all events:", error);
@@ -177,13 +179,13 @@ const EventList = () => {
                   }}
                   aria-label={
                     Array.isArray(favoriteEvents) &&
-                      favoriteEvents.includes(event._id)
+                    favoriteEvents.includes(event._id)
                       ? "Unfavorite"
                       : "Favorite"
                   }
                 >
                   {Array.isArray(favoriteEvents) &&
-                    favoriteEvents.includes(event._id) ? (
+                  favoriteEvents.includes(event._id) ? (
                     <MdFavorite size={30} color="red" />
                   ) : (
                     <MdFavoriteBorder size={30} />
@@ -191,11 +193,28 @@ const EventList = () => {
                 </button>
               </div>
               <div className="event-info">
-                <p>🎵 <span class="category-label">Category:</span>
-                  <span class="genre-border">{event.genre}</span>
+                <p>
+                  🎵 <span class="category-label">Category:</span>
+                  <div class="genre-display">
+                    {Object.entries(event.genre).map(
+                      ([category, subcategories]) => (
+                        <div key={category}>
+                          <strong>{category}:</strong>
+                          {subcategories.map((sub) => (
+                            <span class="genre-border">{sub}</span>
+                          ))}
+                        </div>
+                      )
+                    )}
+                  </div>
                 </p>
               </div>
-              <p className="event-description"><TbFileDescription /> <span class="category-label">Description:{event.description}</span></p>
+              <p className="event-description">
+                <TbFileDescription />{" "}
+                <span class="category-label">
+                  Description:{event.description}
+                </span>
+              </p>
               <div className="bottom-event">
                 <a
                   href={event.link}
@@ -250,8 +269,14 @@ const EventList = () => {
         <EventListContent />
       </div>
 
-      <div className={`eventlist-modal-overlay ${isModalOpen ? 'active' : ''}`} onClick={() => setIsModalOpen(false)}>
-        <div className={`eventlist-modal-sheet ${isModalOpen ? 'active' : ''}`} onClick={(e) => e.stopPropagation()}>
+      <div
+        className={`eventlist-modal-overlay ${isModalOpen ? "active" : ""}`}
+        onClick={() => setIsModalOpen(false)}
+      >
+        <div
+          className={`eventlist-modal-sheet ${isModalOpen ? "active" : ""}`}
+          onClick={(e) => e.stopPropagation()}
+        >
           <div className="eventlist-modal-header">
             <div className="eventlist-modal-handle"></div>
             <button
