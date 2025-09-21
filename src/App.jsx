@@ -9,7 +9,7 @@ import Chat from "../frontend/src/chat/chat";
 import ChatContainerAI from "../frontend/src/chat/components/javascript/ChatContainerAI";
 import { Route, Routes, useLocation } from "react-router-dom";
 import { NotificationProvider } from "../frontend/src/context/notificationContext";
-import { SocketProvider } from "../frontend/src/context/socketcontext";
+import { SocketProvider } from "../frontend/src/context/make.com";
 import { useAuth } from "../backend/src/firebase/Authcontext";
 // import ForgotPassword from "./Log/ForgotForm";
 

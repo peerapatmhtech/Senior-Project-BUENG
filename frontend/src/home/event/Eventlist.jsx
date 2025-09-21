@@ -2,12 +2,12 @@ import React, { useEffect, useState, useRef, useCallback } from "react";
 import axios from "axios";
 import "./Eventlist.css";
 import { useTheme } from "../../context/themecontext";
-import { useNotifications } from "../../context/notificationContext"; // Import useSocket
+import { useSocket } from "../../context/make.com"; // Import useSocket
 import { MdFavorite, MdFavoriteBorder } from "react-icons/md";
 import { FiCalendar, FiX } from "react-icons/fi";
 import { TbFileDescription } from "react-icons/tb";
 
-const EventList = () => {
+const EventList = ({ setWaiting, waiting }) => {
   const [events, setEvents] = useState([]);
   const [eventsImage, setEventsImage] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -15,7 +15,7 @@ const EventList = () => {
   const email = localStorage.getItem("userEmail");
   const { isDarkMode } = useTheme();
   const [favoriteEvents, setFavoriteEvents] = useState([]);
-  const { socket } = useNotifications();
+  const socket = useSocket();
 
   const user = { email };
 
@@ -51,7 +51,8 @@ const EventList = () => {
   useEffect(() => {
     if (!socket) return;
 
-    socket.on("events_updated", () => {
+    socket.on('events_updated', () => {
+      setWaiting(false);
       fetchEvents();
       fetchImage();
     });
@@ -132,7 +133,7 @@ const EventList = () => {
       console.error("❌ Error unliking event:", error);
     }
   };
-
+  if (waiting === true) return <span className="loader"></span>;
   if (loading) return <p className="loading-text">กำลังโหลด...</p>;
 
   const EventListContent = () => (
@@ -153,7 +154,7 @@ const EventList = () => {
             <div key={event._id} className="event-card">
               <img
                 className="event-image"
-                src={event.image}
+                src={event.image  || '/frontend/assets/ChatGPT Image 5 ก.ย. 2568 02_30_13.jpg'}
                 alt={event.title}
                 width="200"
               />

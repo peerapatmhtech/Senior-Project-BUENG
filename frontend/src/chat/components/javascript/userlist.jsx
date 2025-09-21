@@ -53,7 +53,6 @@ const ListUser = ({
   const handleEnterRoom = (roomId) => {
     navigate(`/chat/${roomId}`);
   };
-console.log("sortedFriends:", sortedFriends);
   return (
     <div className="favorite-container">
       <div className="favorite-toggle" onClick={handleToggle}>

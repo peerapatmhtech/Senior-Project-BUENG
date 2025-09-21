@@ -641,13 +641,11 @@ export const NotificationProvider = ({ children }) => {
         setNewFriendRequest,
         fetchNotifications,
         noti: notifications,
-        setNotifications,
         handleNotifyFriendAccept,
         handleDeleteFriendRequest,
         refreshNotifications,
         handleNotifyFriendRequest,
         isLoading,
-        fetchNotifications, // เพิ่ม fetchNotifications สำหรับการเรียกจากภายนอก
       }}
     >
       {children}
