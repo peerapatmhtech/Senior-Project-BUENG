@@ -218,9 +218,10 @@ export default function (io) {
         return res.status(200).json({ message: "No events found" });
       }
       if (events.length > 0) {
-        io.emit("events_updated");
+
         return res.status(200).json(events);
       }
+      io.emit("events_updated");
     } catch (error) {
       console.error("Error fetching events:", error);
       res.status(500).json({ message: "Server error", error: error.message });

@@ -35,8 +35,12 @@ router.get("/user-rooms/:email", async (req, res) => {
   console.log("Getting rooms for:", encodedEmail);
 
   try {
+    if (!encodedEmail) {
+      return res.status(400).json({ error: "Email is required." });
+    }
+
     const user = await Info.findOne({ email: encodedEmail });
-    if (!user) return res.status(404).json({ error: "User not found" });
+    if (!user) return res.status(204).json({ error: "User not found" });
 
     // ✅ แยกเฉพาะ roomId ออกมา
 
@@ -65,9 +69,12 @@ router.get("/infos", async (req, res) => {
 // Get user by email (query)
 router.get("/infos/:email", async (req, res) => {
   try {
+    if (!req.params.email) {
+      return res.status(400).json({ message: "Missing email parameter" });
+    }
     const user = await Info.findOne({ email: req.params.email });
     if (!user) {
-      return res.status(404).json({ message: "ไม่พบผู้ใช้" });
+      return res.status(200).json({ message: "User not found" });
     }
     res.json(user);
   } catch (err) {
@@ -94,8 +101,11 @@ router.post("/save-user-info", async (req, res) => {
 router.get("/user-info/:email", async (req, res) => {
   const { email } = req.params;
   try {
+    if (!email) {
+      return res.status(400).json({ message: "Email is required." });
+    }
     const user = await Info.findOne({ email });
-    if (!user) return res.status(404).json({ message: "User not found" });
+    if (!user) return res.status(204).json({ message: "User not found" });
     res.json(user.userInfo || {});
   } catch (error) {
     console.error("❌ Error fetching user info:", error);

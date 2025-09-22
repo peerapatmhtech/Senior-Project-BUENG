@@ -108,8 +108,11 @@ router.delete("/users/:userEmail/unfollow/:targetEmail", async (req, res) => {
 router.get("/user/:email/follow-info", async (req, res) => {
     const userEmail = req.params.email;
     try {
+        if (!userEmail) {
+            return res.status(400).json({ message: "Email is required." });
+        }
         const user = await Friend.findOne({ email: userEmail });
-        if (!user) return res.status(404).json({ message: "User not found" });
+        if (!user) return res.status(204).json({ message: "User not found" });
         const followers = await Friend.find({ email: { $in: user.followers } });
         const following = await Friend.find({ email: { $in: user.following } });
         res.json({ followers, following });
@@ -118,14 +121,20 @@ router.get("/user/:email/follow-info", async (req, res) => {
     }
 });
 router.get("/users/:email", async (req, res) => {
-  const userEmail = req.params.email.toLowerCase();
-  try {
-    const user = await Friend.findOne({ email: userEmail });
-    res.json(user);
-  } catch (error) {
-    console.error("Error fetching user by email:", error);
-    res.status(500).json({ error: "Failed to fetch user" });
-  }
+    const userEmail = req.params.email.toLowerCase();
+    try {
+        if (!userEmail) {
+            return res.status(400).json({ error: "Email is required." });
+        }
+        const user = await Friend.findOne({ email: userEmail });
+        if (!user) {
+            return res.status(204).send("User not found");
+        }
+        res.json(user);
+    } catch (error) {
+        console.error("Error fetching user by email:", error);
+        res.status(500).json({ error: "Failed to fetch user" });
+    }
 });
 
 export default router;

@@ -15,7 +15,6 @@ const socket = io(import.meta.env.VITE_APP_API_BASE_URL);
 const Newcommu = () => {
   const [rooms, setRooms] = useState([]);
   const [users, setUsers] = useState([]);
-  const [currentUserfollow, setCurrentUserfollow] = useState(null);
   const modalRef = useRef(null);
   const [openMenuFor, setOpenMenuFor] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -35,9 +34,6 @@ const Newcommu = () => {
   const [handlematchfriend, setHandleMatchFriend] = useState(false);
   const [getnickName, getNickName] = useState([]);
 
-  useEffect(() => {
-    fetchGmailUser(); // ดึงข้อมูล Gmail user จาก backend
-  }, []);
 
   // ปิด Google Analytics ใน development environment
   useEffect(() => {
@@ -143,17 +139,6 @@ const Newcommu = () => {
     };
   }, []);
 
-  const fetchCurrentUserFollow = async () => {
-    try {
-      const res = await fetch(
-        `${import.meta.env.VITE_APP_API_BASE_URL}/api/users/${userEmail}`
-      );
-      const data = await res.json();
-      setCurrentUserfollow(data);
-    } catch (err) {
-      console.error("โหลด currentUserfollow ไม่ได้:", err);
-    }
-  };
   const fetchFilter = async () => {
     try {
       const res = await axios.get(
@@ -169,6 +154,10 @@ const Newcommu = () => {
       const res = await axios.get(
         `${import.meta.env.VITE_APP_API_BASE_URL}/api/infos/${userEmail}`
       );
+ 
+      if (res.status === 200) {
+        toast.info("ไม่พบข้อมูลผู้ใช้งาน");
+      }
       getNickName(res.data);
     } catch (err) {
       console.error("โหลด nickname ล้มเหลว:", err);
@@ -179,28 +168,17 @@ const Newcommu = () => {
     fetchFilter();
     fetchUsersAndFriends();
     fetchInfos();
-    if (genres) {
-      fetchCurrentUserFollow();
-    }
   }, [userEmail]);
 
-  const fetchGmailUser = async () => {
-    try {
-      const res = await axios.get(
-        `${import.meta.env.VITE_APP_API_BASE_URL}/api/users/${userEmail}`
-      );
-      setCurrentUserfollow(res.data);
-    } catch (err) {
-      console.error("โหลด Gmail currentUser ไม่ได้:", err);
-    }
-  };
   const fetchCurrentUserAndFriends = async () => {
     try {
       const encodedEmail = encodeURIComponent(userEmail);
       const userRes = await axios.get(
         `${import.meta.env.VITE_APP_API_BASE_URL}/api/users/${encodedEmail}`
       );
+      if (!userRes.data) return;
       const currentUser = userRes.data;
+      console.log("currentUser", currentUser);
 
       if (Array.isArray(currentUser.friends)) {
         const friendEmails = currentUser.friends;

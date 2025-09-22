@@ -53,13 +53,30 @@ const EmailLogin = () => {
         setIsRegister(false);
         setFormData({ email: '', password: '', confirmPassword: '', displayName: '' });
       } else {
-        await loginWithEmail(formData.email, formData.password);
-        localStorage.setItem('userEmail', formData.email);
-        navigate('/home');
+        const result = await loginWithEmail(formData.email, formData.password);
+        const user = result.user;
+        console.log('User:', result);
+        console.log('User:', user);
+
+
+        // ส่งข้อมูลผู้ใช้ไปยัง backend (MongoDB)
+        await axios.post(`${import.meta.env.VITE_APP_API_BASE_URL}/api/login`, {
+          displayName: user.displayName,
+          email: user.email,
+          photoURL: user.photoURL,
+        });
+
+        localStorage.setItem('userName', user.displayName);
+        localStorage.setItem('userPhoto', user.photoURL);
+        localStorage.setItem('userEmail', user.email);
+
+        setTimeout(() => {
+          navigate("/home");
+        }, 500);
       }
     } catch (error) {
       console.error('Auth error:', error);
-      
+
       // แปล Firebase error messages
       let errorMessage = error.message;
       if (error.code === 'auth/user-not-found') {
@@ -73,7 +90,7 @@ const EmailLogin = () => {
       } else if (error.code === 'auth/invalid-email') {
         errorMessage = 'รูปแบบอีเมลไม่ถูกต้อง';
       }
-      
+
       setError(errorMessage);
     } finally {
       setLoading(false);

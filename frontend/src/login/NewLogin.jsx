@@ -111,7 +111,7 @@ const NewLogin = () => {
         photoURL: user.photoURL,
       });
 
-      console.log("Response from backend:", response.data);
+      // console.log("Response from backend:", response.data)
 
       // เก็บข้อมูลลง localStorage
       localStorage.setItem("userName", user.displayName);

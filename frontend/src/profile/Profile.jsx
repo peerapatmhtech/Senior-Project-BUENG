@@ -225,7 +225,7 @@ const Profile = () => {
     );
   }
 
-  const mainProfilePhoto = userPhotos.length > 0 ? userPhotos[0].url : localStorage.getItem("userPhoto") || 'https://via.placeholder.com/150';
+  const mainProfilePhoto = userPhotos.length > 0 ? userPhotos[0].url : localStorage.getItem("userPhoto");
 
   return (
     <div className={`profile-page ${isDarkMode ? "dark-mode" : ""}`}>
