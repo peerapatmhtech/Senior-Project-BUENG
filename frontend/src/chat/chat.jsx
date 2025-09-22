@@ -681,7 +681,7 @@ const Chat = () => {
           axios.get(`${import.meta.env.VITE_APP_API_BASE_URL}/api/infomatch/all`),
           axios.get(`${import.meta.env.VITE_APP_API_BASE_URL}/api/allrooms`),
           axios.get(`${import.meta.env.VITE_APP_API_BASE_URL}/api/events/${encodedEmail}`),
-          axios.get(`${import.meta.env.VITE_APP_API_BASE_URL}/api/get-all-info`),
+          axios.get(`${import.meta.env.VITE_APP_API_BASE_URL}/api/infos`),
           axios.get(`${import.meta.env.VITE_APP_API_BASE_URL}/api/user-rooms/${encodedEmail}`),
         ]);
         setCommunityData(CommunityData.data);

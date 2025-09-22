@@ -36,7 +36,7 @@ router.get("/events-match/:email", async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 })
-router.delete("/delete-all-events-match", async (req, res) => {
+router.delete("/events-match", async (req, res) => {
   try {
     await EventMatch.deleteMany({}); // ลบทุกเอกสารใน collection
     res.status(200).json({ message: "ลบกิจกรรมทั้งหมดเรียบร้อยแล้ว" });

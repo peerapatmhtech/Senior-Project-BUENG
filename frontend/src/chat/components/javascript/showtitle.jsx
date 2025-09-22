@@ -13,7 +13,7 @@ const ShowTitle = ({ userimage, openchat }) => {
       const fetchUserImage = async () => {
         try {
           const response = await axios.get(
-            `${import.meta.env.VITE_APP_API_BASE_URL}/api/all-events`
+            `${import.meta.env.VITE_APP_API_BASE_URL}/api/events`
           );
           if (response.data) {
             setUserEvents(response.data);

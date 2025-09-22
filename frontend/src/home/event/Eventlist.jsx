@@ -6,10 +6,10 @@ import { useSocket } from "../../context/make.com"; // Import useSocket
 import { MdFavorite, MdFavoriteBorder } from "react-icons/md";
 import { FiCalendar, FiX } from "react-icons/fi";
 import { TbFileDescription } from "react-icons/tb";
+import { toast } from "react-toastify";
 
 const EventList = ({ setWaiting, waiting }) => {
   const [events, setEvents] = useState([]);
-  const [eventsImage, setEventsImage] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const email = localStorage.getItem("userEmail");
@@ -24,43 +24,41 @@ const EventList = ({ setWaiting, waiting }) => {
       const res = await axios.get(
         `${import.meta.env.VITE_APP_API_BASE_URL}/api/events/${user.email}`
       );
-      setEvents(res.data);
+      if (res.status === 200 && Array.isArray(res.data)) {
+        setEvents(res.data);
+      }
     } catch (error) {
-      console.error("❌ Error fetching events:", error);
+      // console.error("❌ Error fetching events:", error);
+      if (error.response && error.response.status === 404) {
+        setEvents([]);
+        toast.success("ไม่มีกิจกรรมในขณะนี้");
+      } else {
+        toast.error("เกิดข้อผิดพลาดในการโหลดกิจกรรม");
+      }
     } finally {
       setLoading(false);
     }
   }, [user.email]);
 
-  const fetchImage = useCallback(async () => {
-    try {
-      const res = await axios.get(
-        `${import.meta.env.VITE_APP_API_BASE_URL}/api/get-image-genres`
-      );
-      setEventsImage(res.data.imageGenres);
-    } catch (err) {
-      console.error("❌ Error fetching images:", err);
-    }
-  }, []);
-
   useEffect(() => {
     fetchEvents();
-    fetchImage();
-  }, []);
+  }, [fetchEvents]);
+
+  const handleEventsUpdated = useCallback(() => {
+    setWaiting(false);
+    fetchEvents();
+    console.log("dasda")
+  }, [setWaiting, fetchEvents]);
 
   useEffect(() => {
     if (!socket) return;
 
-    socket.on('events_updated', () => {
-      setWaiting(false);
-      fetchEvents();
-      fetchImage();
-    });
+    socket.on("events_updated", handleEventsUpdated);
 
     return () => {
-      socket.off("events_updated");
+      socket.off("events_updated", handleEventsUpdated);
     };
-  }, [socket, fetchEvents, fetchImage]);
+  }, [socket, handleEventsUpdated]);
 
   const handleDelete = async (id) => {
     const confirm = window.confirm("คุณแน่ใจว่าต้องการลบกิจกรรมนี้หรือไม่?");
@@ -68,7 +66,7 @@ const EventList = ({ setWaiting, waiting }) => {
 
     try {
       await axios.delete(
-        `${import.meta.env.VITE_APP_API_BASE_URL}/api/detele-events/${id}`
+        `${import.meta.env.VITE_APP_API_BASE_URL}/api/events/${id}`
       );
     } catch (error) {
       console.error("❌ Error deleting event:", error);
@@ -84,9 +82,7 @@ const EventList = ({ setWaiting, waiting }) => {
 
     try {
       await axios.delete(
-        `${
-          import.meta.env.VITE_APP_API_BASE_URL
-        }/api/delete-all-events/${userEmail}`
+        `${import.meta.env.VITE_APP_API_BASE_URL}/api/events/${userEmail}`
       );
     } catch (error) {
       console.error("❌ Error deleting all events:", error);
@@ -154,7 +150,7 @@ const EventList = ({ setWaiting, waiting }) => {
             <div key={event._id} className="event-card">
               <img
                 className="event-image"
-                src={event.image  || '/frontend/assets/ChatGPT Image 5 ก.ย. 2568 02_30_13.jpg'}
+                src={event.image}
                 alt={event.title}
                 width="200"
               />
@@ -195,24 +191,19 @@ const EventList = ({ setWaiting, waiting }) => {
               </div>
               <div className="event-info">
                 <p>
-                  🎵 <span class="category-label">Category:</span>
-                  <div class="genre-display">
-                    {Object.entries(event.genre).map(
-                      ([category, subcategories]) => (
-                        <div key={category}>
-                          <strong>{category}:</strong>
-                          {subcategories.map((sub) => (
-                            <span class="genre-border">{sub}</span>
-                          ))}
-                        </div>
-                      )
-                    )}
-                  </div>
+                  🎵 <span className="category-label">Category:</span>
+                  {Object.values(event.genre)
+                    .flat()
+                    .map((subcategory, index) => (
+                      <span key={index} className="genre-border">
+                        {subcategory}
+                      </span>
+                    ))}{" "}
                 </p>
               </div>
               <p className="event-description">
                 <TbFileDescription />{" "}
-                <span class="category-label">
+                <span className="category-label">
                   Description:{event.description}
                 </span>
               </p>

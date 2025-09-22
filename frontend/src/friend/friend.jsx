@@ -744,7 +744,7 @@ const Friend = () => {
     const getNickNameF = async () => {
       try {
         const res = await axios.get(
-          `${import.meta.env.VITE_APP_API_BASE_URL}/api/get-all-info`
+          `${import.meta.env.VITE_APP_API_BASE_URL}/api/infos`
         );
         getNickName(res.data);
       } catch (err) {

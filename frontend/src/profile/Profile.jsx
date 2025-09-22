@@ -66,7 +66,7 @@ const Profile = () => {
         const [userRes, followRes, nickRes] = await Promise.all([
           axios.get(`${import.meta.env.VITE_APP_API_BASE_URL}/api/user-info/${encodeURIComponent(userEmail)}`),
           axios.get(`${import.meta.env.VITE_APP_API_BASE_URL}/api/user/${encodeURIComponent(userEmail)}/follow-info`),
-          axios.get(`${import.meta.env.VITE_APP_API_BASE_URL}/api/get-user?email=${userEmail}`),
+          axios.get(`${import.meta.env.VITE_APP_API_BASE_URL}/api/infos?email=${userEmail}`),
         ]);
 
         setUserInfo(userRes.data || { detail: "" });

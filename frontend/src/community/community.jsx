@@ -13,10 +13,7 @@ import HeaderProfile from "../ui/HeaderProfile";
 const socket = io(import.meta.env.VITE_APP_API_BASE_URL);
 
 const Newcommu = () => {
-  const loggedInEmail = localStorage.getItem("userEmail");
-
   const [rooms, setRooms] = useState([]);
-  const [matches, setMatches] = useState([]);
   const [users, setUsers] = useState([]);
   const [currentUserfollow, setCurrentUserfollow] = useState(null);
   const modalRef = useRef(null);
@@ -46,10 +43,10 @@ const Newcommu = () => {
   useEffect(() => {
     if (import.meta.env.DEV) {
       // ปิด gtag tracking ใน development
-      window.gtag = function() {
-        console.log('Google Analytics disabled in development mode');
+      window.gtag = function () {
+        console.log("Google Analytics disabled in development mode");
       };
-      
+
       // ป้องกัน analytics requests
       if (window.dataLayer) {
         window.dataLayer = [];
@@ -135,17 +132,6 @@ const Newcommu = () => {
     }
   };
 
-  const fetchMatches = async () => {
-    try {
-      const res = await fetch(
-        `${import.meta.env.VITE_APP_API_BASE_URL}/api/matches/${loggedInEmail}`
-      );
-      const data = await res.json();
-      setMatches(data);
-    } catch (error) {
-      console.error("เกิดข้อผิดพลาดในการโหลด matches:", error);
-    }
-  };
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setSelectedUser(null);
@@ -160,7 +146,7 @@ const Newcommu = () => {
   const fetchCurrentUserFollow = async () => {
     try {
       const res = await fetch(
-        `${import.meta.env.VITE_APP_API_BASE_URL}/api/users/${loggedInEmail}`
+        `${import.meta.env.VITE_APP_API_BASE_URL}/api/users/${userEmail}`
       );
       const data = await res.json();
       setCurrentUserfollow(data);
@@ -168,51 +154,36 @@ const Newcommu = () => {
       console.error("โหลด currentUserfollow ไม่ได้:", err);
     }
   };
-
+  const fetchFilter = async () => {
+    try {
+      const res = await axios.get(
+        `${import.meta.env.VITE_APP_API_BASE_URL}/api/filters/${userEmail}`
+      );
+      setGenres(res.data);
+    } catch (err) {
+      console.error("โหลด Gmail currentUser ไม่ได้:", err);
+    }
+  };
+  const fetchInfos = async () => {
+    try {
+      const res = await axios.get(
+        `${import.meta.env.VITE_APP_API_BASE_URL}/api/infos/${userEmail}`
+      );
+      getNickName(res.data);
+    } catch (err) {
+      console.error("โหลด nickname ล้มเหลว:", err);
+    }
+  };
   useEffect(() => {
-    const getGenres = async () => {
-      try {
-        const res = await axios.get(
-          `${import.meta.env.VITE_APP_API_BASE_URL
-          }/api/filters/${loggedInEmail}`
-        );
-        setGenres(res.data);
-      } catch (err) {
-        console.error("โหลด Gmail currentUser ไม่ได้:", err);
-      }
-    };
-    getGenres();
+    if (!userEmail) return;
+    fetchFilter();
+    fetchUsersAndFriends();
+    fetchInfos();
     if (genres) {
-      fetchMatches();
       fetchCurrentUserFollow();
     }
-  }, [loggedInEmail]);
+  }, [userEmail]);
 
-  const handleFollow = async (friendEmail) => {
-    await fetchGmailUser();
-    if (!currentUserfollow || !Array.isArray(currentUserfollow.following)) {
-      console.warn("currentUser ยังไม่พร้อม หรือ following ไม่มี");
-      return;
-    }
-
-    const isFollowing = currentUserfollow.following.includes(friendEmail);
-    const url = `${import.meta.env.VITE_APP_API_BASE_URL
-      }/api/users/${userEmail}/${isFollowing ? "unfollow" : "follow"
-      }/${friendEmail}`;
-    const method = isFollowing ? "DELETE" : "POST";
-
-    try {
-      await axios({ method, url });
-      await fetchGmailUser();
-    } catch (err) {
-      console.error("Follow/unfollow error:", err);
-    }
-  };
-
-  const handleProfileClick = (friend) => {
-    setSelectedUser(friend);
-    setIsModalOpen(true);
-  };
   const fetchGmailUser = async () => {
     try {
       const res = await axios.get(
@@ -281,21 +252,28 @@ const Newcommu = () => {
 
     socket.on("update-users", (data) => {
       // ตรวจสอบโครงสร้างข้อมูล
-      const onlineUsersList = Array.isArray(data) ? data :
-        (data && Array.isArray(data.onlineUsers)) ? data.onlineUsers : [];
+      const onlineUsersList = Array.isArray(data)
+        ? data
+        : data && Array.isArray(data.onlineUsers)
+        ? data.onlineUsers
+        : [];
 
       setUsers((prevUsers) =>
         prevUsers.map((user) => ({
           ...user,
           isOnline: user.email ? onlineUsersList.includes(user.email) : false,
-          lastSeen: data.lastSeenTimes ? data.lastSeenTimes[user.email] : null
+          lastSeen: data.lastSeenTimes ? data.lastSeenTimes[user.email] : null,
         }))
       );
       setFriends((prevFriends) =>
         prevFriends.map((friend) => ({
           ...friend,
-          isOnline: friend.email ? onlineUsersList.includes(friend.email) : false,
-          lastSeen: data.lastSeenTimes ? data.lastSeenTimes[friend.email] : null
+          isOnline: friend.email
+            ? onlineUsersList.includes(friend.email)
+            : false,
+          lastSeen: data.lastSeenTimes
+            ? data.lastSeenTimes[friend.email]
+            : null,
         }))
       );
     });
@@ -304,37 +282,6 @@ const Newcommu = () => {
       socket.off("update-users");
     };
   }, [userEmail]);
-  useEffect(() => {
-    if (userEmail) {
-      fetchUsersAndFriends();
-    }
-  }, [userEmail]);
-  const fetchFollowInfo = async (targetEmail) => {
-    try {
-      const res = await axios.get(
-        `${import.meta.env.VITE_APP_API_BASE_URL
-        }/api/user/${targetEmail}/follow-info`
-      );
-
-      setFollowers(res.data.followers);
-      setFollowing(res.data.following);
-    } catch (error) {
-      console.error("Error fetching follow info:", error);
-    }
-  };
-  useEffect(() => {
-    const getNickNameF = async () => {
-      try {
-        const res = await axios.get(
-          `${import.meta.env.VITE_APP_API_BASE_URL}/api/get-all-info`
-        );
-        getNickName(res.data);
-      } catch (err) {
-        console.error("โหลด nickname ล้มเหลว:", err);
-      }
-    };
-    getNickNameF();
-  }, []);
 
   return (
     <RequireLogin>
@@ -352,8 +299,9 @@ const Newcommu = () => {
           </button>
           {(showOnlyMyRooms || selectedRooms.length > 0) && (
             <button
-              className={`delete-button-all-room ${isDeleteMode ? "active" : ""
-                }`}
+              className={`delete-button-all-room ${
+                isDeleteMode ? "active" : ""
+              }`}
               onClick={() => {
                 if (showOnlyMyRooms) {
                   setIsDeleteMode(!isDeleteMode);
@@ -368,8 +316,8 @@ const Newcommu = () => {
               {isDeleteMode
                 ? `ยกเลิก (${selectedRooms.length})`
                 : selectedRooms.length > 0
-                  ? `ลบห้อง (${selectedRooms.length})`
-                  : "ลบห้อง"}
+                ? `ลบห้อง (${selectedRooms.length})`
+                : "ลบห้อง"}
             </button>
           )}
           {isDeleteMode && selectedRooms.length > 0 && (
@@ -380,7 +328,6 @@ const Newcommu = () => {
               ยืนยันการลบ ({selectedRooms.length})
             </button>
           )}
-
         </div>
         <div className="container-content">
           {handlematchfriend === true ? (
@@ -390,18 +337,14 @@ const Newcommu = () => {
               setSelectedRooms={setSelectedRooms}
             />
           ) : (
-         
-              
-              <RoomList
-                showOnlyMyRooms={showOnlyMyRooms}
-                rooms={rooms}
-                isDeleteMode={isDeleteMode}
-                selectedRooms={selectedRooms}
-                setSelectedRooms={setSelectedRooms}
-              />
+            <RoomList
+              showOnlyMyRooms={showOnlyMyRooms}
+              rooms={rooms}
+              isDeleteMode={isDeleteMode}
+              selectedRooms={selectedRooms}
+              setSelectedRooms={setSelectedRooms}
+            />
           )}
-
-
         </div>
       </div>
     </RequireLogin>

@@ -59,7 +59,7 @@ export function useEvents({ email, socket }) {
   const handleDelete = async (id) => {
     if (!window.confirm("คุณแน่ใจว่าต้องการลบกิจกรรมนี้หรือไม่?")) return;
     try {
-      await axios.delete(`${API_BASE_URL}/api/detele-events/${id}`);
+      await axios.delete(`${API_BASE_URL}/api/events/${id}`);
       // No need to call fetchEvents, socket should handle the update
     } catch (err) {
       console.error("❌ Error deleting event:", err);
@@ -70,7 +70,7 @@ export function useEvents({ email, socket }) {
   const handleDeleteAll = async () => {
     if (!window.confirm("คุณแน่ใจว่าต้องการลบกิจกรรมทั้งหมดหรือไม่?")) return;
     try {
-      await axios.delete(`${API_BASE_URL}/api/delete-all-events/${email}`);
+      await axios.delete(`${API_BASE_URL}/api/events/${email}`);
       await axios.delete(`${API_BASE_URL}/api/like/${email}`);
       setFavoriteEvents([]);
       // No need to call fetchEvents, socket should handle the update

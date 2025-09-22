@@ -54,7 +54,7 @@ router.get("/user-rooms/:email", async (req, res) => {
 
 // ดึงข้อมูลผู้ใช้ทั้งหมด (nicknames)
 // ใช้สำหรับแสดงรายชื่อผู้ใช้ในหน้าเพื่อน
-router.get("/get-all-info", async (req, res) => {
+router.get("/infos", async (req, res) => {
   try {
     const users = await Info.find();
     res.json(users);
@@ -63,10 +63,9 @@ router.get("/get-all-info", async (req, res) => {
   }
 });
 // Get user by email (query)
-router.get("/get-user", async (req, res) => {
-  const { email } = req.query;
+router.get("/infos/:email", async (req, res) => {
   try {
-    const user = await Info.findOne({ email });
+    const user = await Info.findOne({ email: req.params.email });
     if (!user) {
       return res.status(404).json({ message: "ไม่พบผู้ใช้" });
     }
@@ -108,7 +107,11 @@ router.get("/user-info-except/:email", async (req, res) => {
   const { email } = req.params;
   try {
     const users = await Info.find({ email: { $ne: email } });
-    res.status(200).json({ users: users.map(user => ({ email: user.email, ...user.userInfo })) });
+    res
+      .status(200)
+      .json({
+        users: users.map((user) => ({ email: user.email, ...user.userInfo })),
+      });
   } catch (error) {
     console.error("❌ Error fetching users:", error);
     res.status(500).json({ message: "Server error" });
@@ -129,7 +132,9 @@ router.post("/save-user-name", async (req, res) => {
       { new: true }
     );
     if (!infoUpdate) {
-      return res.status(404).json({ message: "ไม่พบผู้ใช้นี้ในทั้งสอง collection" });
+      return res
+        .status(404)
+        .json({ message: "ไม่พบผู้ใช้นี้ในทั้งสอง collection" });
     }
     res.json({
       message: "อัปเดต nickname และ displayName เรียบร้อย",
