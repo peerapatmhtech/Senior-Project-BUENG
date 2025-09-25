@@ -191,7 +191,7 @@ const EventList = ({ setWaiting, waiting }) => {
               </div>
               <div className="event-info">
                 <p>
-                  🎵 <span className="category-label">Category:</span>
+                  <span className="category-label">Category:</span>
                   {Object.values(event.genre)
                     .flat()
                     .map((subcategory, index) => (

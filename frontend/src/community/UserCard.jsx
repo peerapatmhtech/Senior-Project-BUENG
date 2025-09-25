@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import api from '../lib/axiosSecure';
+import api from '../../../backend/src/middleware/axiosSecure';
 
 const UserCard = ({ room, userEmail, users }) => {
   const [photos, setPhotos] = useState([]);

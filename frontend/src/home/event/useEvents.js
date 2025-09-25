@@ -88,11 +88,12 @@ export function useEvents({ email, socket }) {
         eventTitle: title,
       });
       setFavoriteEvents((prev) => [...prev, eventId]);
-      setPendingFavorites((prev) => [...prev, { event: title }]);
+      setPendingFavorites((prev) => [...prev, { eventTitle: title }]);
     } catch (err) {
       console.error("❌ Error liking event:", err);
     }
   };
+  console.log(pendingFavorites)
 
   const handleUnlike = async (eventId) => {
     try {
@@ -116,6 +117,7 @@ export function useEvents({ email, socket }) {
   };
 
   useEffect(() => {
+    console.log(pendingFavorites)
     if (debounceRef.current) clearTimeout(debounceRef.current);
     if (pendingFavorites.length > 0) {
       debounceRef.current = setTimeout(() => {

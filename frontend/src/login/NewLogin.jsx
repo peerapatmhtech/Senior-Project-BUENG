@@ -2,7 +2,8 @@ import React, { useState, useEffect } from "react";
 import { auth, provider, signInWithPopup } from "../../../backend/src/firebase/firebase";
 import { useAuth } from "../../../backend/src/firebase/Authcontext";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import { getCsrfToken } from "../../../backend/src/middleware/axiosSecure";
+import api from "../../../backend/src/middleware/axiosSecure";
 import "./NewLogin.css";
 
 const NewLogin = () => {
@@ -105,7 +106,7 @@ const NewLogin = () => {
       container?.classList.add("success-animation");
 
       // ส่งข้อมูลผู้ใช้ไปยัง backend (MongoDB)
-      const response = await axios.post(`${import.meta.env.VITE_APP_API_BASE_URL}/api/login`, {
+      const response = await api.post(`/api/login`, {
         displayName: user.displayName,
         email: user.email,
         photoURL: user.photoURL,
@@ -120,9 +121,10 @@ const NewLogin = () => {
 
       // Smooth transition to home
       setTimeout(() => {
+
         navigate("/home");
       }, 500);
-
+      await getCsrfToken();
     } catch (error) {
       setError("เกิดข้อผิดพลาดในการล็อกอิน");
       console.error(error);
@@ -158,7 +160,7 @@ const NewLogin = () => {
       container?.classList.add("success-animation");
 
       // ส่งข้อมูลผู้ใช้ไปยัง backend
-      await axios.post(`${import.meta.env.VITE_APP_API_BASE_URL}/api/login`, {
+      await api.post(`/api/login`, {
         displayName: user.displayName || signInForm.email.split('@')[0],
         email: user.email,
         photoURL: user.photoURL || null,
@@ -170,9 +172,10 @@ const NewLogin = () => {
       localStorage.setItem("userEmail", user.email);
 
       setTimeout(() => {
+
         navigate("/home");
       }, 500);
-
+      await getCsrfToken();
     } catch (error) {
       console.error("Email sign in error:", error);
       setError(error.message);
@@ -214,7 +217,7 @@ const NewLogin = () => {
       container?.classList.add("success-animation");
 
       // ส่งข้อมูลผู้ใช้ไปยัง backend
-      await axios.post(`${import.meta.env.VITE_APP_API_BASE_URL}/api/login`, {
+      await api.post(`/api/login`, {
         displayName: user.displayName,
         email: user.email,
         photoURL: user.photoURL || null,
@@ -471,7 +474,7 @@ const NewLogin = () => {
             <div className="reset-modal" onClick={(e) => e.stopPropagation()}>
               <div className="modal-header">
                 <h2>รีเซ็ตรหัสผ่าน</h2>
-                <button 
+                <button
                   className="close-btn"
                   onClick={() => setShowResetModal(false)}
                   aria-label="ปิด"
@@ -479,10 +482,10 @@ const NewLogin = () => {
                   ×
                 </button>
               </div>
-              
+
               <form onSubmit={handleForgotPassword}>
                 <p>กรอกอีเมล @bumail.net ของคุณ เราจะส่งลิงก์รีเซ็ตรหัสผ่านให้คุณ</p>
-                
+
                 <input
                   type="email"
                   placeholder="yourname@bumail.net"
@@ -492,7 +495,7 @@ const NewLogin = () => {
                   disabled={isLoading}
                   autoComplete="email"
                 />
-                
+
                 <div className="modal-buttons">
                   <button
                     type="button"
@@ -510,7 +513,7 @@ const NewLogin = () => {
                     {isLoading ? 'กำลังส่ง...' : 'ส่งลิงก์รีเซ็ต'}
                   </button>
                 </div>
-                
+
                 {error && <div className="error-message">{error}</div>}
                 {resetMessage && <div className="success-message">{resetMessage}</div>}
               </form>

@@ -16,7 +16,6 @@ import { useAuth } from "../backend/src/firebase/Authcontext";
 function App() {
   const location = useLocation(); // ใช้เพื่อดึงข้อมูล path ปัจจุบัน
   const { loading } = useAuth();
-
   // แสดง loading ระหว่างที่ check auth state
   if (loading) {
     return (
@@ -25,7 +24,9 @@ function App() {
         <p>กำลังตรวจสอบสิทธิ์...</p>
       </div>
     );
-  }
+  };
+
+
 
   return (
     <SocketProvider>

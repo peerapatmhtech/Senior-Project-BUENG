@@ -13,6 +13,7 @@ const eventSchema = new mongoose.Schema(
     link: String,
     image: String,
     createdByAI: Boolean,
+    updatedAt: String,
     email: String,
   },
   { timestamps: true }

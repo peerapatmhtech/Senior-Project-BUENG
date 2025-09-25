@@ -8,12 +8,14 @@ import { Server } from "socket.io";
 import userRoutes from "./backend/src/routes/gmail.js";
 import friendRoutes from "./backend/src/routes/friend.js";
 import roomRoutes from "./backend/src/routes/room.js";
-import infoRoutes  from "./backend/src/routes/info.js";
+import cookieParser from "cookie-parser";
+import infoRoutes from "./backend/src/routes/info.js";
 import eventRoutes from "./backend/src/routes/event.js";
 import likeRoutes from "./backend/src/routes/like.js"; // Routes from "./routes/like.js";
-import roommatchRoutes  from "./backend/src/routes/eventmatch.js"; // Routes from "./routes/room.js";
+import roommatchRoutes from "./backend/src/routes/eventmatch.js"; // Routes from "./routes/room.js";
 import mongoose from "mongoose";
 import { Filter } from "./backend/src/model/filter.js";
+import { Event } from "./backend/src/model/event.js";
 import axios from "axios";
 
 // Import new routes (ES Modules style)
@@ -21,7 +23,11 @@ import friendRequestRoutes from "./backend/src/routes/friendRequest.js";
 import friendApiRoutes from "./backend/src/routes/friendApi.js";
 import userPhotoRoutes from "./backend/src/routes/userPhoto.js";
 import infoMatchRoutes from "./backend/src/routes/infomatch.js"; // Import info match routes
-import verifyFirebaseToken from "./backend/src/middleware/verifyToken.js"; // Import token verification middleware
+import session from "express-session";
+import csurf from "csurf";
+import helmet from "helmet";
+import rateLimit from 'express-rate-limit';
+
 
 
 
@@ -45,7 +51,11 @@ const io = new Server(server, {
 const port = process.env.PORT || 8080;
 const MONGO_URI = process.env.MONGO_URI;
 const MAKE_WEBHOOK_URL = process.env.MAKE_WEBHOOK_URL;
+const COOKIE_SECRET = process.env.COOKIE_SECRET;
+
 // ✅ Middleware
+const isProduction = process.env.NODE_ENV === 'production';
+app.use(helmet());
 app.use(
   cors({
     origin: allowedOrigins,
@@ -53,9 +63,51 @@ app.use(
   })
 );
 app.use(bodyParser.json());
+app.use(cookieParser(COOKIE_SECRET));
+
+// Session Middleware
+app.use(
+  session({
+    secret: COOKIE_SECRET,
+    resave: false,
+    saveUninitialized: false, // Don't create session until something stored
+    cookie: {
+      secure: isProduction, // Use secure cookies in production
+      httpOnly: true, // Prevent client-side script access
+      sameSite: isProduction ? 'none' : 'lax', // 'none' for cross-site requests, 'lax' for local dev
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    },
+  })
+);
+
+// CSRF Protection Middleware
+// This must come after the session middleware
+const csrfProtection = csurf({
+  cookie: {
+    key: '_csrf', // The name of the cookie
+    path: '/',
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax',
+  },
+});
+
+app.use(csrfProtection);
+
+// Custom middleware to attach user from session to req.user for downstream routes
+app.use((req, res, next) => {
+  req.user = req.session.user || null;
+  next();
+});
+
 
 // Serve static files from the uploads directory
 app.use('/uploads', express.static('uploads'));
+
+// API endpoint to get the CSRF token
+app.get("/api/csrf-token", (req, res) => {
+  res.json({ csrfToken: req.csrfToken() });
+});
 
 // ✅ Connect MongoDB
 mongoose.connect(MONGO_URI);
@@ -73,12 +125,12 @@ const broadcastUserStatus = () => {
   // ส่งข้อมูลแบบมีโครงสร้างชัดเจน
   const onlineUsersEmails = Array.from(onlineUsers.keys());
   const lastSeenObj = {};
-  
+
   // แปลง Map เป็น object ธรรมดา
   lastSeenTimes.forEach((timestamp, email) => {
     lastSeenObj[email] = timestamp;
   });
-  
+
   io.emit("update-users", {
     onlineUsers: onlineUsersEmails,
     lastSeenTimes: lastSeenObj
@@ -92,27 +144,27 @@ io.on("connection", (socket) => {
     console.log("🧑‍💻 User online", user);
     const { email, displayName, photoURL } = user;
     if (!email) return;
-    
+
     socket.email = email;
-    
+
     // เก็บข้อมูลผู้ใช้
     userDetails.set(email, { displayName, photoURL, email });
-    
+
     // เพิ่ม socket.id เข้าไปใน Set
     if (!onlineUsers.has(email)) {
       onlineUsers.set(email, new Set());
     }
     onlineUsers.get(email).add(socket.id);
-    
+
     // เก็บ socket ID ล่าสุดของผู้ใช้สำหรับการส่งการแจ้งเตือนส่วนตัว
     userSockets[email] = socket.id;
-    
+
     // ลบเวลาออฟไลน์ล่าสุด (เพราะตอนนี้ออนไลน์แล้ว)
     lastSeenTimes.delete(email);
-    
+
     // แจ้งเตือนทุกคนว่ามีคนออนไลน์
     broadcastUserStatus();
-    
+
     // ส่งเฉพาะข้อมูลผู้ใช้นี้ว่าออนไลน์
     io.emit("user-online", {
       email,
@@ -132,21 +184,21 @@ io.on("connection", (socket) => {
         // ถ้าไม่มี socket id ของผู้ใช้ ให้เพิ่มเข้ามาใหม่
         onlineUsers.set(email, new Set([socket.id]));
         socket.email = email;
-        
+
         // เก็บข้อมูลผู้ใช้
         if (displayName && photoURL) {
           userDetails.set(email, { displayName, photoURL, email });
         }
-        
+
         // ลบเวลาออฟไลน์ล่าสุด (เพราะตอนนี้ออนไลน์แล้ว)
         lastSeenTimes.delete(email);
-        
+
         // แจ้งเตือนทุกคน
         broadcastUserStatus();
       }
     }
   });
-  
+
   socket.on("user-offline", (userData) => {
     if (userData && userData.email) {
       const { email } = userData;
@@ -157,7 +209,7 @@ io.on("connection", (socket) => {
           // บันทึกเวลาล่าสุดที่ออฟไลน์
           const timestamp = new Date().toISOString();
           lastSeenTimes.set(email, timestamp);
-          
+
           // ส่งข้อมูลว่าผู้ใช้ออฟไลน์พร้อมเวลาล่าสุด
           io.emit("user-offline", {
             email,
@@ -168,7 +220,7 @@ io.on("connection", (socket) => {
           });
         }
       }
-      
+
       // ส่ง user list ไปให้ทุก client
       broadcastUserStatus();
     }
@@ -184,7 +236,7 @@ io.on("connection", (socket) => {
         // บันทึกเวลาล่าสุดที่ออฟไลน์
         const timestamp = new Date().toISOString();
         lastSeenTimes.set(email, timestamp);
-        
+
         // ส่งข้อมูลว่าผู้ใช้ออฟไลน์พร้อมเวลาล่าสุด
         io.emit("user-offline", {
           email,
@@ -210,30 +262,143 @@ app.post("/api/update-genres", async (req, res) => {
   }
 
   try {
+
+    //////validate email//////////
+    if (!email) {
+      return res
+        .status(400)
+        .json({ message: "Missing email" });
+    };
+
+    /////////////Find user and update genres and subgenres////////////
     const user = await Filter.findOneAndUpdate(
       { email },
       { genres, subGenres: subGenres || {} },
       { new: true, upsert: true } // เพิ่ม upsert เผื่อ user ยังไม่มีใน Filter
     );
 
-    // ✅ ส่งข้อมูลไปยัง Make.com เฉพาะกรณีที่ genres/subGenres มีข้อมูล
-    const hasGenres = Array.isArray(genres) ? genres.length > 0 : false;
-    const hasSubGenres = subGenres && typeof subGenres === "object" && Object.values(subGenres).some(arr => Array.isArray(arr) ? arr.length > 0 : false);
-    if (hasGenres && hasSubGenres) {
-      await axios.post(MAKE_WEBHOOK_URL, {
-        type: "update-genres",
-        filter_info: {
-          email: user.email,
-          genres: user.genres,
-          subGenres: user.subGenres,
-          updatedAt: updatedAt || new Date().toISOString(),
-        },
+
+    const filter = {};
+
+    ////////////Filter out events from the provided userEmail////////
+    // Exclude events from the provided userEmail
+    if (user.email) {
+      filter.email = { $ne: user.email };
+    }
+
+    // Validate subgenres structure - it should be an object
+    if (
+      !user.subGenres ||
+      typeof user.subGenres !== "object" ||
+      Array.isArray(user.subGenres) ||
+      user.subGenres === null
+    ) {
+      return res.status(400).json({
+        message:
+          "A 'subgenres' object with category filters is required in the request body.",
       });
     }
 
-    res
-      .status(200)
-      .json({ message: "Genres updated & sent to Make.com", user });
+    const subgenresObject = user.subGenres;
+    const genreFilters = Object.entries(subgenresObject)
+      .map(([category, subgenreList]) => {
+        const trimmedCategory = category.trim();
+        if (!trimmedCategory) return null;
+
+        // If subgenres are provided, filter by them
+        if (Array.isArray(subgenreList) && subgenreList.length > 0) {
+          const cleanSubgenres = subgenreList
+            .map((s) => String(s).trim())
+            .filter((s) => s.length > 0);
+          if (cleanSubgenres.length > 0) {
+            return { [`genre.${trimmedCategory}`]: { $in: cleanSubgenres } };
+          }
+        }
+
+        // Otherwise, match any event with the category
+        return { [`genre.${trimmedCategory}`]: { $exists: true } };
+      })
+      .filter((f) => f !== null);
+
+
+    if (genreFilters.length > 0) {
+      if (genreFilters.length === 1) {
+        Object.assign(filter, genreFilters[0]);
+      } else {
+        filter.$or = genreFilters;
+      }
+    } else {
+      // If subgenresObject is empty (e.g., subgenres: {}), return no events
+      return res.json([]);
+    }
+
+    const events = await Event.find(filter).sort({ date: 1 });
+
+    // หา events ที่มี title หรือ link ซ้ำกับที่มีอยู่แล้ว
+    const duplicateCheck = await Event.find({
+      $and: [
+        { _id: { $nin: events.map((e) => e._id) } }, // ไม่ใช่ตัวมันเอง
+        {
+          $or: [
+            { title: { $in: events.map((e) => e.title) } },
+            { link: { $in: events.map((e) => e.link) } },
+          ],
+        },
+      ],
+    });
+
+    // กรองเอาเฉพาะที่ไม่ซ้ำ
+    const duplicateTitles = new Set(duplicateCheck.map((e) => e.title));
+    const duplicateLinks = new Set(duplicateCheck.map((e) => e.link));
+
+    const uniqueEvents = events.filter(
+      (e) =>
+        !duplicateTitles.has(e.title) && !duplicateLinks.has(e.link)
+    );
+
+
+    //////////////Send unique events to make.com////////
+    if (uniqueEvents.length === 0 || uniqueEvents.length === events.length) {
+      // ✅ ส่งข้อมูลไปยัง Make.com เฉพาะกรณีที่ genres/subGenres มีข้อมูล
+      const hasGenres = Array.isArray(genres) ? genres.length > 0 : false;
+      const hasSubGenres = subGenres && typeof subGenres === "object" && Object.values(subGenres).some(arr => Array.isArray(arr) ? arr.length > 0 : false);
+      if (hasGenres && hasSubGenres) {
+        await axios.post(MAKE_WEBHOOK_URL, {
+          type: "update-genres",
+          filter_info: {
+            email: user.email,
+            genres: user.genres,
+            subGenres: user.subGenres,
+            updatedAt: updatedAt || new Date().toISOString(),
+          },
+        });
+      }
+    }
+
+    if (uniqueEvents.length > 0) {
+      const savePromises = uniqueEvents.map(event =>
+        axios.post(
+          `${import.meta.env.VITE_APP_API_BASE_URL}/api/save-event`,
+          {
+            email: user.email,
+            title: event.title,
+            description: event.description,
+            link: event.link,
+            image: event.image,
+            genre: event.subgenre,
+            createdByAI: true,
+          },
+          {
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        )
+      );
+      await Promise.all(savePromises);
+    }
+
+    res.json(uniqueEvents);
   } catch (error) {
     console.error("❌ Update failed:", error);
     res.status(500).json({ message: "Server error" });
@@ -279,8 +444,6 @@ app.use("/api", roommatchRoutes);
 app.use("/api", likeRoutes);
 app.use("/api", infoMatchRoutes(io));
 
-// Secure routes (ต้องมี token)
-app.use("/api/secure", verifyFirebaseToken);
 
 // ลงทะเบียน friendRequest routes โดยตรงเพื่อแก้ปัญหาเรื่อง 404
 // Log API requests for debugging
@@ -295,10 +458,10 @@ app.use("/api", userPhotoRoutes);
 
 // Test secure endpoint
 app.get("/api/secure/me", (req, res) => {
-  res.json({ 
-    success: true, 
-    message: "Token valid", 
-    user: req.user 
+  res.json({
+    success: true,
+    message: "Token valid",
+    user: req.user
   });
 });
 
@@ -310,7 +473,7 @@ app.get("/api/secure/bu-student", (req, res) => {
       message: 'Access restricted to @bumail.net email addresses only'
     });
   }
-  
+
   res.json({
     success: true,
     message: 'Welcome BU student!',

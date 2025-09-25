@@ -7,7 +7,6 @@ const RequireLogin = ({ children }) => {
   const navigate = useNavigate();
   const userName = localStorage.getItem("userName");
   const userEmail = localStorage.getItem("userEmail");
-
   if (!userName || !userEmail) {
     return (
       <div className="flex flex-col items-center justify-center h-screen w-full">

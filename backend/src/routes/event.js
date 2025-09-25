@@ -9,7 +9,23 @@ export default function (io) {
   // Save event
 
   router.post("/save-event", async (req, res) => {
-    const { title, genre, description, link, image, email } = req.body;
+    const { data, email, indicesToExclude: rawIndicesToExclude, subGenres, updatedAt } = req.body;
+    let indicesToExclude = [];
+  if (typeof rawIndicesToExclude === 'string') {
+    indicesToExclude = rawIndicesToExclude
+      .split(',')
+      .map(s => s.trim())
+      .filter(s => s !== '')
+      .map(Number); // Convert to number
+  } else if (Array.isArray(rawIndicesToExclude)) {
+    indicesToExclude = rawIndicesToExclude
+      .map(s => String(s).trim()) // Ensure it's a string before trimming
+      .filter(s => s !== '')
+      .map(Number); // Convert to number
+  }
+
+  // Filter out NaN values and get unique numbers
+  indicesToExclude = [...new Set(indicesToExclude.filter(n => !isNaN(n)))];
 
     try {
       // ตรวจสอบ email
@@ -17,68 +33,73 @@ export default function (io) {
         return res.status(400).json({ message: "Email is required" });
       }
 
-      // ตรวจสอบ required fields
-      if (!title || !description || !link) {
+      // ตรวจสอบ updatedAt
+      if (!updatedAt || String(updatedAt).trim() === "") {
+        return res.status(400).json({ message: "updatedAt is required" });
+      }
+
+      // ตรวจสอบ subGenres ว่ามีข้อมูลหรือไม่
+      if (!subGenres || Object.keys(subGenres).length === 0) {
+        return res.status(400).json({ message: "subGenres is required" });
+      }
+
+      // ตรวจสอบว่า data เป็น array ที่มีข้อมูลหรือไม่
+      if (!Array.isArray(data) || data.length === 0) {
         return res
           .status(400)
-          .json({ message: "Title, description, link are required" });
+          .json({ message: "Data must be a non-empty array" });
       }
 
-      // ตรวจสอบและ validate genre
-      if (!genre) {
-        return res.status(400).json({ message: "Genre is required" });
-      }
+      const newEvents = [];
+      for (let i = 0; i < data.length; i++) {
+        const item = data[i];
 
-      // ตรวจสอบว่า genre เป็น object หรือไม่
-      if (typeof genre !== "object" || Array.isArray(genre)) {
-        return res.status(400).json({
-          message:
-            "Genre must be an object with category keys and array values",
-        });
-      }
-
-      // ตรวจสอบว่า genre object มีข้อมูลหรือไม่
-      const genreKeys = Object.keys(genre);
-      if (genreKeys.length === 0) {
-        return res.status(400).json({
-          message: "Genre must contain at least one category",
-        });
-      }
-
-      // ตรวจสอบว่ามีข้อมูลซ้ำหรือไม่
-      const existingEvent = await Event.findOne({ title: title, link: link, email: email });
-      if (existingEvent) {
-        return res.status(204).json({ message: "Event already created" }); // No Content;
-      }
-
-      // ตรวจสอบว่า values ใน genre เป็น array หรือไม่
-      for (const key of genreKeys) {
-        if (!Array.isArray(genre[key]) || genre[key].length === 0) {
-          return res.status(400).json({
-            message: `Genre category '${key}' must be a non-empty array`,
-          });
+        // ตรวจสอบว่า index นี้ควรถูกยกเว้นหรือไม่
+        if (indicesToExclude.includes(i)) {
+          continue; // ข้ามรายการนี้ไป
         }
+
+        const { title, link, snippet, pagemap } = item;
+
+        // ข้ามถ้าไม่มีข้อมูลสำคัญ
+        if (!title || !link) {
+          continue;
+        }
+
+        // ตรวจสอบว่ามีข้อมูลซ้ำหรือไม่
+        const existingEvent = await Event.findOne({ title, link, email });
+        if (existingEvent) {
+          continue; // ข้ามไปรายการถัดไปถ้ามี event นี้อยู่แล้ว
+        }
+
+        // ดึง URL รูปภาพออกมาอย่างปลอดภัย
+        const image =
+          pagemap?.cse_thumbnail?.[0]?.src || pagemap?.cse_image?.[0]?.src || null;
+
+        // สร้าง event ใหม่
+        const newEvent = new Event({
+          title,
+          description: snippet, // แมพ snippet ไปที่ description
+          link,
+          genre: subGenres,
+          updatedAt,
+          image,
+          createdByAI: true,
+          email,
+        });
+
+        await newEvent.save();
+        newEvents.push(newEvent);
       }
 
-      // สร้าง event ใหม่
-      const newEvent = new Event({
-        title,
-        genre,
-        description,
-        link,
-        image,
-        createdByAI: true,
-        email,
-      });
-
-      await newEvent.save();
-
-      // แจ้งเตือนผ่าน socket
-      io.emit("events_updated");
+      // แจ้งเตือนผ่าน socket ถ้ามีการสร้าง event ใหม่อย่างน้อยหนึ่งรายการ
+      if (newEvents.length > 0) {
+        io.emit("events_updated");
+      }
 
       res.status(201).json({
-        message: "Event saved successfully",
-        event: newEvent,
+        message: `Successfully saved ${newEvents.length} new events.`,
+        events: newEvents,
       });
     } catch (error) {
       console.error("Error saving event:", error);

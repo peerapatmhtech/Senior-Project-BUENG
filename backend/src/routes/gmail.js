@@ -2,10 +2,15 @@ import express from "express";
 import { Gmail } from "../model/gmail.js";
 const app = express.Router();
 
-// 📌 3️⃣ API บันทึก/อัปเดตผู้ใช้จาก Google Login
+// 📌 3️⃣ API บันทึก/อัปเดตผู้ใช้จาก Google Login และสร้าง Session
 app.post("/login", async (req, res) => {
   try {
     const { displayName, email, photoURL } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ message: "Email is required for login." });
+    }
+
     let user = await Gmail.findOne({ email });
 
     if (!user) {
@@ -16,10 +21,24 @@ app.post("/login", async (req, res) => {
     }
 
     await user.save();
-    res.status(200).json({ message: "Login บันทึกลง MongoDB เรียบร้อยแล้ว" });
+
+    // Create a session for the user
+    const sessionUser = {
+      _id: user._id,
+      email: user.email,
+      displayName: user.displayName,
+      photoURL: user.photoURL,
+    };
+    req.session.user = sessionUser;
+
+    res.status(200).json({
+      message: "Login successful and session created.",
+      user: sessionUser,
+    });
+
   } catch (error) {
-    console.error("Error saving login to MongoDB:", error);
-    res.status(500).json({ message: "ไม่สามารถบันทึกข้อมูลผู้ใช้ได้" });
+    console.error("Error during login:", error);
+    res.status(500).json({ message: "Server error during login." });
   }
 });
 
@@ -46,16 +65,16 @@ app.get("/usersfriends", async (req, res) => {
   }
 });
 
-// API สำหรับลบผู้ใช้เมื่อ Logout (real-time)
-app.post("/logout", async (req, res) => {
-  try {
-    const { email } = req.body;
-    io.emit("user-logout", email); // ต้องส่ง io จาก server.js ถ้าต้องการใช้
-    res.status(200).json({ message: "ลบผู้ใช้ออกจาก MongoDB เรียบร้อยแล้ว" });
-  } catch (error) {
-    console.error("❌ Error deleting user:", error);
-    res.status(500).json({ message: "ไม่สามารถลบข้อมูลผู้ใช้ได้" });
-  }
+// API สำหรับการ Logout และทำลาย Session
+app.post("/logout", (req, res) => {
+  req.session.destroy((err) => {
+    if (err) {
+      return res.status(500).json({ message: "Could not log out, please try again." });
+    }
+    // Clear the session cookie
+    res.clearCookie('connect.sid'); // The default session cookie name
+    return res.status(200).json({ message: "Logout successful." });
+  });
 });
 
 

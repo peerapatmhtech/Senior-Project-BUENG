@@ -1,6 +1,7 @@
 import { useState } from "react";
 import axios from "axios";
 import { IoMdAddCircle, IoMdCloseCircle } from "react-icons/io";
+import api from "../../../backend/src/middleware/axiosSecure";
 import { useParams } from "react-router-dom";
 import "./css/createroom.css";
 const CreateRoom = ({ onRoomCreated }) => {
@@ -22,7 +23,7 @@ const CreateRoom = ({ onRoomCreated }) => {
     const createdBy = localStorage.getItem("userName") || "ไม่ระบุ";
 
     // เช็คชื่อห้องซ้ำ
-    const res = await axios.get(`${import.meta.env.VITE_APP_API_BASE_URL}/api/allrooms`);
+    const res = await api.get(`/api/allrooms`);
     const allRooms = res.data;
     const isDuplicate = allRooms.some(
       (room) =>
@@ -35,7 +36,7 @@ const CreateRoom = ({ onRoomCreated }) => {
     }
 
     try {
-      const res = await axios.post(`${import.meta.env.VITE_APP_API_BASE_URL}/api/createroom`, {
+      const res = await api.post(`/api/createroom`, {
         ...roomData,
         createdBy,
         roomId,

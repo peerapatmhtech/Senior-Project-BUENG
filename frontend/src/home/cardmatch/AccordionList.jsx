@@ -3,7 +3,7 @@ import "./AccordionList.css";
 import { FaChevronDown, FaPlus, FaTimes } from "react-icons/fa";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import axios from "axios";
+import api from "../../../../backend/src/middleware/axiosSecure";
 
 // A single genre item component
 const GenreItem = ({
@@ -125,8 +125,8 @@ const AccordionList = ({ items, setWaiting }) => {
 
     try {
       setWaiting(true);
-      await axios.post(
-        `${import.meta.env.VITE_APP_API_BASE_URL}/api/update-genres`,
+      await api.post(
+        `/api/update-genres`,
         {
           email,
           genres: selectedGenres,
@@ -150,8 +150,8 @@ const AccordionList = ({ items, setWaiting }) => {
     setError("");
     const email = localStorage.getItem("userEmail");
     try {
-      const genres = await axios.post(
-        `${import.meta.env.VITE_APP_API_BASE_URL}/api/update-genres`,
+      const genres = await api.post(
+        `/api/update-genres`,
         {
           email,
           genres: [],
@@ -159,8 +159,8 @@ const AccordionList = ({ items, setWaiting }) => {
           updatedAt: new Date().toISOString(),
         }
       );
-      const events = await axios.delete(
-        `${import.meta.env.VITE_APP_API_BASE_URL}/api/events/user/${email}`
+      const events = await api.delete(
+        `/api/events/user/${email}`
       );
       if (events.status == 200 && genres.status == 200) {
         toast.info("ล้างข้อมูลความสนใจทั้งหมดแล้ว");
@@ -180,10 +180,8 @@ const AccordionList = ({ items, setWaiting }) => {
       if (!email) return;
       setLoading(true);
       try {
-        const res = await axios.get(
-          `${
-            import.meta.env.VITE_APP_API_BASE_URL
-          }/api/filters/${encodeURIComponent(email)}`
+        const res = await api.get(
+          `/api/filters/${encodeURIComponent(email)}`
         );
         const data = res.data;
         if (data && data.subGenres) {

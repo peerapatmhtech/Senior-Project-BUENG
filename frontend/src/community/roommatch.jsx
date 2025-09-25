@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, createRef } from "react";
-import api from "../lib/axiosSecure";
+import api from "../../../backend/src/middleware/axiosSecure";
 import { useNavigate } from "react-router-dom";
 import TinderCard from "react-tinder-card";
 import { useTheme } from "../context/themecontext";
@@ -24,7 +24,7 @@ const RoomMatch = ({ accordionComponent }) => {
   const [loading, setLoading] = useState(true);
   const [showMatchModal, setShowMatchModal] = useState(false);
   const [matchedRoom, setMatchedRoom] = useState(null);
-  const  socket  = useSocket(); // Get socket instance
+  const socket = useSocket(); // Get socket instance
 
   // ตรวจสอบขนาดหน้าจอ
   useEffect(() => {
@@ -63,23 +63,23 @@ const RoomMatch = ({ accordionComponent }) => {
   }, [socket, fetchRooms]);
   const filteredRooms = Array.isArray(rooms)
     ? rooms.filter((room) => {
-        // เช็คว่า email ของเราอยู่ใน usermatch หรือ email
-        const isUserInRoom =
-          room.usermatch === userEmail || room.email === userEmail;
-        if (!isUserInRoom) return false;
+      // เช็คว่า email ของเราอยู่ใน usermatch หรือ email
+      const isUserInRoom =
+        room.usermatch === userEmail || room.email === userEmail;
+      if (!isUserInRoom) return false;
 
-        // ถ้าเราอยู่ใน usermatch ให้เช็ค usermatchjoined ต้องเป็น false
-        if (room.usermatch === userEmail && room.usermatchjoined === true) {
-          return false;
-        }
+      // ถ้าเราอยู่ใน usermatch ให้เช็ค usermatchjoined ต้องเป็น false
+      if (room.usermatch === userEmail && room.usermatchjoined === true) {
+        return false;
+      }
 
-        // ถ้าเราอยู่ใน email ให้เช็ค emailjoined ต้องเป็น false
-        if (room.email === userEmail && room.emailjoined === true) {
-          return false;
-        }
+      // ถ้าเราอยู่ใน email ให้เช็ค emailjoined ต้องเป็น false
+      if (room.email === userEmail && room.emailjoined === true) {
+        return false;
+      }
 
-        return true;
-      })
+      return true;
+    })
     : [];
   useEffect(() => {
     try {
@@ -173,15 +173,7 @@ const RoomMatch = ({ accordionComponent }) => {
       // ลบข้อมูลเมื่อ swipe ซ้าย (เหมือนปุ่ม skip)
       if (roomId) {
         try {
-          await fetch(
-            `${import.meta.env.VITE_APP_API_BASE_URL}/api/infomatch/${roomId}`,
-            {
-              method: "DELETE",
-              headers: {
-                Authorization: `Bearer ${localStorage.getItem("idToken")}`,
-              },
-            }
-          );
+          await api.delete(`/api/infomatch/${roomId}`);
 
           // ลบออกจาก state
           setRooms((prevRooms) =>
@@ -247,9 +239,8 @@ const RoomMatch = ({ accordionComponent }) => {
   return (
     <ModalWrapper>
       <div
-        className={`room-match-container ${isDarkMode ? "dark-mode" : ""} ${
-          isModalOpen ? "modal-active" : ""
-        }`}
+        className={`room-match-container ${isDarkMode ? "dark-mode" : ""} ${isModalOpen ? "modal-active" : ""
+          }`}
       >
         {/* Show AccordionList on mobile only */}
         {isMobile && accordionComponent && (
@@ -313,8 +304,7 @@ const RoomMatch = ({ accordionComponent }) => {
                   if (currentRoom) {
                     try {
                       const res = await fetch(
-                        `${
-                          import.meta.env.VITE_APP_API_BASE_URL
+                        `${import.meta.env.VITE_APP_API_BASE_URL
                         }/api/infomatch/${currentRoom._id}`,
                         {
                           method: "DELETE",
