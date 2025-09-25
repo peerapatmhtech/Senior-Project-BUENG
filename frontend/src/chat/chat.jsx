@@ -19,7 +19,7 @@ import {
   doc,
   where,
 } from "firebase/firestore";
-import axios from "axios";
+import api from "../../../backend/src/middleware/axiosSecure";
 
 import { useNotifications } from "../context/notificationContext";
 import { useTheme } from "../context/themecontext";
@@ -401,8 +401,8 @@ const Chat = () => {
     if (!userEmail) return;
     setLoadingFriends(true);
     try {
-      const response = await axios.get(
-        `${import.meta.env.VITE_APP_API_BASE_URL}/api/users`
+      const response = await api.get(
+        `/api/users`
       );
       const allUsers = response.data;
       setUsers(allUsers);
@@ -436,15 +436,15 @@ const Chat = () => {
     if (!userEmail) return;
     try {
       const encodedEmail = encodeURIComponent(userEmail);
-      const userRes = await axios.get(
-        `${import.meta.env.VITE_APP_API_BASE_URL}/api/users/${encodedEmail}`
+      const userRes = await api.get(
+        `/api/users/${encodedEmail}`
       );
       const currentUser = userRes.data;
       if (Array.isArray(currentUser.friends)) {
         const friendArray = currentUser.friends;
         const friendEmails = friendArray.map((f) => f.email);
-        const allUsersRes = await axios.get(
-          `${import.meta.env.VITE_APP_API_BASE_URL}/api/users`
+        const allUsersRes = await api.get(
+          `/api/users`
         );
         const allUsers = allUsersRes.data;
         const filteredFriends = allUsers
@@ -468,8 +468,8 @@ const Chat = () => {
 
   const fetchGmailUser = async () => {
     try {
-      const res = await axios.get(
-        `${import.meta.env.VITE_APP_API_BASE_URL}/api/users/${userEmail}`
+      const res = await api.get(
+        `/api/users/${userEmail}`
       );
       setCurrentUserfollow(res.data);
     } catch (err) {
@@ -677,12 +677,12 @@ const Chat = () => {
       try {
         const encodedEmail = encodeURIComponent(userEmail);
         const [CommunityData, UserMatchData, AllRoomData, AllEventData, AllInfoData, AllJoinedRoomData] = await Promise.all([
-          axios.get(`${import.meta.env.VITE_APP_API_BASE_URL}/api/user-rooms/${encodedEmail}`),
-          axios.get(`${import.meta.env.VITE_APP_API_BASE_URL}/api/infomatch/all`),
-          axios.get(`${import.meta.env.VITE_APP_API_BASE_URL}/api/allrooms`),
-          axios.get(`${import.meta.env.VITE_APP_API_BASE_URL}/api/events/${encodedEmail}`),
-          axios.get(`${import.meta.env.VITE_APP_API_BASE_URL}/api/infos`),
-          axios.get(`${import.meta.env.VITE_APP_API_BASE_URL}/api/user-rooms/${encodedEmail}`),
+          api.get(`/api/user-rooms/${encodedEmail}`),
+          api.get(`/api/infomatch/all`),
+          api.get(`/api/allrooms`),
+          api.get(`/api/events/${encodedEmail}`),
+          api.get(`/api/infos`),
+          api.get(`/api/user-rooms/${encodedEmail}`),
         ]);
         setCommunityData(CommunityData.data);
         setUserMatchData(UserMatchData.data.data);

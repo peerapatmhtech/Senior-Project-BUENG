@@ -6,8 +6,8 @@ import { BrowserRouter } from 'react-router-dom';
 import Friend from '../../components/freind/friend';
 import { ThemeProvider } from '../../context/themecontext';
 
-// Mock axios
-jest.mock('axios');
+// Mock api
+jest.mock('api');
 
 // Mock socket.io-client
 jest.mock('socket.io-client', () => {
@@ -84,8 +84,8 @@ describe('Friend Component', () => {
       return null;
     });
     
-    // Mock axios responses
-    axios.get.mockImplementation((url) => {
+    // Mock api responses
+    api.get.mockImplementation((url) => {
       if (url.includes('/api/users/current@example.com')) {
         return Promise.resolve({ data: mockCurrentUser });
       }
@@ -98,8 +98,8 @@ describe('Friend Component', () => {
       return Promise.reject(new Error('Not found'));
     });
     
-    axios.post.mockResolvedValue({ data: { success: true, message: 'Success' } });
-    axios.delete.mockResolvedValue({ data: { success: true, message: 'Success' } });
+    api.post.mockResolvedValue({ data: { success: true, message: 'Success' } });
+    api.delete.mockResolvedValue({ data: { success: true, message: 'Success' } });
     
     // Reset mock calls
     jest.clearAllMocks();
@@ -116,7 +116,7 @@ describe('Friend Component', () => {
     
     // รอให้โหลดข้อมูลเสร็จ
     await waitFor(() => {
-      expect(axios.get).toHaveBeenCalledTimes(3);
+      expect(api.get).toHaveBeenCalledTimes(3);
     });
     
     // ตรวจสอบว่าแสดงชื่อของเพื่อนและผู้ใช้อื่นๆ
@@ -137,7 +137,7 @@ describe('Friend Component', () => {
     
     // รอให้โหลดข้อมูลเสร็จ
     await waitFor(() => {
-      expect(axios.get).toHaveBeenCalledTimes(3);
+      expect(api.get).toHaveBeenCalledTimes(3);
     });
     
     // หาปุ่ม "เพิ่มเพื่อน" และคลิก
@@ -146,7 +146,7 @@ describe('Friend Component', () => {
     
     // ตรวจสอบว่ามีการเรียกใช้ API สำหรับส่งคำขอเพื่อน
     await waitFor(() => {
-      expect(axios.post).toHaveBeenCalledWith(
+      expect(api.post).toHaveBeenCalledWith(
         expect.stringContaining('/api/friend-request'),
         expect.objectContaining({
           from: expect.objectContaining({
@@ -169,7 +169,7 @@ describe('Friend Component', () => {
     
     // รอให้โหลดข้อมูลเสร็จ
     await waitFor(() => {
-      expect(axios.get).toHaveBeenCalledTimes(3);
+      expect(api.get).toHaveBeenCalledTimes(3);
     });
     
     // ค้นหาและคลิกปุ่มตัวเลือก (ซึ่งจะเปิดเมนูที่มีปุ่ม "ลบเพื่อน")
@@ -186,7 +186,7 @@ describe('Friend Component', () => {
     
     // ตรวจสอบว่ามีการเรียกใช้ API สำหรับลบเพื่อน
     await waitFor(() => {
-      expect(axios.delete).toHaveBeenCalledWith(
+      expect(api.delete).toHaveBeenCalledWith(
         expect.stringContaining('/api/users/current@example.com/friends/'),
         expect.anything()
       );

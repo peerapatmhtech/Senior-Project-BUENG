@@ -1,5 +1,4 @@
 import { useState } from "react";
-import axios from "axios";
 import { IoMdAddCircle, IoMdCloseCircle } from "react-icons/io";
 import api from "../../../backend/src/middleware/axiosSecure";
 import { useParams } from "react-router-dom";

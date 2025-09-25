@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
-import axios from "axios";
+import api from "../../../../backend/src/middleware/axiosSecure";
 import "./Eventlist.css";
 import { useTheme } from "../../context/themecontext";
 import { useSocket } from "../../context/make.com"; // Import useSocket
@@ -21,8 +21,8 @@ const EventList = ({ setWaiting, waiting }) => {
 
   const fetchEvents = useCallback(async () => {
     try {
-      const res = await axios.get(
-        `${import.meta.env.VITE_APP_API_BASE_URL}/api/events/${user.email}`
+      const res = await api.get(
+        `/api/events/${user.email}`
       );
       if (res.status === 200 && Array.isArray(res.data)) {
         setEvents(res.data);
@@ -65,8 +65,8 @@ const EventList = ({ setWaiting, waiting }) => {
     if (!confirm) return;
 
     try {
-      await axios.delete(
-        `${import.meta.env.VITE_APP_API_BASE_URL}/api/events/${id}`
+      await api.delete(
+        `/api/events/${id}`
       );
     } catch (error) {
       console.error("❌ Error deleting event:", error);
@@ -81,8 +81,8 @@ const EventList = ({ setWaiting, waiting }) => {
     if (!confirm) return;
 
     try {
-      await axios.delete(
-        `${import.meta.env.VITE_APP_API_BASE_URL}/api/events/${userEmail}`
+      await api.delete(
+        `/api/events/${userEmail}`
       );
     } catch (error) {
       console.error("❌ Error deleting all events:", error);
@@ -91,8 +91,8 @@ const EventList = ({ setWaiting, waiting }) => {
 
   const fetchFavoriteEvents = async () => {
     try {
-      const res = await axios.get(
-        `${import.meta.env.VITE_APP_API_BASE_URL}/api/likes/${email}`
+      const res = await api.get(
+        `/api/likes/${email}`
       );
       setFavoriteEvents(
         Array.isArray(res.data) ? res.data.map((like) => like.eventId) : []
@@ -108,7 +108,7 @@ const EventList = ({ setWaiting, waiting }) => {
 
   const handleLike = async (eventId, title) => {
     try {
-      await axios.post(`${import.meta.env.VITE_APP_API_BASE_URL}/api/like`, {
+      await api.post(`/api/like`, {
         userEmail: email,
         eventId: eventId,
         eventTitle: title,
@@ -121,8 +121,8 @@ const EventList = ({ setWaiting, waiting }) => {
 
   const handleUnlike = async (eventId) => {
     try {
-      await axios.delete(
-        `${import.meta.env.VITE_APP_API_BASE_URL}/api/like/${email}/${eventId}`
+      await api.delete(
+        `/api/like/${email}/${eventId}`
       );
       fetchFavoriteEvents();
     } catch (error) {

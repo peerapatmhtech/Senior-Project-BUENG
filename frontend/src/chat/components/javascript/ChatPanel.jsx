@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { MdAttachFile } from "react-icons/md";
 import { IoIosArrowBack, IoMdSend  } from "react-icons/io";
 import ProfileModal from "./ProfileModal";
-import axios from "axios";
+import api from "../../../../../backend/src/middleware/axiosSecure";
 
 const ChatPanel = ({
   messages,
@@ -39,7 +39,7 @@ const ChatPanel = ({
   const fetchFollowInfo = async (targetEmail) => {
     if (!targetEmail) return;
     try {
-      const res = await axios.get(
+      const res = await api.get(
         `${import.meta.env.VITE_APP_API_BASE_URL
         }/api/user/${targetEmail}/follow-info`
       );

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import "../../css/ProfileModal.css";
-import axios from "axios";
+import api from "../../../../../backend/src/middleware/axiosSecure";
 import { toast, ToastContainer } from "react-toastify";
 
 
@@ -52,14 +52,14 @@ const ProfileModal = ({ isOpen, onClose, user, userImage, setFriends, followers,
                 );
             }
             if (user) {
-                await axios.delete(
+                await api.delete(
                     `${import.meta.env.VITE_APP_API_BASE_URL
                     }/api/users/${userEmail}/friends/${user}`
                 );
             }
             if (roomid && roomName) {
                 console.log("Deleting joined room:", roomName, "for user:", userEmail);
-                await axios.delete(
+                await api.delete(
                     `${import.meta.env.VITE_APP_API_BASE_URL
                     }/api/delete-joined-rooms/${roomid}/${userEmail}`
                 );
@@ -87,8 +87,8 @@ const ProfileModal = ({ isOpen, onClose, user, userImage, setFriends, followers,
     };
     const fetchGmailUser = async () => {
         try {
-            const res = await axios.get(
-                `${import.meta.env.VITE_APP_API_BASE_URL}/api/users/${userEmail}`
+            const res = await api.get(
+                `/api/users/${userEmail}`
             );
             setCurrentUserfollow(res.data);
         } catch (err) {
@@ -109,7 +109,7 @@ const ProfileModal = ({ isOpen, onClose, user, userImage, setFriends, followers,
         const method = isFollowing ? "DELETE" : "POST";
 
         try {
-            await axios({ method, url });
+            await api({ method, url });
             await fetchGmailUser();
             toast.success("ติดตามสำเร็จ!");
         } catch (err) {

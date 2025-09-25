@@ -1,5 +1,5 @@
 import  { useEffect, useState } from "react";
-import axios from "axios";
+import api from "../../../backend/src/middleware/axiosSecure";
 import { useNavigate } from "react-router-dom";
 import "./css/roomlist.css";
 import { toast } from "react-toastify";
@@ -29,13 +29,13 @@ const RoomList = ({
   useEffect(() => {
     const fetchRooms = async () => {
       try {
-        const res = await axios.get(
-          `${import.meta.env.VITE_APP_API_BASE_URL}/api/allrooms`
+        const res = await api.get(
+          `/api/allrooms`
         );
         
         // ดึงห้องที่ user join แล้ว
-        const filterjoinedRooms = await axios.get(
-          `${import.meta.env.VITE_APP_API_BASE_URL}/api/user-rooms/${userEmail}`
+        const filterjoinedRooms = await api.get(
+          `/api/user-rooms/${userEmail}`
         );
         // สมมติ API ส่งกลับเป็น { roomNames: [{ _id, name, ... }] }
         const joinedIds = Array.isArray(filterjoinedRooms.data.roomIds)
@@ -65,8 +65,8 @@ const RoomList = ({
 
   const handleAddCommunity = async (roomId, roomName) => {
     try {
-      await axios.post(
-        `${import.meta.env.VITE_APP_API_BASE_URL}/api/join-community`,
+      await api.post(
+        `/api/join-community`,
         {
           userEmail,
           roomId,

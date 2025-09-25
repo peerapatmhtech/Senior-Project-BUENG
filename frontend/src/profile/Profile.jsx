@@ -4,7 +4,7 @@ import { Button } from "../ui";
 import { useNavigate } from "react-router-dom";
 import { FaEdit, FaCamera, FaPlus, FaTimes, FaStar } from "react-icons/fa";
 import { useTheme } from "../context/themecontext";
-import axios from "axios";
+import api from "../../../backend/src/middleware/axiosSecure";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import HeaderProfile from "../ui/HeaderProfile";
@@ -42,7 +42,7 @@ const Profile = () => {
   const fetchUserPhotos = useCallback(async () => {
     if (!userEmail) return;
     try {
-      const photosRes = await axios.get(`${import.meta.env.VITE_APP_API_BASE_URL}/api/user-photos/${encodeURIComponent(userEmail)}`);
+      const photosRes = await api.get(`/api/user-photos/${encodeURIComponent(userEmail)}`);
       if (photosRes.data.success) {
         setUserPhotos(photosRes.data.data || []);
       } else {
@@ -64,9 +64,9 @@ const Profile = () => {
       setLoading(true);
       try {
         const [userRes, followRes, nickRes] = await Promise.all([
-          axios.get(`${import.meta.env.VITE_APP_API_BASE_URL}/api/user-info/${encodeURIComponent(userEmail)}`),
-          axios.get(`${import.meta.env.VITE_APP_API_BASE_URL}/api/user/${encodeURIComponent(userEmail)}/follow-info`),
-          axios.get(`${import.meta.env.VITE_APP_API_BASE_URL}/api/infos?email=${userEmail}`),
+          api.get(`/api/user-info/${encodeURIComponent(userEmail)}`),
+          api.get(`/api/user/${encodeURIComponent(userEmail)}/follow-info`),
+          api.get(`/api/infos?email=${userEmail}`),
         ]);
 
         setUserInfo(userRes.data || { detail: "" });
@@ -99,7 +99,7 @@ const Profile = () => {
     }
 
     try {
-      await axios.post(`${import.meta.env.VITE_APP_API_BASE_URL}/api/save-user-name`, { userEmail, nickName });
+      await api.post(`/api/save-user-name`, { userEmail, nickName });
       toast.success("Nickname updated!");
       setIsEditingName(false);
     } catch (err) {
@@ -114,7 +114,7 @@ const Profile = () => {
     }
 
     try {
-      await axios.post(`${import.meta.env.VITE_APP_API_BASE_URL}/api/save-user-info`, { email: userEmail, userInfo: tempInfo });
+      await api.post(`/api/save-user-info`, { email: userEmail, userInfo: tempInfo });
       setUserInfo(tempInfo);
       setIsEditingAbout(false);
       toast.success("Profile updated successfully!");
@@ -141,7 +141,7 @@ const Profile = () => {
     formData.append("email", userEmail);
 
     try {
-      const response = await axios.post(`${import.meta.env.VITE_APP_API_BASE_URL}/api/upload-user-photo`, formData);
+      const response = await api.post(`/api/upload-user-photo`, formData);
       if (response.data.success) {
         await fetchUserPhotos(); // Correctly refetch photos
         toast.success("Photo uploaded successfully!");
@@ -157,8 +157,8 @@ const Profile = () => {
 
   const handleSavePhotoOrder = async (photoIds) => {
     try {
-      await axios.post(
-        `${import.meta.env.VITE_APP_API_BASE_URL}/api/user-photos/reorder`,
+      await api.post(
+        `/api/user-photos/reorder`,
         {
           email: userEmail,
           photoIds,
@@ -191,7 +191,7 @@ const Profile = () => {
     const remainingPhotos = userPhotos.filter((photo) => photo._id !== photoId);
 
     try {
-      const response = await axios.delete(`${import.meta.env.VITE_APP_API_BASE_URL}/api/user-photo/${photoId}`, { data: { email: userEmail } });
+      const response = await api.delete(`/api/user-photo/${photoId}`, { data: { email: userEmail } });
       if (response.data.success) {
         setUserPhotos(remainingPhotos);
         toast.success("Photo deleted");

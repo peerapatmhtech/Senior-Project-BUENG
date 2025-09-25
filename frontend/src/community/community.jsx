@@ -5,7 +5,7 @@ import { useState, useEffect, useRef } from "react";
 import RequireLogin from "../ui/RequireLogin";
 import "react-toastify/dist/ReactToastify.css";
 import { toast } from "react-toastify";
-import axios from "axios";
+import api from "../../../backend/src/middleware/axiosSecure";
 import io from "socket.io-client";
 import { useTheme } from "../context/themecontext";
 import RoomMatch from "../../../frontend/src/community/roommatch";
@@ -74,16 +74,16 @@ const Newcommu = () => {
     if (!confirm) return;
 
     try {
-      await axios.post(
-        `${import.meta.env.VITE_APP_API_BASE_URL}/api/delete-rooms`,
+      await api.post(
+        `/api/delete-rooms`,
         {
           selectedRooms: selectedRooms,
         }
       );
 
       // อัปเดตรายการห้องหลังลบ
-      const res = await axios.get(
-        `${import.meta.env.VITE_APP_API_BASE_URL}/api/allrooms`
+      const res = await api.get(
+        `/api/allrooms`
       );
       setRooms(res.data);
 
@@ -98,8 +98,8 @@ const Newcommu = () => {
 
   const fetchUsersAndFriends = async () => {
     try {
-      const response = await axios.get(
-        `${import.meta.env.VITE_APP_API_BASE_URL}/api/users`
+      const response = await api.get(
+        `/api/users`
       );
       const allUsers = response.data;
       setUsers(allUsers);
@@ -141,8 +141,8 @@ const Newcommu = () => {
 
   const fetchFilter = async () => {
     try {
-      const res = await axios.get(
-        `${import.meta.env.VITE_APP_API_BASE_URL}/api/filters/${userEmail}`
+      const res = await api.get(
+        `/api/filters/${userEmail}`
       );
       setGenres(res.data);
     } catch (err) {
@@ -151,8 +151,8 @@ const Newcommu = () => {
   };
   const fetchInfos = async () => {
     try {
-      const res = await axios.get(
-        `${import.meta.env.VITE_APP_API_BASE_URL}/api/infos/${userEmail}`
+      const res = await api.get(
+        `/api/infos/${userEmail}`
       );
  
       if (res.status === 200) {
@@ -173,19 +173,18 @@ const Newcommu = () => {
   const fetchCurrentUserAndFriends = async () => {
     try {
       const encodedEmail = encodeURIComponent(userEmail);
-      const userRes = await axios.get(
-        `${import.meta.env.VITE_APP_API_BASE_URL}/api/users/${encodedEmail}`
+      const userRes = await api.get(
+        `/api/users/${encodedEmail}`
       );
       if (!userRes.data) return;
       const currentUser = userRes.data;
-      console.log("currentUser", currentUser);
 
       if (Array.isArray(currentUser.friends)) {
         const friendEmails = currentUser.friends;
 
         // ดึง users ทั้งหมดมาเพื่อจับคู่กับ friend emails
-        const allUsersRes = await axios.get(
-          `${import.meta.env.VITE_APP_API_BASE_URL}/api/users`
+        const allUsersRes = await api.get(
+          `/api/users`
         );
         const allUsers = allUsersRes.data;
 

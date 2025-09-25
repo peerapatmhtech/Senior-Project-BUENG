@@ -130,7 +130,7 @@ router.delete("/user-photo/:photoId", async (req, res) => {
 router.post("/user-photos/reorder", async (req, res) => {
   try {
     const { email, photoIds } = req.body;
-    const user = await User.findOne({ email });
+    const user = await UserPhoto.findOne({ email });
     if (!user) {
       return res
         .status(404)

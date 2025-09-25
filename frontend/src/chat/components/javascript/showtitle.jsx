@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
+import api from "../../../../../backend/src/middleware/axiosSecure";
 import "../css/showtitle.css"; // ใช้ชื่อไฟล์ที่ถูกต้องเป็นตัวพิมพ์เล็ก
 import { useNavigate } from "react-router-dom";
 
@@ -12,8 +12,8 @@ const ShowTitle = ({ userimage, openchat }) => {
     try {
       const fetchUserImage = async () => {
         try {
-          const response = await axios.get(
-            `${import.meta.env.VITE_APP_API_BASE_URL}/api/events`
+          const response = await api.get(
+            `/api/events`
           );
           if (response.data) {
             setUserEvents(response.data);

@@ -6,7 +6,7 @@ import React, {
   useCallback,
 } from "react";
 import io from "socket.io-client";
-import axios from "axios";
+import api from "../../../backend/src/middleware/axiosSecure";
 import { toast } from "react-toastify";
 
 // สร้าง socket instance พร้อม options เพื่อแก้ปัญหาการเชื่อมต่อ
@@ -38,11 +38,7 @@ export const NotificationProvider = ({ children }) => {
     setIsLoading(true);
     try {
       // ดึงข้อมูลคำขอเพื่อนล่าสุดผ่าน REST API
-      const response = await axios.get(
-        `${
-          import.meta.env.VITE_APP_API_BASE_URL
-        }/api/friend-requests/${userEmail}`
-      );
+      const response = await api.get(`/api/friend-requests/${userEmail}`);
 
       // ถ้าไม่มีคำขอเพื่อน
       if (
@@ -286,16 +282,14 @@ export const NotificationProvider = ({ children }) => {
   ]);
 
   // ฟังก์ชันสำหรับการทำเครื่องหมายว่าแจ้งเตือนได้อ่านแล้ว
-  const markNotificationAsRead = (notificationId) => {
+  const markNotificationAsRead = async (notificationId) => {
     // หาอินเด็กซ์ของการแจ้งเตือนที่จะทำเครื่องหมายว่าอ่านแล้ว
     const notificationElement = document.querySelector(
       `[data-notification-id="${notificationId}"]`
     );
     try {
-      axios.put(
-        `${
-          import.meta.env.VITE_APP_API_BASE_URL
-        }/api/mark-friend-requests-read/${notificationId}`,
+      await api.put(
+        `/api/mark-friend-requests-read/${notificationId}`,
         { read: true },
         { headers: { "Content-Type": "application/json" } }
       );
@@ -368,10 +362,8 @@ export const NotificationProvider = ({ children }) => {
           const finalRoomId = generateRoomId();
 
           // ส่งการตอบกลับคำขอเพื่อนผ่าน REST API
-          const responseData = await axios.post(
-            `${
-              import.meta.env.VITE_APP_API_BASE_URL
-            }/api/friend-request-response`,
+          const responseData = await api.post(
+            `/api/friend-request-response`,
             {
               requestId: requestId,
               userEmail: userEmail,
@@ -393,8 +385,8 @@ export const NotificationProvider = ({ children }) => {
             }
           );
 
-          await axios.post(
-            `${import.meta.env.VITE_APP_API_BASE_URL}/api/add-friend`,
+          await api.post(
+            `/api/add-friend`,
             {
               userEmail: notification.from.email,
               friendEmail: userEmail,
@@ -450,10 +442,8 @@ export const NotificationProvider = ({ children }) => {
             );
           }
           // ต้องดึงข้อมูลจาก API เพื่อดูว่าใครยอมรับคำขอเพื่อนเรา
-          const response = await axios.get(
-            `${
-              import.meta.env.VITE_APP_API_BASE_URL
-            }/api/friend-accepts/${userEmail}`
+          const response = await api.get(
+            `/api/friend-accepts/${userEmail}`
           );
 
           if (response.data && response.data.latestAccept) {
@@ -497,7 +487,7 @@ export const NotificationProvider = ({ children }) => {
       const notification = notifications.find((n) => n.id === requestId);
       if (notification) {
         // ส่งคำขอไปยัง API เพื่อลบคำขอเพื่อน
-        await axios.delete(
+        await api.delete(
           `${
             import.meta.env.VITE_APP_API_BASE_URL
           }/api/friend-request/${requestId}`

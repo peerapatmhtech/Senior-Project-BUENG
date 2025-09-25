@@ -1,9 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { FaChevronDown, FaChevronRight } from "react-icons/fa";
-import { BsThreeDots } from "react-icons/bs";
 import { FaHeart } from "react-icons/fa";
-import axios from "axios";
-import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 const MatchList = ({
   allEvents,

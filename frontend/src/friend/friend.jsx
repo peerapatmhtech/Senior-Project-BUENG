@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, useContext } from "react";
-import axios from "axios";
+import api from "../../../backend/src/middleware/axiosSecure";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "./friend.css";
@@ -120,8 +120,8 @@ const Friend = () => {
       const encodedEmail = encodeURIComponent(userEmail);
 
       ////////Fetch Online Users////////
-      const allUsersRes = await axios.get(
-        `${import.meta.env.VITE_APP_API_BASE_URL}/api/users`
+      const allUsersRes = await api.get(
+        `/api/users`
       );
       const allUsers = allUsersRes.data;
 
@@ -129,8 +129,8 @@ const Friend = () => {
       setUsers(allUsers);
 
       //////////Fetch  Favorites////////
-      const userRes = await axios.get(
-        `${import.meta.env.VITE_APP_API_BASE_URL}/api/users/${encodedEmail}`
+      const userRes = await api.get(
+        `/api/users/${encodedEmail}`
       );
       const currentUser = userRes.data;
 
@@ -181,7 +181,7 @@ const Friend = () => {
     // socket.on("notify-friend-request", async () => {
     //   try {
     //     // ดึงข้อมูลคำขอเพื่อนล่าสุดผ่าน REST API
-    //     const response = await axios.get(
+    //     const response = await api.get(
     //       `${
     //         import.meta.env.VITE_APP_API_BASE_URL
     //       }/api/friend-requests/${userEmail}`
@@ -265,7 +265,7 @@ const Friend = () => {
         await fetchCurrentUserAndFriends();
 
         // ต้องดึงข้อมูลจาก API เพื่อดูว่าใครยอมรับคำขอเพื่อนเรา
-        const response = await axios.get(
+        const response = await api.get(
           `${
             import.meta.env.VITE_APP_API_BASE_URL
           }/api/friend-accepts/${userEmail}`
@@ -500,8 +500,8 @@ const Friend = () => {
         requestId: requestId,
       };
 
-      const response = await axios.post(
-        `${import.meta.env.VITE_APP_API_BASE_URL}/api/friend-request`,
+      const response = await api.post(
+        `/api/friend-request`,
         requestData,
         {
           headers: {
@@ -528,13 +528,11 @@ const Friend = () => {
       setLoadingFriendEmail(friendEmail);
 
       // ลบเพื่อนผ่าน REST API
-      await axios.delete(
-        `${
-          import.meta.env.VITE_APP_API_BASE_URL
-        }/api/users/${userEmail}/friends/${friendEmail}`
+      await api.delete(
+        `/api/users/${userEmail}/friends/${friendEmail}`
       );
       try {
-        await axios.delete(
+        await api.delete(
           `${
             import.meta.env.VITE_APP_API_BASE_URL
           }/api/friend-request-email/${userEmail}/${friendEmail}`
@@ -622,8 +620,8 @@ const Friend = () => {
 
   const fetchCurrentUser = async () => {
     try {
-      const res = await axios.get(
-        `${import.meta.env.VITE_APP_API_BASE_URL}/api/users/${userEmail}`
+      const res = await api.get(
+        `/api/users/${userEmail}`
       );
       const userData = {
         ...res.data,
@@ -639,8 +637,8 @@ const Friend = () => {
   };
   const fetchGmailUser = async () => {
     try {
-      const res = await axios.get(
-        `${import.meta.env.VITE_APP_API_BASE_URL}/api/users/${userEmail}`
+      const res = await api.get(
+        `/api/users/${userEmail}`
       );
       setCurrentUserfollow(res.data);
     } catch (err) {
@@ -662,7 +660,7 @@ const Friend = () => {
     }/${targetEmail}`;
     const method = isFollowing ? "DELETE" : "POST";
     try {
-      await axios({ method, url });
+      await api({ method, url });
       await fetchGmailUser();
       toast.success(isFollowing ? "Unfollowed" : "Followed");
     } catch (err) {
@@ -727,10 +725,8 @@ const Friend = () => {
 
   const fetchFollowInfo = async (targetEmail) => {
     try {
-      const res = await axios.get(
-        `${
-          import.meta.env.VITE_APP_API_BASE_URL
-        }/api/user/${targetEmail}/follow-info`
+      const res = await api.get(
+        `/api/user/${targetEmail}/follow-info`
       );
       setFollowers(res.data.followers);
       setFollowing(res.data.following);
@@ -743,8 +739,8 @@ const Friend = () => {
   useEffect(() => {
     const getNickNameF = async () => {
       try {
-        const res = await axios.get(
-          `${import.meta.env.VITE_APP_API_BASE_URL}/api/infos`
+        const res = await api.get(
+          `/api/infos`
         );
         getNickName(res.data);
       } catch (err) {

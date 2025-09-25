@@ -378,7 +378,7 @@ app.post("/api/update-genres", async (req, res) => {
     if (uniqueEvents.length > 0) {
       const savePromises = uniqueEvents.map(event =>
         axios.post(
-          `${import.meta.env.VITE_APP_API_BASE_URL}/api/save-event`,
+          `/api/save-event`,
           {
             email: user.email,
             title: event.title,

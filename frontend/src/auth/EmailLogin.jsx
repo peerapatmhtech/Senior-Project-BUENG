@@ -60,7 +60,7 @@ const EmailLogin = () => {
 
 
         // ส่งข้อมูลผู้ใช้ไปยัง backend (MongoDB)
-        await axios.post(`${import.meta.env.VITE_APP_API_BASE_URL}/api/login`, {
+        await api.post(`/api/login`, {
           displayName: user.displayName,
           email: user.email,
           photoURL: user.photoURL,
