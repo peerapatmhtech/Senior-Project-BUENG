@@ -1,7 +1,7 @@
 import express from "express";
 import { Room } from "../model/room.js";
 import { Info } from "../model/info.js";
-import { EventMatch } from "../model/eventmatch.js";
+// import { EventMatch } from "../model/eventmatch.js";
 const router = express.Router();
 
 // Join community
