@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import api from '../../../backend/src/middleware/axiosSecure';
+import api from '../api';
 
 // Helper function to fetch photos for a user
 const fetchUserPhotos = async (userEmail, mainPhotoUrl) => {

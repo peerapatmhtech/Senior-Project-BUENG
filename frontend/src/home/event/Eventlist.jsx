@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import api from "../../../../backend/src/middleware/axiosSecure";
+import api from "../../api";
 import "./Eventlist.css";
 import { useTheme } from "../../context/themecontext";
 import { useSocket } from "../../context/make.com";

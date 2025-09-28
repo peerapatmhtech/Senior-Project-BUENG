@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { IoMdAddCircle, IoMdCloseCircle } from "react-icons/io";
-import api from "../../../backend/src/middleware/axiosSecure";
+import api from "../api";
 import { useParams } from "react-router-dom";
 import "./css/createroom.css";
 const CreateRoom = ({ onRoomCreated }) => {

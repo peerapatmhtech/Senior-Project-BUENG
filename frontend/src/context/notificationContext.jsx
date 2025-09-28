@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import io from "socket.io-client";
-import api from "../../../backend/src/middleware/axiosSecure";
+import api from "../api";
 import { toast } from "react-toastify";
 
 // --- Helper Functions for API calls ---

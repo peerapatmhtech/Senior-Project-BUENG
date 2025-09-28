@@ -4,7 +4,7 @@ import "./AccordionList.css";
 import { FaChevronDown, FaPlus, FaTimes } from "react-icons/fa";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import api from "../../../../backend/src/middleware/axiosSecure";
+import api from "../../api";
 
 // Helper function to fetch initial filters
 const fetchInitialFilters = async (email) => {

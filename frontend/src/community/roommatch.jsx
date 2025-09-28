@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import api from "../../../backend/src/middleware/axiosSecure";
+import api from "../api";
 import { useNavigate } from "react-router-dom";
 import TinderCard from "react-tinder-card";
 import { useTheme } from "../context/themecontext";

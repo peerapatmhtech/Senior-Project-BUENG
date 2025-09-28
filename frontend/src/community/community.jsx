@@ -6,7 +6,7 @@ import RoomList from "./roomlist";
 import RequireLogin from "../ui/RequireLogin";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import api from "../../../backend/src/middleware/axiosSecure";
+import api from "../api";
 import { useTheme } from "../context/themecontext";
 // import RoomMatch from "./roommatch";
 import HeaderProfile from "../ui/HeaderProfile";

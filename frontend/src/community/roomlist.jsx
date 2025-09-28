@@ -1,5 +1,5 @@
 import  { useEffect, useState } from "react";
-import api from "../../../backend/src/middleware/axiosSecure";
+import api from "../api";
 import { useNavigate } from "react-router-dom";
 import "./css/roomlist.css";
 import { toast } from "react-toastify";
