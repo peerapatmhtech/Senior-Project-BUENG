@@ -1,9 +1,10 @@
 import express from "express";
 import Friend from "../model/Friend.js";
+import { requireOwner } from "../middleware/required.js";
 const router = express.Router();
 
 // เพิ่มเพื่อน
-router.post("/add-friend", async (req, res) => {
+router.post("/add-friend",requireOwner, async (req, res) => {
     const { userEmail, friendEmail, roomId } = req.body;
     if (!userEmail || !friendEmail || !roomId) {
         return res.status(400).json({ error: "Both userEmail and friendEmail are required." });
@@ -21,9 +22,12 @@ router.post("/add-friend", async (req, res) => {
 });
 
 // ดึงข้อมูลเพื่อน
-router.get("/friends/:email", async (req, res) => {
+router.get("/friends/:email", requireOwner, async (req, res) => {
     const { email } = req.params;
     try {
+        if (!email) {
+            return res.status(400).send("Email is required.");
+        }
         const user = await Friend.findOne({ email });
         if (!user) return res.status(404).send("User not found");
         res.json(user.friends);

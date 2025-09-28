@@ -6,7 +6,7 @@ const api = axios.create({
   withCredentials: true, // Crucial for cookies and CSRF
 });
 
-// --- CSRF Protection ---
+// // --- CSRF Protection ---
 let csrfToken = null;
 
 // Function to get the CSRF token
@@ -28,7 +28,6 @@ export const getCsrfToken = async () => {
 api.interceptors.request.use(
   async (config) => {
     const method = config.method.toLowerCase();
-
     // Only attach CSRF token for state-changing methods
     if (['post', 'put', 'delete', 'patch'].includes(method)) {
       const token = await getCsrfToken();

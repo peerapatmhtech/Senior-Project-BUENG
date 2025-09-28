@@ -3,6 +3,7 @@ const router = express.Router();
 import User from '../model/userroom.js';
 import Friend from "../model/Friend.js";
 import FriendRequest from "../model/friendRequest.js";
+import { requireOwner } from "../middleware/required.js";
 
 // API สำหรับส่งคำขอเป็นเพื่อน
 router.post('/friend-request', async (req, res) => {
@@ -112,7 +113,7 @@ router.put('/mark-friend-requests-read/:requestId', async (req, res) => {
 
 
 // API ดึงข้อมูลคำขอเพื่อนของผู้ใช้
-router.get('/friend-requests/:userEmail', async (req, res) => {
+router.get('/friend-requests/:userEmail', requireOwner, async (req, res) => {
   try {
     const { userEmail } = req.params;
 
@@ -141,7 +142,7 @@ router.get('/friend-requests/:userEmail', async (req, res) => {
 });
 
 // API สำหรับตอบรับหรือปฏิเสธคำขอเพื่อน
-router.post('/friend-request-response', async (req, res) => {
+router.post('/friend-request-response', requireOwner, async (req, res) => {
   try {
     const { requestId, userEmail, friendEmail, response, roomId } = req.body;
 
@@ -235,7 +236,7 @@ router.post('/friend-request-response', async (req, res) => {
 });
 
 // API สำหรับดึงข้อมูลการยอมรับคำขอเพื่อนล่าสุด (สำหรับแสดง Toast)
-router.get('/friend-accepts/:userEmail', async (req, res) => {
+router.get('/friend-accepts/:userEmail',requireOwner, async (req, res) => {
   try {
     const { userEmail } = req.params;
 

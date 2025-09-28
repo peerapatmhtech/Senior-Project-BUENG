@@ -1,18 +1,17 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { MdAttachFile } from "react-icons/md";
-import { IoIosArrowBack, IoMdSend  } from "react-icons/io";
+import { IoIosArrowBack, IoMdSend } from "react-icons/io";
 import ProfileModal from "./ProfileModal";
-import api from "../../../../../backend/src/middleware/axiosSecure";
+import { useQuery } from "@tanstack/react-query";
+import { fetchFollowInfo, fetchInfos, fetchUsers } from "../../../lib/queries";
 
 const ChatPanel = ({
   messages,
-  users,
   userEmail,
   userPhoto,
   userName,
   sortedFriends,
   RoomsBar,
-  getnickName,
   openchat,
   input,
   setInput,
@@ -27,37 +26,33 @@ const ChatPanel = ({
 }) => {
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
-  const [followers, setFollowers] = useState([]);
-  const [following, setFollowing] = useState([]);
   const [isCom, setIscom] = useState(false);
 
+  // Fetch data using React Query
+  const { data: users = [] } = useQuery({ queryKey: ["users"], queryFn: fetchUsers });
+  const { data: getnickName = [] } = useQuery({ queryKey: ["infos"], queryFn: fetchInfos });
+
+  const { data: followInfo } = useQuery({
+    queryKey: ["followInfo", userImage?.email],
+    queryFn: () => fetchFollowInfo(userImage?.email),
+    enabled: !!userImage?.email, // Only run query if userImage.email exists
+  });
+
+  const followers = followInfo?.followers || [];
+  const following = followInfo?.following || [];
+
   const handleProfileClick = (userObject) => {
-    if (!userObject) return; // ป้องกันกรณี userObject เป็น null หรือ undefined
+    if (!userObject) return;
     setSelectedUser(userObject);
     setModalVisible(true);
   };
-  const fetchFollowInfo = async (targetEmail) => {
-    if (!targetEmail) return;
-    try {
-      const res = await api.get(
-        `${import.meta.env.VITE_APP_API_BASE_URL
-        }/api/user/${targetEmail}/follow-info`
-      );
-      setFollowers(res.data.followers);
-      setFollowing(res.data.following);
-    } catch (error) {
-      console.error("Error fetching follow info:", error);
-    }
-  };
+
   useEffect(() => {
     if (!userImage) return;
-    if (userImage.name) { setIscom(true); return; }
-    if (userImage.usermatch) { setIscom(true); return; }
-    if (userImage.email) setIscom(false);
-    try {
-      fetchFollowInfo(userImage.email);
-    } catch (error) {
-      console.error("Error fetching follow info:", error);
+    if (userImage.name || userImage.usermatch) {
+      setIscom(true);
+    } else if (userImage.email) {
+      setIscom(false);
     }
   }, [userImage]);
 
@@ -68,8 +63,8 @@ const ChatPanel = ({
           className={`back-button-mobile ${openchat ? "mobile-layout-mode" : ""}`}
           onClick={() => setOpenchat(false)}
           style={{
-            WebkitTapHighlightColor: 'transparent', // ลบ highlight สีฟ้าบน iOS
-            userSelect: 'none' // ป้องกันการเลือกข้อความ
+            WebkitTapHighlightColor: "transparent",
+            userSelect: "none",
           }}
         >
           <IoIosArrowBack />
@@ -77,12 +72,12 @@ const ChatPanel = ({
         <div className="center-mobile">
           <img
             src={
-              userImage && users && (
-                users.find((u) => u.email === userImage?.usermatch)?.photoURL ||
+              userImage &&
+              users &&
+              (users.find((u) => u.email === userImage?.usermatch)?.photoURL ||
                 users.find((u) => u.email === userImage?.email)?.photoURL ||
                 userImage?.image ||
-                defaultProfileImage
-              )
+                defaultProfileImage)
             }
             alt="Profile"
             className={`chat-profile ${openchat ? "mobile-layout-mode" : ""}`}
@@ -90,22 +85,25 @@ const ChatPanel = ({
               if (!userImage || !users) return;
               const userObject =
                 users.find((u) => u.email === userImage?.usermatch) ||
-                users.find((u) => u.email === userImage?.email) || userImage;
+                users.find((u) => u.email === userImage?.email) ||
+                userImage;
               handleProfileClick(userObject);
             }}
           />
         </div>
         <h2 className={`chat-title ${openchat ? "mobile-layout-mode" : ""}`}>
-          {userImage && Array.isArray(getnickName) && users && (
-            getnickName.find((u) => u.email === userImage?.usermatch)
+          {(userImage &&
+            Array.isArray(getnickName) &&
+            users &&
+            (getnickName.find((u) => u.email === userImage?.usermatch)
               ?.nickname ||
-            getnickName.find((u) => u.email === userImage?.email)
-              ?.nickname ||
-            users.find((u) => u.email === userImage?.usermatch)?.displayName ||
-            users.find((u) => u.email === userImage?.email)?.displayName ||
-            (RoomsBar && RoomsBar.roomName) ||
-            userName || "Chat"
-          )}
+              getnickName.find((u) => u.email === userImage?.email)?.nickname ||
+              users.find((u) => u.email === userImage?.usermatch)
+                ?.displayName ||
+              users.find((u) => u.email === userImage?.email)?.displayName ||
+              (RoomsBar && RoomsBar.roomName) ||
+              userName)) ||
+            "Chat"}
         </h2>
       </div>
       <div className="chat-box">
@@ -134,7 +132,7 @@ const ChatPanel = ({
             const isNewDay =
               !previousMessageDate ||
               messageDate?.toDateString() !==
-              previousMessageDate?.toDateString();
+                previousMessageDate?.toDateString();
 
             return (
               <React.Fragment key={msg.id}>
@@ -144,8 +142,9 @@ const ChatPanel = ({
                   </div>
                 )}
                 <div
-                  className={`chat-message ${isCurrentUser ? "my-message" : "other-message"
-                    }`}
+                  className={`chat-message ${
+                    isCurrentUser ? "my-message" : "other-message"
+                  }`}
                 >
                   {!isCurrentUser && (
                     <img
@@ -157,13 +156,15 @@ const ChatPanel = ({
                     />
                   )}
                   <div
-                    className={`message-content ${isCurrentUser ? "current" : "other"
-                      }`}
+                    className={`message-content ${
+                      isCurrentUser ? "current" : "other"
+                    }`}
                   >
                     <div className="colum-message">
                       <div
-                        className={`message-bubble ${isCurrentUser ? "current" : "other"
-                          }`}
+                        className={`message-bubble ${
+                          isCurrentUser ? "current" : "other"
+                        }`}
                       >
                         {msg.content || msg.text}
                       </div>
@@ -183,9 +184,7 @@ const ChatPanel = ({
       </div>
       <div className="chat-input-container">
         <div className="chat-border">
-          <div className="emoji-right">
-            {/* <TiMicrophoneOutline /> */}
-          </div>
+          <div className="emoji-right"></div>
           <input
             type="text"
             value={input}
@@ -196,13 +195,9 @@ const ChatPanel = ({
           />
           <div className="emoji">
             <MdAttachFile />
-            {/* <IoCameraOutline /> */}
-            {/* <BsEmojiSmile /> */}
           </div>
           <div className="emoji-left">
-            <IoMdSend 
-              onClick={handleSend}
-            />
+            <IoMdSend onClick={handleSend} />
           </div>
         </div>
       </div>

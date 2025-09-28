@@ -1,4 +1,5 @@
 import express from "express";
+import { requireOwner } from "../middleware/required.js";
 import { InfoMatch } from "../model/infomatch.js";
 // import { info } from "autoprefixer";
 export default function (io) {
@@ -10,7 +11,7 @@ export default function (io) {
       const { detail, email, chance, usermatch, emailjoined, usermatchjoined } = req.body;
 
       // ตรวจสอบข้อมูลที่จำเป็น
-      if (!detail || !email || !usermatch ) {
+      if (!detail || !email || !usermatch) {
         return res.status(400).json({
           success: false,
           message: "กรุณากรอกข้อมูลที่จำเป็น"
@@ -74,7 +75,7 @@ export default function (io) {
   });
 
   // READ - ดึงข้อมูล InfoMatch ตาม Email
-  router.get("/infomatch/:email", async (req, res) => {
+  router.get("/infomatch/:email", requireOwner, async (req, res) => {
     try {
       const { email } = req.params;
 
@@ -104,7 +105,7 @@ export default function (io) {
   });
 
   // READ - ดึงข้อมูล InfoMatch ตาม email และเพื่อน
-  router.get("/infomatch/user/:email", async (req, res) => {
+  router.get("/infomatch/user/:email", requireOwner, async (req, res) => {
     try {
       const { email } = req.params;
 
@@ -311,7 +312,7 @@ export default function (io) {
   });
 
   // DELETE - ลบ InfoMatch ทั้งหมดของผู้ใช้
-  router.delete("/user/:email", async (req, res) => {
+  router.delete("/user/:email", requireOwner, async (req, res) => {
     try {
       const { email } = req.params;
 

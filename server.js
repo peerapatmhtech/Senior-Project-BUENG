@@ -24,19 +24,17 @@ import friendApiRoutes from "./backend/src/routes/friendApi.js";
 import userPhotoRoutes from "./backend/src/routes/userPhoto.js";
 import infoMatchRoutes from "./backend/src/routes/infomatch.js"; // Import info match routes
 import session from "express-session";
-import csurf from "csurf";
 import helmet from "helmet";
 import rateLimit from 'express-rate-limit';
-
-
+import MongoStore from "connect-mongo";
+import csrf from 'csurf';
+import { limiter } from "./backend/src/middleware/ratelimit.js";
+import { requireOwner } from "./backend/src/middleware/required.js";
 
 
 
 dotenv.config();
-const allowedOrigins = [
-  "https://project-react-mocha-eta.vercel.app", // production frontend
-  "http://localhost:5173", // local dev frontend
-];
+const allowedOrigins = process.env.VITE_APP_WEB_BASE_URL;
 
 const app = express();
 const server = http.createServer(app);
@@ -53,6 +51,8 @@ const MONGO_URI = process.env.MONGO_URI;
 const MAKE_WEBHOOK_URL = process.env.MAKE_WEBHOOK_URL;
 const COOKIE_SECRET = process.env.COOKIE_SECRET;
 
+
+app.use(express.json({ limit: '50mb' }));
 // ✅ Middleware
 const isProduction = process.env.NODE_ENV === 'production';
 app.use(helmet());
@@ -65,49 +65,57 @@ app.use(
 app.use(bodyParser.json());
 app.use(cookieParser(COOKIE_SECRET));
 
-// Session Middleware
+
+////////Protection Doss and DDos Attack////////
+app.use(
+  rateLimit({
+    windowMs: 1 * 60 * 1000, // 15 minutes
+    max: 500, // limit each IP to 100 requests per windowMs
+  })
+);
+
+///////Protection Cross-Site Request Forgery (CSRF)////////
 app.use(
   session({
     secret: COOKIE_SECRET,
     resave: false,
-    saveUninitialized: false, // Don't create session until something stored
+    saveUninitialized: false,
+    store: MongoStore.create({
+      mongoUrl: MONGO_URI,
+      collectionName: "sessions",
+      ttl: 60 * 60, // อายุ session = 1 ชม.
+    }),
     cookie: {
       secure: isProduction, // Use secure cookies in production
       httpOnly: true, // Prevent client-side script access
-      sameSite: isProduction ? 'none' : 'lax', // 'none' for cross-site requests, 'lax' for local dev
-      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      sameSite: isProduction ? 'strict' : 'lax', // 'none' for cross-site requests, 'lax' for local dev
+      maxAge: 1000 * 60 * 60, // อายุ cookie 30 นาที
     },
   })
 );
+const csrfProtection = csrf();
 
-// CSRF Protection Middleware
-// This must come after the session middleware
-const csrfProtection = csurf({
-  cookie: {
-    key: '_csrf', // The name of the cookie
-    path: '/',
-    httpOnly: true,
-    secure: isProduction,
-    sameSite: isProduction ? 'none' : 'lax',
-  },
-});
-
-app.use(csrfProtection);
-
-// Custom middleware to attach user from session to req.user for downstream routes
 app.use((req, res, next) => {
-  req.user = req.session.user || null;
-  next();
+  const excludedPaths = ['/api/save-event', '/api/infomatch/create'];
+  // Only exclude POST requests to specific paths from CSRF protection
+  if (req.method === 'POST' && excludedPaths.includes(req.path)) {
+    return next();
+  }
+  // Apply CSRF protection for all other routes
+  return csrfProtection(req, res, next);
 });
+
+app.get('/api/csrf-token', (req, res) => {
+  res.json({ csrfToken: req.csrfToken() });
+});
+
+//////////////////////////
+
 
 
 // Serve static files from the uploads directory
 app.use('/uploads', express.static('uploads'));
 
-// API endpoint to get the CSRF token
-app.get("/api/csrf-token", (req, res) => {
-  res.json({ csrfToken: req.csrfToken() });
-});
 
 // ✅ Connect MongoDB
 mongoose.connect(MONGO_URI);
@@ -253,7 +261,7 @@ io.on("connection", (socket) => {
   });
 });
 // 📌 API บันทึกหมวดหมู่เพลงที่ผู้ใช้เลือก
-app.post("/api/update-genres", async (req, res) => {
+app.post("/api/update-genres", limiter, requireOwner, async (req, res) => {
   const { email, genres, subGenres, updatedAt } = req.body;
   if (!email || !genres || !subGenres) {
     return res

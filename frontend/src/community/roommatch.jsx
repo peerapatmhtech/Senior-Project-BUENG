@@ -1,4 +1,5 @@
-import React, { useEffect, useState, useRef, createRef } from "react";
+import React, { useEffect, useState, useRef, useMemo } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../../../backend/src/middleware/axiosSecure";
 import { useNavigate } from "react-router-dom";
 import TinderCard from "react-tinder-card";
@@ -11,218 +12,156 @@ import "./css/roommatch.css";
 import { useSocket } from "../context/make.com";
 import UserCard from "./UserCard";
 
+// --- API Helper Functions ---
+const fetchRooms = async () => {
+  const response = await api.get(`/api/infomatch/all`);
+  return response.data.data || [];
+};
+
+const fetchUsers = async () => {
+  const response = await api.get(`/api/users`);
+  return response.data || [];
+};
+
 const RoomMatch = ({ accordionComponent }) => {
   const userEmail = localStorage.getItem("userEmail");
   const { isDarkMode } = useTheme();
-  const [rooms, setRooms] = useState([]);
-  const [users, setUsers] = useState([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const childRefs = useRef([]);
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const socket = useSocket();
+
+  const [currentIndex, setCurrentIndex] = useState(0);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 990);
-  const [loading, setLoading] = useState(true);
   const [showMatchModal, setShowMatchModal] = useState(false);
   const [matchedRoom, setMatchedRoom] = useState(null);
-  const socket = useSocket(); // Get socket instance
 
-  // ตรวจสอบขนาดหน้าจอ
+  // --- Queries ---
+  const { data: rooms = [], isLoading: isLoadingRooms } = useQuery({ 
+    queryKey: ['rooms'], 
+    queryFn: fetchRooms,
+    staleTime: 1000 * 60 * 2, // 2 minutes
+  });
+  const { data: users = [], isLoading: isLoadingUsers } = useQuery({ 
+    queryKey: ['users'], 
+    queryFn: fetchUsers,
+    staleTime: 1000 * 60 * 2, // 2 minutes
+  });
+
+  // --- Mutations ---
+  const likeMutation = useMutation({
+    mutationFn: async ({ roomId, updateData }) => {
+      const response = await api.put(`/api/infomatch/${roomId}`, updateData);
+      return response.data;
+    },
+    onSuccess: (updatedRoom) => {
+      toast.success("คุณกดไลค์แล้ว!");
+      if (updatedRoom && updatedRoom.emailjoined && updatedRoom.usermatchjoined) {
+        setMatchedRoom(updatedRoom);
+        setShowMatchModal(true);
+        localStorage.setItem(`match_shown_${updatedRoom._id}`, "true");
+      }
+      queryClient.invalidateQueries({ queryKey: ['rooms'] });
+    },
+    onError: () => toast.error("ไม่สามารถกดไลค์ได้"),
+  });
+
+  const skipMutation = useMutation({
+    mutationFn: (roomId) => api.delete(`/api/infomatch/${roomId}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['rooms'] });
+    },
+    onError: () => toast.error("เกิดข้อผิดพลาดในการข้าม"),
+  });
+
+  // --- Memoized Derived State ---
+  const filteredRooms = useMemo(() => {
+    return Array.isArray(rooms) ? rooms.filter(room => {
+      const isUserInRoom = room.usermatch === userEmail || room.email === userEmail;
+      if (!isUserInRoom) return false;
+      if (room.usermatch === userEmail && room.usermatchjoined) return false;
+      if (room.email === userEmail && room.emailjoined) return false;
+      return true;
+    }) : [];
+  }, [rooms, userEmail]);
+
+  const childRefs = useMemo(() => Array(filteredRooms.length).fill(0).map(() => React.createRef()), [filteredRooms.length]);
+
   useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth <= 990);
-    };
+    setCurrentIndex(filteredRooms.length - 1);
+  }, [filteredRooms.length]);
 
+  // --- Effects ---
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 990);
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
-  const fetchRooms = async () => {
-    setLoading(true);
-    try {
-      const matchInfo = await api.get(`/api/infomatch/all`);
-      setRooms(matchInfo.data.data);
-    } catch (error) {
-      console.error("โหลดห้องไม่สำเร็จ:", error);
-      setRooms([]);
-    }
-    setLoading(false);
-  };
-  useEffect(() => {
-    fetchRooms();
-  }, []);
+
   useEffect(() => {
     if (!socket) return;
-
-    socket.on("match_updated", () => {
-      console.log("Received match_updated event. Refetching data...");
-      fetchRooms();
-    });
-
-    return () => {
-      socket.off("match_updated");
+    const handleMatchUpdate = () => {
+      // console.log("Received match_updated event. Invalidating rooms query...");
+      queryClient.invalidateQueries({ queryKey: ['rooms'] });
     };
-  }, [socket, fetchRooms]);
-  const filteredRooms = Array.isArray(rooms)
-    ? rooms.filter((room) => {
-      // เช็คว่า email ของเราอยู่ใน usermatch หรือ email
-      const isUserInRoom =
-        room.usermatch === userEmail || room.email === userEmail;
-      if (!isUserInRoom) return false;
+    socket.on("match_updated", handleMatchUpdate);
+    return () => socket.off("match_updated", handleMatchUpdate);
+  }, [socket, queryClient]);
 
-      // ถ้าเราอยู่ใน usermatch ให้เช็ค usermatchjoined ต้องเป็น false
-      if (room.usermatch === userEmail && room.usermatchjoined === true) {
-        return false;
-      }
-
-      // ถ้าเราอยู่ใน email ให้เช็ค emailjoined ต้องเป็น false
-      if (room.email === userEmail && room.emailjoined === true) {
-        return false;
-      }
-
-      return true;
-    })
-    : [];
-  useEffect(() => {
-    try {
-      setCurrentIndex((filteredRooms || []).length - 1);
-      childRefs.current = Array((filteredRooms || []).length)
-        .fill(0)
-        .map((_, i) => childRefs.current[i] || createRef());
-    } catch (error) {
-      console.error("Error fetching match info:", error);
-    }
-  }, []);
-  useEffect(() => {
-    const fetchGmails = async () => {
-      try {
-        const res = await api.get(`/api/users`);
-        setUsers(res.data);
-      } catch (error) {
-        console.error("โหลดห้องไม่สำเร็จ:", error);
-      }
-    };
-
-    fetchGmails();
-  }, []);
-  useEffect(() => {
-    try {
-      setCurrentIndex((filteredRooms || []).length - 1);
-      childRefs.current = Array((filteredRooms || []).length)
-        .fill(0)
-        .map((_, i) => childRefs.current[i] || createRef());
-    } catch (error) {
-      console.error("โหลดห้องไม่สำเร็จ:", error);
-    }
-  }, []);
-
-  const handleEnterRoom = async (roomId, roomName) => {
-    try {
-      console.log("Entering room:", roomId, "with name:", roomName);
-
-      // หา room จาก roomId ที่ส่งมา
-      const currentRoom = filteredRooms.find((room) => room._id === roomId);
-      console.log("Current room found:", currentRoom);
-      console.log("filteredRooms:", filteredRooms);
-
-      if (currentRoom && currentRoom._id) {
-        let updateData = {};
-
-        // เช็คว่าเราอยู่ใน email หรือ usermatch แล้วอัปเดทค่าที่เกี่ยวข้อง
-        if (currentRoom.email === userEmail) {
-          updateData.emailjoined = true;
-        } else if (currentRoom.usermatch === userEmail) {
-          updateData.usermatchjoined = true;
-        }
-        console.log("Update data:", updateData);
-        const response = await api.put(`/api/infomatch/${roomId}`, updateData);
-
-        // เช็คว่าทั้งสองฝ่าย join แล้วหรือไม่
-        const updatedRoom = response.data;
-        if (
-          updatedRoom &&
-          updatedRoom.emailjoined &&
-          updatedRoom.usermatchjoined
-        ) {
-          // แสดง Match Modal
-          setMatchedRoom(updatedRoom);
-          setShowMatchModal(true);
-
-          // เก็บสถานะการแสดงผลเพื่อไม่แสดงซ้ำ
-          localStorage.setItem(`match_shown_${updatedRoom._id}`, "true");
-        }
-      }
-
-      // ลบห้องที่ไลค์แล้วออกจาก state และไปห้องต่อไป
-      const roomIndex = filteredRooms.findIndex((room) => room._id === roomId);
-      if (roomIndex !== -1) {
-        setRooms((prevRooms) =>
-          prevRooms.filter((room) => room._id !== roomId)
-        );
-        setCurrentIndex((prev) => Math.max(0, prev - 1));
-      }
-
-      toast.success("คุณกดไลค์แล้ว!");
-    } catch (error) {
-      console.error("Error adding friend:", error);
-      toast.error("ไม่สามารถเพิ่มเพื่อนได้");
+  // --- Handlers ---
+  const handleEnterRoom = (roomId) => {
+    const currentRoom = filteredRooms.find(room => room._id === roomId);
+    if (currentRoom) {
+      let updateData = {};
+      if (currentRoom.email === userEmail) updateData.emailjoined = true;
+      else if (currentRoom.usermatch === userEmail) updateData.usermatchjoined = true;
+      likeMutation.mutate({ roomId, updateData });
     }
   };
-  const swiped = async (direction, roomId, roomName, index) => {
-    if (direction === "right") {
-      handleEnterRoom(roomId, roomName);
-    } else if (direction === "left") {
-      // ลบข้อมูลเมื่อ swipe ซ้าย (เหมือนปุ่ม skip)
-      if (roomId) {
-        try {
-          await api.delete(`/api/infomatch/${roomId}`);
 
-          // ลบออกจาก state
-          setRooms((prevRooms) =>
-            prevRooms.filter((room) => room._id !== roomId)
-          );
-        } catch (error) {
-          console.error("Error deleting info match:", error);
-        }
-      }
+  const swiped = (direction, roomId) => {
+    if (direction === "right") {
+      handleEnterRoom(roomId);
+    } else if (direction === "left") {
+      skipMutation.mutate(roomId);
     }
   };
 
   const swipe = async (dir) => {
-    if (currentIndex >= 0 && currentIndex < rooms.length) {
-      await childRefs.current[currentIndex]?.current?.swipe(dir);
+    if (currentIndex >= 0 && currentIndex < filteredRooms.length) {
+      await childRefs[currentIndex]?.current?.swipe(dir);
+    }
+  };
+
+  const handleSkipButtonClick = () => {
+    if (currentIndex < filteredRooms.length) {
+      const currentRoom = filteredRooms[currentIndex];
+      if (currentRoom) {
+        skipMutation.mutate(currentRoom._id);
+      }
     }
   };
 
   const openModal = () => setIsModalOpen(true);
   const closeModal = () => setIsModalOpen(false);
-
-  // ปิด modal เมื่อคลิกที่ overlay
   const handleOverlayClick = (e) => {
-    if (e.target === e.currentTarget) {
-      closeModal();
-    }
+    if (e.target === e.currentTarget) closeModal();
   };
 
-  // Modal Wrapper Component
-  const ModalWrapper = ({ children }) => {
-    if (!isMobile) {
-      return children; // แสดงแบบปกติในหน้าจอใหญ่
-    }
+  const getHighResPhoto = (url) => url ? url.replace(/=s\d+-c(?=[&?]|$)/, "=s400-c") : url;
 
+  const isLoading = isLoadingRooms || isLoadingUsers;
+
+  // --- Render ---
+  const ModalWrapper = ({ children }) => {
+    if (!isMobile) return children;
     return (
       <>
-        {/* <MobileToggleButton /> */}
-        <div
-          className={`roommatch-modal-overlay ${isModalOpen ? "active" : ""}`}
-          onClick={handleOverlayClick}
-        >
-          <div
-            className={`roommatch-modal-sheet ${isModalOpen ? "active" : ""}`}
-          >
+        <div className={`roommatch-modal-overlay ${isModalOpen ? "active" : ""}`} onClick={handleOverlayClick}>
+          <div className={`roommatch-modal-sheet ${isModalOpen ? "active" : ""}`}>
             <div className="roommatch-modal-header">
               <div className="roommatch-modal-handle"></div>
-              <button className="roommatch-modal-close" onClick={closeModal}>
-                <FiX />
-              </button>
+              <button className="roommatch-modal-close" onClick={closeModal}><FiX /></button>
             </div>
             <div className="roommatch-modal-content">{children}</div>
           </div>
@@ -231,206 +170,61 @@ const RoomMatch = ({ accordionComponent }) => {
     );
   };
 
-  const getHighResPhoto = (url) => {
-    if (!url) return url;
-    // รองรับทั้ง ...=s96-c และ ...=s96-c&... หรือ ...=s96-c?... (กรณีมี query string ต่อท้าย)
-    return url.replace(/=s\d+-c(?=[&?]|$)/, "=s400-c");
-  };
   return (
     <ModalWrapper>
-      <div
-        className={`room-match-container ${isDarkMode ? "dark-mode" : ""} ${isModalOpen ? "modal-active" : ""
-          }`}
-      >
-        {/* Show AccordionList on mobile only */}
-        {isMobile && accordionComponent && (
-          <div className="roommatch-accordion-mobile">{accordionComponent}</div>
-        )}
-
-        {loading && (
+      <div className={`room-match-container ${isDarkMode ? "dark-mode" : ""} ${isModalOpen ? "modal-active" : ""}`}>
+        {isMobile && accordionComponent && <div className="roommatch-accordion-mobile">{accordionComponent}</div>}
+        {isLoading && (
           <div className="roommatch-loading-overlay">
             <div className="roommatch-spinner">
-              <div className="roommatch-dot"></div>
-              <div className="roommatch-dot"></div>
-              <div className="roommatch-dot"></div>
+              <div className="roommatch-dot"></div><div className="roommatch-dot"></div><div className="roommatch-dot"></div>
             </div>
-            <div className="roommatch-loading-text">
-              กำลังโหลดห้องแนะนำ กรุณารอสักครู่...
-            </div>
+            <div className="roommatch-loading-text">กำลังโหลดห้องแนะนำ กรุณารอสักครู่...</div>
           </div>
         )}
         <div className="card-stack">
-          {!loading && filteredRooms.length === 0 && (
+          {!isLoading && filteredRooms.length === 0 && (
             <div className="roommatch-tindercard-loading">
               <div className="roommatch-tindercard-spinner">
-                <div className="roommatch-tindercard-bar"></div>
-                <div className="roommatch-tindercard-bar"></div>
-                <div className="roommatch-tindercard-bar"></div>
-                <div className="roommatch-tindercard-bar"></div>
+                <div className="roommatch-tindercard-bar"></div><div className="roommatch-tindercard-bar"></div><div className="roommatch-tindercard-bar"></div><div className="roommatch-tindercard-bar"></div>
               </div>
-              <div className="roommatch-tindercard-loading-text">
-                ไม่พบห้องที่เหมาะสม หรือคุณปัดหมดแล้ว
-                <br />
-                กำลังค้นหาห้องใหม่...
-              </div>
+              <div className="roommatch-tindercard-loading-text">ไม่พบห้องที่เหมาะสม หรือคุณปัดหมดแล้ว<br />กำลังค้นหาห้องใหม่...</div>
             </div>
           )}
-          {!loading &&
-            filteredRooms.length > 0 &&
-            filteredRooms.map((room, index) => (
-              <div className="container-tinder-card" key={room._id}>
-                <TinderCard
-                  ref={childRefs.current[index]}
-                  key={room._id}
-                  onSwipe={(dir) => swiped(dir, room._id, room.title, index)}
-                  preventSwipe={["up", "down"]}
-                  className="tinder-card"
-                >
-                  <UserCard room={room} userEmail={userEmail} users={users} />
-                </TinderCard>
-              </div>
-            ))}
+          {!isLoading && filteredRooms.map((room, index) => (
+            <div className="container-tinder-card" key={room._id}>
+              <TinderCard ref={childRefs[index]} key={room._id} onSwipe={(dir) => swiped(dir, room._id)} preventSwipe={["up", "down"]} className="tinder-card">
+                <UserCard room={room} userEmail={userEmail} users={users} />
+              </TinderCard>
+            </div>
+          ))}
         </div>
 
         <div className="button-group">
-          <button
-            onClick={async () => {
-              try {
-                // ลบ event match เฉพาะห้องที่แสดงอยู่ (current)
-
-                if (currentIndex < filteredRooms.length) {
-                  const currentRoom = filteredRooms[currentIndex];
-
-                  if (currentRoom) {
-                    try {
-                      const res = await fetch(
-                        `${import.meta.env.VITE_APP_API_BASE_URL
-                        }/api/infomatch/${currentRoom._id}`,
-                        {
-                          method: "DELETE",
-                          // headers: {
-                          //   'Authorization': `Bearer ${localStorage.getItem('idToken')}`
-                          // }
-                        }
-                      );
-                      if (res === 404) {
-                        toast.error("ไม่พบห้องที่ต้องการลบ");
-                        return;
-                      }
-
-                      // ลบออกจาก state
-                      setRooms((prevRooms) =>
-                        prevRooms.filter((room) => room._id !== currentRoom._id)
-                      );
-                      setCurrentIndex((prev) => Math.max(0, prev - 1));
-                    } catch (error) {
-                      fetchRooms();
-                      console.error("Error deleting info match:", error);
-                    }
-                  }
-                }
-              } catch (err) {
-                console.error("Error skipping room");
-                fetchRooms();
-              }
-            }}
-            className="skip-button"
-            disabled={loading}
-          >
-            Skip
-          </button>
-          <button
-            onClick={() =>
-              currentIndex >= 0 &&
-              filteredRooms[currentIndex] &&
-              handleEnterRoom(filteredRooms[currentIndex]._id)
-            }
-            className="join-button"
-            disabled={loading}
-          >
-            Like
-          </button>
+          <button onClick={handleSkipButtonClick} className="skip-button" disabled={likeMutation.isPending || skipMutation.isPending}>Skip</button>
+          <button onClick={() => swipe('right')} className="join-button" disabled={likeMutation.isPending || skipMutation.isPending}>Like</button>
         </div>
         <ToastContainer position="top-right" autoClose={3000} hideProgressBar />
 
-        {/* Match Modal - เหมือน Tinder */}
         {showMatchModal && matchedRoom && (
           <div className="match-modal-overlay">
             <div className="match-modal">
               <div className="match-celebration">
                 <div className="floating-hearts">
-                  <FaHeart className="heart heart-1" />
-                  <FaHeart className="heart heart-2" />
-                  <FaHeart className="heart heart-3" />
-                  <FaHeart className="heart heart-4" />
-                  <FaHeart className="heart heart-5" />
+                  <FaHeart className="heart heart-1" /><FaHeart className="heart heart-2" /><FaHeart className="heart heart-3" /><FaHeart className="heart heart-4" /><FaHeart className="heart heart-5" />
                 </div>
-
                 <div className="match-text">
                   <h1>IT'S A MATCH!</h1>
-                  <p>
-                    You and{" "}
-                    {matchedRoom.email !== userEmail
-                      ? matchedRoom.email
-                      : matchedRoom.usermatch}{" "}
-                    liked each other
-                  </p>
+                  <p>You and {matchedRoom.email !== userEmail ? matchedRoom.email : matchedRoom.usermatch} liked each other</p>
                 </div>
-
                 <div className="match-users">
-                  <div className="user-avatar">
-                    <img
-                      src={(() => {
-                        const currentUser = users.find(
-                          (u) => u.email === userEmail
-                        );
-                        return currentUser
-                          ? getHighResPhoto(currentUser.photoURL)
-                          : "https://via.placeholder.com/80";
-                      })()}
-                      alt="Your Avatar"
-                    />
-                  </div>
+                  <div className="user-avatar"><img src={getHighResPhoto(users.find(u => u.email === userEmail)?.photoURL) || "https://via.placeholder.com/80"} alt="Your Avatar" /></div>
                   <FaHeart className="match-heart" />
-                  <div className="user-avatar">
-                    <img
-                      src={(() => {
-                        const partnerEmail =
-                          matchedRoom.email !== userEmail
-                            ? matchedRoom.email
-                            : matchedRoom.usermatch;
-                        const partnerUser = users.find(
-                          (u) => u.email === partnerEmail
-                        );
-                        return partnerUser
-                          ? getHighResPhoto(partnerUser.photoURL)
-                          : "https://via.placeholder.com/80";
-                      })()}
-                      alt={
-                        matchedRoom.email !== userEmail
-                          ? matchedRoom.email
-                          : matchedRoom.usermatch
-                      }
-                    />
-                  </div>
+                  <div className="user-avatar"><img src={getHighResPhoto(users.find(u => u.email === (matchedRoom.email !== userEmail ? matchedRoom.email : matchedRoom.usermatch))?.photoURL) || "https://via.placeholder.com/80"} alt={matchedRoom.email !== userEmail ? matchedRoom.email : matchedRoom.usermatch} /></div>
                 </div>
-
                 <div className="match-actions">
-                  <button
-                    className="match-close-btn"
-                    onClick={() => setShowMatchModal(false)}
-                  >
-                    Continue Swiping
-                  </button>
-                  <button
-                    className="match-chat-btn"
-                    onClick={() => {
-                      setShowMatchModal(false);
-                      navigate(`/chat/${matchedRoom._id}`);
-                    }}
-                  >
-                    Send Message
-                  </button>
+                  <button className="match-close-btn" onClick={() => setShowMatchModal(false)}>Continue Swiping</button>
+                  <button className="match-chat-btn" onClick={() => { setShowMatchModal(false); navigate(`/chat/${matchedRoom._id}`); }}>Send Message</button>
                 </div>
               </div>
             </div>

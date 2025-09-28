@@ -1,9 +1,9 @@
 import { FaChevronDown, FaChevronRight } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { fetchAllRooms, fetchUserRooms } from "../../../lib/queries";
 
 const CommunityList = ({
-  joinedRooms,
-  allRooms,
   setActiveUser,
   setRoombar,
   isOpencom,
@@ -15,6 +15,19 @@ const CommunityList = ({
   setIsGroupChat,
 }) => {
   const navigate = useNavigate();
+  const userEmail = localStorage.getItem("userEmail");
+
+  const { data: joinedRooms = { roomNames: [], roomIds: [] } } = useQuery({
+    queryKey: ["userRooms", userEmail],
+    queryFn: () => fetchUserRooms(userEmail),
+    enabled: !!userEmail,
+  });
+
+  const { data: allRooms = [] } = useQuery({
+    queryKey: ["allRooms"],
+    queryFn: fetchAllRooms,
+  });
+
   const handleEnterRoom = (roomId) => {
     navigate(`/chat/${roomId}`);
   };
@@ -35,7 +48,6 @@ const CommunityList = ({
           {" "}
           <ul className="friend-list-chat">
             {joinedRooms.roomNames?.map((name, index) => {
-              // ใช้ index เป็น fallback ถ้าไม่มี id จริง
               const roomId = joinedRooms.roomIds?.[index] || `${name}-${index}`;
               if (!name || !roomId) return null;
               return (
@@ -45,8 +57,9 @@ const CommunityList = ({
                       room.name === name ? (
                         <li
                           key={`room-${room._id || room.name}-${i}-${index}`}
-                          className={`chat-friend-item ${selectedTab === room.name ? "selected" : ""
-                            }`}
+                          className={`chat-friend-item ${
+                            selectedTab === room.name ? "selected" : ""
+                          }`}
                           onClick={() => {
                             setSelectedTab(room.name);
                             setActiveUser(room.name);
@@ -64,7 +77,9 @@ const CommunityList = ({
                               className="friend-photo"
                             />
                             <div className="friend-detailss">
-                              <span className="friend-name-commu">{room.name}</span>
+                              <span className="friend-name-commu">
+                                {room.name}
+                              </span>
                             </div>
                           </div>
                         </li>

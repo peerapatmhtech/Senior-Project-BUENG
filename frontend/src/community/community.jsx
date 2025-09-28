@@ -1,130 +1,79 @@
+import React, { useState, useEffect, useRef, useMemo } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import "./css/community.css";
 import CreateRoom from "./createroom";
 import RoomList from "./roomlist";
-import { useState, useEffect, useRef } from "react";
 import RequireLogin from "../ui/RequireLogin";
-import "react-toastify/dist/ReactToastify.css";
 import { toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import api from "../../../backend/src/middleware/axiosSecure";
-import io from "socket.io-client";
 import { useTheme } from "../context/themecontext";
-import RoomMatch from "../../../frontend/src/community/roommatch";
+// import RoomMatch from "./roommatch";
 import HeaderProfile from "../ui/HeaderProfile";
-const socket = io(import.meta.env.VITE_APP_API_BASE_URL);
+
+// --- API Helper Functions ---
+const fetchAllRooms = () => api.get(`/api/allrooms`).then(res => res.data);
+const fetchAllUsers = () => api.get(`/api/users`).then(res => res.data);
+// const fetchUserFilters = (email) => api.get(`/api/filters/${email}`).then(res => res.data);
+// const fetchUserInfos = (email) => api.get(`/api/infos/${email}`).then(res => res.data);
 
 const Newcommu = () => {
-  const [rooms, setRooms] = useState([]);
-  const [users, setUsers] = useState([]);
-  const modalRef = useRef(null);
+  const queryClient = useQueryClient();
+  const { isDarkMode } = useTheme();
+  const userEmail = localStorage.getItem("userEmail");
+
   const [openMenuFor, setOpenMenuFor] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
-  const dropdownRefs = useRef({});
   const [showOnlyMyRooms, setShowOnlyMyRooms] = useState(false);
-  const userEmail = localStorage.getItem("userEmail");
-  const displayName = localStorage.getItem("userName");
-  const photoURL = localStorage.getItem("userPhoto");
-  const [friends, setFriends] = useState([]);
-  const [followers, setFollowers] = useState([]);
-  const [following, setFollowing] = useState([]);
-  const [genres, setGenres] = useState([]);
-  const { isDarkMode, setIsDarkMode } = useTheme();
   const [selectedRooms, setSelectedRooms] = useState([]);
   const [isDeleteMode, setIsDeleteMode] = useState(false);
-  const [handlematchfriend, setHandleMatchFriend] = useState(false);
-  const [getnickName, getNickName] = useState([]);
+  // const [handlematchfriend, setHandleMatchFriend] = useState(false);
+  const modalRef = useRef(null);
+  const dropdownRefs = useRef({});
 
+  // 1. Replaced all fetch functions with useQuery
+  const { data: rooms = [], isLoading: isLoadingRooms } = useQuery({ queryKey: ['rooms'], queryFn: fetchAllRooms, staleTime: 1000 * 60 * 2 });
+  const { data: users = [], isLoading: isLoadingUsers } = useQuery({ queryKey: ['users'], queryFn: fetchAllUsers, staleTime: 1000 * 60 * 2 });
+  const { data: genres = [] } = useQuery({ queryKey: ['filters', userEmail], queryFn: () => fetchUserFilters(userEmail), enabled: !!userEmail, staleTime: 1000 * 60 * 5 });
+  const { data: getnickName = [] } = useQuery({ queryKey: ['infos', userEmail], queryFn: () => fetchUserInfos(userEmail), enabled: !!userEmail, staleTime: 1000 * 60 * 5 });
 
-  // ปิด Google Analytics ใน development environment
-  useEffect(() => {
-    if (import.meta.env.DEV) {
-      // ปิด gtag tracking ใน development
-      window.gtag = function () {
-        console.log("Google Analytics disabled in development mode");
-      };
-
-      // ป้องกัน analytics requests
-      if (window.dataLayer) {
-        window.dataLayer = [];
-      }
-    }
-  }, []);
-
-  const handleNewRoom = (room) => {
-    setRooms((prev) => [...prev, room]);
-  };
-  const handleMatchFriend = () => {
-    setHandleMatchFriend((prev) => !prev);
-  };
-  const handleClickOutside = (e) => {
-    if (modalRef.current && !modalRef.current.contains(e.target)) {
-      handleCloseModal();
-    }
-  };
-  const handleDeleteSelectedRooms = async () => {
-    if (selectedRooms.length === 0) {
-      toast.warning("กรุณาเลือกห้องที่ต้องการลบ");
-      return;
-    }
-    console.log("selectedRooms", selectedRooms);
-
-    const confirm = window.confirm(
-      `คุณแน่ใจว่าต้องการลบ ${selectedRooms.length} ห้องหรือไม่?`
-    );
-    if (!confirm) return;
-
-    try {
-      await api.post(
-        `/api/delete-rooms`,
-        {
-          selectedRooms: selectedRooms,
-        }
-      );
-
-      // อัปเดตรายการห้องหลังลบ
-      const res = await api.get(
-        `/api/allrooms`
-      );
-      setRooms(res.data);
-
-      toast.success(`ลบห้องสำเร็จ ${selectedRooms.length} ห้อง`);
+  // 2. Replaced delete function with useMutation
+  const deleteRoomsMutation = useMutation({
+    mutationFn: (roomIds) => api.post(`/api/delete-rooms`, { selectedRooms: roomIds }),
+    onSuccess: (_, deletedIds) => {
+      toast.success(`ลบห้องสำเร็จ ${deletedIds.length} ห้อง`);
+      queryClient.invalidateQueries({ queryKey: ['rooms'] });
       setSelectedRooms([]);
       setIsDeleteMode(false);
-    } catch (error) {
+    },
+    onError: (error) => {
       console.error("Error deleting rooms:", error);
       toast.error("เกิดข้อผิดพลาดในการลบห้อง");
-    }
+    },
+  });
+
+  // 3. Derived state with useMemo instead of useEffect and useState
+  const friends = useMemo(() => {
+    if (!users.length || !userEmail) return [];
+    const currentUser = users.find(u => u.email === userEmail);
+    if (!currentUser || !Array.isArray(currentUser.friends)) return [];
+    const friendEmails = currentUser.friends.map(f => typeof f === "string" ? f : f.email);
+    return users.filter(user => friendEmails.includes(user.email))
+      .map(user => ({ ...user, isOnline: user.isOnline || false }))
+      .sort((a, b) => a.displayName.localeCompare(b.displayName));
+  }, [users, userEmail]);
+
+  const handleNewRoom = (newRoom) => {
+    // Let React Query handle state updates via invalidation from the creation mutation (if any)
+    // Or for optimistic updates:
+    queryClient.setQueryData(['rooms'], (oldData) => [...oldData, newRoom]);
   };
 
-  const fetchUsersAndFriends = async () => {
-    try {
-      const response = await api.get(
-        `/api/users`
-      );
-      const allUsers = response.data;
-      setUsers(allUsers);
-
-      const currentUser = allUsers.find((u) => u.email === userEmail);
-      if (currentUser && Array.isArray(currentUser.friends)) {
-        const friendEmails = currentUser.friends.map((f) =>
-          typeof f === "string" ? f : f.email
-        );
-        const filteredFriends = allUsers
-          .filter((user) => friendEmails.includes(user.email))
-          .map((user) => ({
-            photoURL: user.photoURL,
-            email: user.email,
-            displayName: user.displayName,
-            isOnline: user.isOnline || false,
-          }))
-          .sort((a, b) => a.displayName.localeCompare(b.displayName));
-
-        setFriends(filteredFriends);
-      } else {
-        setFriends([]);
-      }
-    } catch (error) {
-      console.error("Error fetching users and friends:", error);
+  const handleDeleteSelectedRooms = () => {
+    if (selectedRooms.length === 0) return toast.warning("กรุณาเลือกห้องที่ต้องการลบ");
+    if (window.confirm(`คุณแน่ใจว่าต้องการลบ ${selectedRooms.length} ห้องหรือไม่?`)) {
+      deleteRoomsMutation.mutate(selectedRooms);
     }
   };
 
@@ -132,196 +81,58 @@ const Newcommu = () => {
     setIsModalOpen(false);
     setSelectedUser(null);
   };
+
   useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (modalRef.current && !modalRef.current.contains(e.target)) handleCloseModal();
+      const isClickInsideAny = Object.values(dropdownRefs.current).some(ref => ref?.contains(e.target));
+      if (!isClickInsideAny) setOpenMenuFor(null);
+    };
     document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-
-  const fetchFilter = async () => {
-    try {
-      const res = await api.get(
-        `/api/filters/${userEmail}`
-      );
-      setGenres(res.data);
-    } catch (err) {
-      console.error("โหลด Gmail currentUser ไม่ได้:", err);
-    }
-  };
-  const fetchInfos = async () => {
-    try {
-      const res = await api.get(
-        `/api/infos/${userEmail}`
-      );
- 
-      if (res.status === 200) {
-        toast.info("ไม่พบข้อมูลผู้ใช้งาน");
-      }
-      getNickName(res.data);
-    } catch (err) {
-      console.error("โหลด nickname ล้มเหลว:", err);
-    }
-  };
-  useEffect(() => {
-    if (!userEmail) return;
-    fetchFilter();
-    fetchUsersAndFriends();
-    fetchInfos();
-  }, [userEmail]);
-
-  const fetchCurrentUserAndFriends = async () => {
-    try {
-      const encodedEmail = encodeURIComponent(userEmail);
-      const userRes = await api.get(
-        `/api/users/${encodedEmail}`
-      );
-      if (!userRes.data) return;
-      const currentUser = userRes.data;
-
-      if (Array.isArray(currentUser.friends)) {
-        const friendEmails = currentUser.friends;
-
-        // ดึง users ทั้งหมดมาเพื่อจับคู่กับ friend emails
-        const allUsersRes = await api.get(
-          `/api/users`
-        );
-        const allUsers = allUsersRes.data;
-
-        const filteredFriends = allUsers
-          .filter((user) => friendEmails.includes(user.email))
-          .map((user) => ({
-            photoURL: user.photoURL,
-            email: user.email,
-            displayName: user.displayName,
-            isOnline: user.isOnline || false,
-          }))
-          .sort((a, b) => a.displayName.localeCompare(b.displayName));
-        setFriends(filteredFriends);
-        setUsers(allUsers);
-      } else {
-        setFriends([]);
-      }
-    } catch (error) {
-      console.error("Error fetching current user or friends:", error);
-    }
-  };
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      const isClickInsideAny = Object.values(dropdownRefs.current).some((ref) =>
-        ref?.contains(event.target)
-      );
-      if (!isClickInsideAny) {
-        setOpenMenuFor(null);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
-  useEffect(() => {
-    if (!userEmail) return;
-
-    fetchCurrentUserAndFriends();
-    socket.emit("user-online", { displayName, photoURL, email: userEmail });
-
-    socket.on("update-users", (data) => {
-      // ตรวจสอบโครงสร้างข้อมูล
-      const onlineUsersList = Array.isArray(data)
-        ? data
-        : data && Array.isArray(data.onlineUsers)
-        ? data.onlineUsers
-        : [];
-
-      setUsers((prevUsers) =>
-        prevUsers.map((user) => ({
-          ...user,
-          isOnline: user.email ? onlineUsersList.includes(user.email) : false,
-          lastSeen: data.lastSeenTimes ? data.lastSeenTimes[user.email] : null,
-        }))
-      );
-      setFriends((prevFriends) =>
-        prevFriends.map((friend) => ({
-          ...friend,
-          isOnline: friend.email
-            ? onlineUsersList.includes(friend.email)
-            : false,
-          lastSeen: data.lastSeenTimes
-            ? data.lastSeenTimes[friend.email]
-            : null,
-        }))
-      );
-    });
-
-    return () => {
-      socket.off("update-users");
-    };
-  }, [userEmail]);
 
   return (
     <RequireLogin>
       <div className={`main-content-com ${isDarkMode ? "dark-mode" : ""}`}>
-        <header className="header-home">
-          <HeaderProfile userPhoto={photoURL} />
-        </header>
+        <header className="header-home"><HeaderProfile /></header>
         <div className="filter-container">
           <CreateRoom onRoomCreated={handleNewRoom} />
-          <button
-            className={"filter-button" + (showOnlyMyRooms ? " active" : "")}
-            onClick={() => setShowOnlyMyRooms(!showOnlyMyRooms)}
-          >
+          <button className={"filter-button" + (showOnlyMyRooms ? " active" : "")} onClick={() => setShowOnlyMyRooms(!showOnlyMyRooms)}>
             {showOnlyMyRooms ? "All rooms" : "My rooms"}
           </button>
           {(showOnlyMyRooms || selectedRooms.length > 0) && (
             <button
-              className={`delete-button-all-room ${
-                isDeleteMode ? "active" : ""
-              }`}
+              className={`delete-button-all-room ${isDeleteMode ? "active" : ""}`}
               onClick={() => {
                 if (showOnlyMyRooms) {
                   setIsDeleteMode(!isDeleteMode);
                   if (isDeleteMode) setSelectedRooms([]);
                 } else {
-                  toast.warning(
-                    "สามารถลบห้องได้เฉพาะในโหมด 'My rooms' เท่านั้น"
-                  );
+                  toast.warning("สามารถลบห้องได้เฉพาะในโหมด 'My rooms' เท่านั้น");
                 }
               }}
             >
-              {isDeleteMode
-                ? `ยกเลิก (${selectedRooms.length})`
-                : selectedRooms.length > 0
-                ? `ลบห้อง (${selectedRooms.length})`
-                : "ลบห้อง"}
+              {isDeleteMode ? `ยกเลิก (${selectedRooms.length})` : selectedRooms.length > 0 ? `ลบห้อง (${selectedRooms.length})` : "ลบห้อง"}
             </button>
           )}
           {isDeleteMode && selectedRooms.length > 0 && (
-            <button
-              className="confirm-delete-button"
-              onClick={handleDeleteSelectedRooms}
-            >
-              ยืนยันการลบ ({selectedRooms.length})
+            <button className="confirm-delete-button" onClick={handleDeleteSelectedRooms} disabled={deleteRoomsMutation.isPending}>
+              {deleteRoomsMutation.isPending ? "กำลังลบ..." : `ยืนยันการลบ (${selectedRooms.length})`}
             </button>
           )}
         </div>
         <div className="container-content">
-          {handlematchfriend === true ? (
-            <RoomMatch
-              isDeleteMode={isDeleteMode}
-              selectedRooms={selectedRooms}
-              setSelectedRooms={setSelectedRooms}
-            />
-          ) : (
-            <RoomList
-              showOnlyMyRooms={showOnlyMyRooms}
-              rooms={rooms}
-              isDeleteMode={isDeleteMode}
-              selectedRooms={selectedRooms}
-              setSelectedRooms={setSelectedRooms}
-            />
-          )}
+          (
+          <RoomList
+            rooms={rooms} // Pass query data to child
+            isLoading={isLoadingRooms}
+            showOnlyMyRooms={showOnlyMyRooms}
+            isDeleteMode={isDeleteMode}
+            selectedRooms={selectedRooms}
+            setSelectedRooms={setSelectedRooms}
+          />
+          )
         </div>
       </div>
     </RequireLogin>

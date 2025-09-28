@@ -1,6 +1,7 @@
 import express from "express";
 import { Gmail } from "../model/gmail.js";
 import { UserPhoto } from "../model/userPhoto.js";
+import { requireLogin } from "../middleware/required.js";
 import multer from "multer";
 import fs from "fs";
 import path from "path";
@@ -38,7 +39,7 @@ const upload = multer({
   fileFilter: fileFilter,
 });
 
-router.post("/upload-user-photo", upload.single("photo"), async (req, res) => {
+router.post("/upload-user-photo", upload.single("photo"),requireLogin, async (req, res) => {
   console.log("Upload photo API called", req.file, req.body);
   try {
     if (!req.file) {
@@ -87,7 +88,7 @@ router.post("/upload-user-photo", upload.single("photo"), async (req, res) => {
     });
   }
 });
-router.get("/user-photos/:email", async (req, res) => {
+router.get("/user-photos/:email",requireLogin, async (req, res) => {
   const { email } = req.params;
   try {
     if (!email)
@@ -107,7 +108,7 @@ router.get("/user-photos/:email", async (req, res) => {
   }
 });
 
-router.delete("/user-photo/:photoId", async (req, res) => {
+router.delete("/user-photo/:photoId",requireLogin, async (req, res) => {
   try {
     const { email } = req.body;
     const { photoId } = req.params;
@@ -127,7 +128,7 @@ router.delete("/user-photo/:photoId", async (req, res) => {
   }
 });
 
-router.post("/user-photos/reorder", async (req, res) => {
+router.post("/user-photos/reorder",requireLogin, async (req, res) => {
   try {
     const { email, photoIds } = req.body;
     const user = await UserPhoto.findOne({ email });

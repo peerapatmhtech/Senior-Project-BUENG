@@ -1,5 +1,6 @@
 import express from "express";
 import { Like } from "../model/like.js"; // Import the Like model
+import { requireOwner } from "../middleware/required.js";
 const app = express();
 
 // Middleware to parse JSON bodies
@@ -23,10 +24,13 @@ app.post("/like", async (req, res) => {
 });
 // Route to get all likes by user
 // GET /likes/:userEmail
-app.get("/likes/:userEmail", async (req, res) => {
+app.get("/likes/:userEmail", requireOwner, async (req, res) => {
     const { userEmail } = req.params;
 
     try {
+        if (!userEmail) {
+            return res.status(400).json({ message: "User email is required." });
+        }
         const likes = await Like.find({ userEmail });
         res.json(likes);
     } catch (err) {

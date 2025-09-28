@@ -1,50 +1,38 @@
-import { useEffect, useState } from "react";
-import api from "../../../../../backend/src/middleware/axiosSecure";
-import "../css/showtitle.css"; // ใช้ชื่อไฟล์ที่ถูกต้องเป็นตัวพิมพ์เล็ก
+import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { fetchAllEvents } from "../../../lib/queries";
+import "../css/showtitle.css";
 import { useNavigate } from "react-router-dom";
 
 const ShowTitle = ({ userimage, openchat }) => {
-  const [userEvents, setUserEvents] = useState([]);
-  const [matchedEvent, setMatchedEvent] = useState(null);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    try {
-      const fetchUserImage = async () => {
-        try {
-          const response = await api.get(
-            `/api/events`
-          );
-          if (response.data) {
-            setUserEvents(response.data);
+  const { data: allEvents = [], isLoading } = useQuery({
+    queryKey: ["allEvents"],
+    queryFn: fetchAllEvents,
+  });
 
-            // กรอง (filter) ข้อมูลที่มี title ตรงกับ userimage.title
-            if (Array.isArray(response.data)) {
-              const matched = response.data.find(
-                (event) => event.title === userimage.title
-              );
-              setMatchedEvent(matched);
-            }
-          } else {
-            console.error("No image found for user:", userimage.userId);
-          }
-        } catch (error) {
-          console.error("Error fetching user image:", error);
-        }
-      };
+  const matchedEvent = useMemo(() => {
+    if (!userimage || !allEvents) return null;
+    return allEvents.find((event) => event.title === userimage.title);
+  }, [allEvents, userimage]);
 
-      fetchUserImage();
-    } catch (err) {
-      console.log(err);
-    }
-  }, [userimage]);
   const handleBackToMatching = () => {
     navigate("/home");
   };
 
+  if (isLoading) {
+    return (
+      <div className={`bg-title ${openchat ? "mobile-layout-mode" : ""}`}>
+        <div className="user-image">
+          <h2 className="usertitle">Loading...</h2>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div>
-      {/* <div className="bg-title"> */}
       <div className={`bg-title ${openchat ? "mobile-layout-mode" : ""}`}>
         {matchedEvent ? (
           <div className="user-image">
@@ -72,7 +60,9 @@ const ShowTitle = ({ userimage, openchat }) => {
           </div>
         ) : (
           <div className="bg-no-title">
-            <button className="back-button" onClick={handleBackToMatching}>Back to Matching</button>
+            <button className="back-button" onClick={handleBackToMatching}>
+              Back to Matching
+            </button>
           </div>
         )}
       </div>

@@ -4,10 +4,13 @@ import App from "./App.jsx";
 import { AuthProvider } from "../backend/src/firebase/Authcontext.jsx";
 import { SocketProvider } from "../frontend/src/context/socketcontext.jsx";
 import { ThemeProvider } from "../frontend/src/context/themecontext.jsx";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 // import App from './test/testtheconcert.jsx'
 // import App from './test/test2.jsx'
 import "./index.css";
 import { BrowserRouter } from "react-router-dom";
+
+const queryClient = new QueryClient();
 
 // Global error handling for development
 if (import.meta.env.DEV) {
@@ -31,14 +34,16 @@ if (import.meta.env.DEV) {
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <ThemeProvider>
-      <SocketProvider>
-        <BrowserRouter>
-          <AuthProvider>
-            <App />
-          </AuthProvider>
-        </BrowserRouter>
-      </SocketProvider>
-    </ThemeProvider>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider>
+        <SocketProvider>
+          <BrowserRouter>
+            <AuthProvider>
+              <App />
+            </AuthProvider>
+          </BrowserRouter>
+        </SocketProvider>
+      </ThemeProvider>
+    </QueryClientProvider>
   </React.StrictMode>
 );

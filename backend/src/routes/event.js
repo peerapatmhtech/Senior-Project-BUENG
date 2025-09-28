@@ -2,6 +2,7 @@ import express from "express";
 import { Event } from "../model/event.js";
 import { Filter } from "../model/filter.js";
 import { Gmail } from "../model/gmail.js";
+import { requireOwner } from "../middleware/required.js"
 
 export default function (io) {
   const router = express.Router();
@@ -11,21 +12,24 @@ export default function (io) {
   router.post("/save-event", async (req, res) => {
     const { data, email, indicesToExclude: rawIndicesToExclude, subGenres, updatedAt } = req.body;
     let indicesToExclude = [];
-  if (typeof rawIndicesToExclude === 'string') {
-    indicesToExclude = rawIndicesToExclude
-      .split(',')
-      .map(s => s.trim())
-      .filter(s => s !== '')
-      .map(Number); // Convert to number
-  } else if (Array.isArray(rawIndicesToExclude)) {
-    indicesToExclude = rawIndicesToExclude
-      .map(s => String(s).trim()) // Ensure it's a string before trimming
-      .filter(s => s !== '')
-      .map(Number); // Convert to number
-  }
+    if (Array.isArray(rawIndicesToExclude) && rawIndicesToExclude.length === 0) {
+      indicesToExclude = [];
+    }
+    if (typeof rawIndicesToExclude === 'string') {
+      indicesToExclude = rawIndicesToExclude
+        .split(',')
+        .map(s => s.trim())
+        .filter(s => s !== '')
+        .map(Number); // Convert to number
+    } else if (Array.isArray(rawIndicesToExclude)) {
+      indicesToExclude = rawIndicesToExclude
+        .map(s => String(s).trim()) // Ensure it's a string before trimming
+        .filter(s => s !== '')
+        .map(Number); // Convert to number
+    }
 
-  // Filter out NaN values and get unique numbers
-  indicesToExclude = [...new Set(indicesToExclude.filter(n => !isNaN(n)))];
+    // Filter out NaN values and get unique numbers
+    indicesToExclude = [...new Set(indicesToExclude.filter(n => !isNaN(n)))];
 
     try {
       // ตรวจสอบ email
@@ -121,7 +125,7 @@ export default function (io) {
   });
 
   // Get filter by email
-  router.get("/filters/:email", async (req, res) => {
+  router.get("/filters/:email", requireOwner, async (req, res) => {
     try {
       const filter = await Filter.findOne({ email: req.params.email });
       res.json(filter || null);
@@ -131,7 +135,7 @@ export default function (io) {
   });
 
   // Route for complex search (e.g., for make.com)
-  router.post("/events/genre", async (req, res) => {
+  router.post("/events/genre", requireOwner, async (req, res) => {
     try {
       const { subgenres, userEmail } = req.body;
       const filter = {};
@@ -226,7 +230,7 @@ export default function (io) {
   });
 
   // Get events with optional simple filtering
-  router.get("/events/:email", async (req, res) => {
+  router.get("/events/:email", requireOwner, async (req, res) => {
     const email = req.params;
     try {
       if (!email) {
@@ -281,7 +285,7 @@ export default function (io) {
   });
 
   // Delete all events by user
-  router.delete("/events/user/:email", async (req, res) => {
+  router.delete("/events/user/:email", requireOwner, async (req, res) => {
     const { email } = req.params;
     try {
       if (!email) {
@@ -299,9 +303,12 @@ export default function (io) {
   });
 
   // Friend match
-  router.get("/matches/:email", async (req, res) => {
+  router.get("/matches/:email", requireOwner, async (req, res) => {
     const { email } = req.params;
     try {
+      if (!email) {
+        return res.status(400).json({ message: "Email is required" });
+      }
       const user = await Filter.findOne({ email });
       if (!user) return res.status(404).json({ message: "User not found" });
       const matches = await Filter.find({

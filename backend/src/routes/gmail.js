@@ -19,21 +19,15 @@ app.post("/login", async (req, res) => {
       user.displayName = displayName;
       user.photoURL = photoURL;
     }
+    // req.session.userId = user._id;
+
 
     await user.save();
-
-    // Create a session for the user
-    const sessionUser = {
-      _id: user._id,
-      email: user.email,
-      displayName: user.displayName,
-      photoURL: user.photoURL,
-    };
-    req.session.user = sessionUser;
+    let userId = await Gmail.findOne({ email });
+    req.session.userId = userId.email;
 
     res.status(200).json({
       message: "Login successful and session created.",
-      user: sessionUser,
     });
 
   } catch (error) {

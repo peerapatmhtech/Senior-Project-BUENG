@@ -6,7 +6,6 @@ import {
 } from "../../../backend/src/firebase/firebase";
 import { useAuth } from "../../../backend/src/firebase/Authcontext";
 import { useNavigate } from "react-router-dom";
-import { getCsrfToken } from "../../../backend/src/middleware/axiosSecure";
 import api from "../../../backend/src/middleware/axiosSecure";
 import "./NewLogin.css";
 
@@ -108,7 +107,7 @@ const NewLogin = () => {
       // Success animation
       const container = document.getElementById("container");
       container?.classList.add("success-animation");
-      await getCsrfToken();
+
 
       // ส่งข้อมูลผู้ใช้ไปยัง backend (MongoDB)
       const response = await api.post(`/api/login`, {
@@ -161,7 +160,7 @@ const NewLogin = () => {
       // Success animation
       const container = document.getElementById("container");
       container?.classList.add("success-animation");
-      await getCsrfToken();
+
       // ส่งข้อมูลผู้ใช้ไปยัง backend
       await api.post(`/api/login`, {
         displayName: user.displayName || signInForm.email.split("@")[0],
@@ -223,7 +222,7 @@ const NewLogin = () => {
       // Success animation
       const container = document.getElementById("container");
       container?.classList.add("success-animation");
-      await getCsrfToken();
+
 
       // ส่งข้อมูลผู้ใช้ไปยัง backend
       await api.post(`/api/login`, {

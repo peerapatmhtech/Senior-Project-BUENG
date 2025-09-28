@@ -1,9 +1,10 @@
 import express from "express";
 import { Info } from "../model/info.js";
+import { requireOwner } from "../middleware/required.js";
 const router = express.Router();
 
 // routes/api.js หรือไฟล์หลักของ backend
-router.post("/join-community", async (req, res) => {
+router.post("/join-community", requireOwner, async (req, res) => {
   const { userEmail, roomId, roomName } = req.body;
   console.log(userEmail, roomId, roomName);
   if (!userEmail || !roomId || !roomName) {
@@ -30,7 +31,7 @@ router.post("/join-community", async (req, res) => {
 });
 
 //////////ดึงห้องที่ผู้ใช้เชื่อมต่อ/////////////////
-router.get("/user-rooms/:email", async (req, res) => {
+router.get("/user-rooms/:email", requireOwner, async (req, res) => {
   const encodedEmail = req.params.email.toLowerCase();
   console.log("Getting rooms for:", encodedEmail);
 
@@ -67,7 +68,7 @@ router.get("/infos", async (req, res) => {
   }
 });
 // Get user by email (query)
-router.get("/infos/:email", async (req, res) => {
+router.get("/infos/:email", requireOwner, async (req, res) => {
   try {
     if (!req.params.email) {
       return res.status(400).json({ message: "Missing email parameter" });
@@ -83,7 +84,7 @@ router.get("/infos/:email", async (req, res) => {
   }
 });
 // POST /api/save-user-info
-router.post("/save-user-info", async (req, res) => {
+router.post("/save-user-info", requireOwner, async (req, res) => {
   const { email, userInfo } = req.body;
   try {
     const updatedUser = await Info.findOneAndUpdate(
@@ -98,7 +99,7 @@ router.post("/save-user-info", async (req, res) => {
   }
 });
 // GET /api/user-info/:email
-router.get("/user-info/:email", async (req, res) => {
+router.get("/user-info/:email", requireOwner, async (req, res) => {
   const { email } = req.params;
   try {
     if (!email) {
@@ -113,7 +114,7 @@ router.get("/user-info/:email", async (req, res) => {
   }
 });
 // ดึงข้อมูลผู้ใช้ทุกคน ยกเว้นอีเมลที่รับมาจาก params
-router.get("/user-info-except/:email", async (req, res) => {
+router.get("/user-info-except/:email", requireOwner, async (req, res) => {
   const { email } = req.params;
   try {
     const users = await Info.find({ email: { $ne: email } });
@@ -128,7 +129,7 @@ router.get("/user-info-except/:email", async (req, res) => {
   }
 });
 // Change Nickname
-router.post("/save-user-name", async (req, res) => {
+router.post("/save-user-name", requireOwner, async (req, res) => {
   const { userEmail, nickName } = req.body;
   try {
     const infoUpdate = await Info.findOneAndUpdate(

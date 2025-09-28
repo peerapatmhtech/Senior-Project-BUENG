@@ -1,75 +1,82 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import api from '../../../backend/src/middleware/axiosSecure';
 
+// Helper function to fetch photos for a user
+const fetchUserPhotos = async (userEmail, mainPhotoUrl) => {
+  if (!userEmail) return [];
+
+  const mainPhoto = mainPhotoUrl ? { url: mainPhotoUrl, _id: 'main_photo' } : null;
+  let allPhotos = mainPhoto ? [mainPhoto] : [];
+
+  try {
+    const response = await api.get(`/api/user-photos/${userEmail}`);
+    if (response.data.success && Array.isArray(response.data.data)) {
+      const additionalPhotos = response.data.data.filter(p => p.url !== mainPhotoUrl);
+      allPhotos = [...allPhotos, ...additionalPhotos];
+    }
+    return allPhotos;
+  } catch (error) {
+    console.error("Failed to fetch user photos for", userEmail, error);
+    // If fetching additional photos fails, just return the main photo
+    return allPhotos;
+  }
+};
+
 const UserCard = ({ room, userEmail, users }) => {
-  const [photos, setPhotos] = useState([]);
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
+
+  // Determine the email of the user to display on the card
+  const userToDisplayEmail = useMemo(() => 
+    room.email !== userEmail ? room.email : room.usermatch, 
+    [room, userEmail]
+  );
+
+  // Find the full user object from the 'users' prop (which is already cached by the parent)
+  const userToDisplay = useMemo(() => 
+    users.find(u => u.email === userToDisplayEmail), 
+    [users, userToDisplayEmail]
+  );
+
+  // 1. Replaced useEffect with useQuery to fetch photos
+  const { data: photos = [], isLoading: isLoadingPhotos } = useQuery({
+    queryKey: ['userPhotos', userToDisplayEmail], // Unique key for each user's photos
+    queryFn: () => fetchUserPhotos(userToDisplayEmail, userToDisplay?.photoURL),
+    enabled: !!userToDisplayEmail && !!userToDisplay, // Only fetch if we have the user's email and profile
+    staleTime: 1000 * 60 * 5, // Cache photos for 5 minutes
+  });
 
   const getHighResPhoto = (url) => {
     if (!url) return url;
     return url.replace(/=s\d+-c(?=[&?]|$)/, "=s400-c");
   };
 
-  useEffect(() => {
-    const fetchPhotos = async () => {
-      const userEmailToFetch = room.email !== userEmail ? room.email : room.usermatch;
-      if (!userEmailToFetch) return;
-
-      try {
-        const user = users.find(u => u.email === userEmailToFetch);
-        const mainPhoto = user ? { url: user.photoURL, _id: 'main_photo' } : null;
-
-        const response = await api.get(`/api/user-photos/${userEmailToFetch}`);
-        
-        let allPhotos = [];
-        if (mainPhoto) {
-            allPhotos.push(mainPhoto);
-        }
-
-        if (response.data.success && Array.isArray(response.data.data)) {
-            const additionalPhotos = response.data.data.filter(p => p.url !== (mainPhoto ? mainPhoto.url : ''));
-            allPhotos = [...allPhotos, ...additionalPhotos];
-        }
-        
-        setPhotos(allPhotos);
-
-      } catch (error) {
-        console.error("Failed to fetch user photos for", userEmailToFetch, error);
-        const user = users.find(u => u.email === userEmailToFetch);
-        const mainPhoto = user ? { url: user.photoURL, _id: 'main_photo' } : null;
-        if(mainPhoto) setPhotos([mainPhoto]);
-        else setPhotos([]);
-      }
-    };
-
-    if (room && users.length > 0) {
-        fetchPhotos();
-    }
-  }, [room, userEmail, users]);
-
   const handlePhotoNav = (e, direction) => {
     e.stopPropagation();
     if (!photos || photos.length <= 1) return;
 
-    if (direction === 'next') {
-      setActivePhotoIndex((prevIndex) => (prevIndex + 1) % photos.length);
-    } else {
-      setActivePhotoIndex((prevIndex) => (prevIndex - 1 + photos.length) % photos.length);
-    }
+    setActivePhotoIndex(prevIndex => {
+      if (direction === 'next') return (prevIndex + 1) % photos.length;
+      return (prevIndex - 1 + photos.length) % photos.length;
+    });
   };
-
-  const userToDisplay = users.find(u => u.email === (room.email !== userEmail ? room.email : room.usermatch));
 
   return (
     <div className="room-card-match">
       <div className="room-chance-badge">
         โอกาสแมช {room.chance}
       </div>
-      {photos.length > 0 ? (
+      {isLoadingPhotos ? (
+        <div className="tinder-card-inner-loading">
+          <div className="tinder-card-spinner">
+            <div className="tinder-card-dot"></div><div className="tinder-card-dot"></div><div className="tinder-card-dot"></div>
+          </div>
+          <div className="tinder-card-loading-text">กำลังโหลดรูปภาพ...</div>
+        </div>
+      ) : photos.length > 0 ? (
         <>
           <img
-            src={getHighResPhoto(photos[activePhotoIndex].url)}
+            src={getHighResPhoto(photos[activePhotoIndex]?.url)}
             alt="room"
             className="room-image-match"
           />
@@ -86,19 +93,13 @@ const UserCard = ({ room, userEmail, users }) => {
           )}
         </>
       ) : (
+        // Fallback if no photos are found at all
         <div className="tinder-card-inner-loading">
-          <div className="tinder-card-spinner">
-            <div className="tinder-card-dot"></div>
-            <div className="tinder-card-dot"></div>
-            <div className="tinder-card-dot"></div>
-          </div>
-          <div className="tinder-card-loading-text">
-            กำลังโหลดข้อมูล...
-          </div>
+           <img src="https://via.placeholder.com/400" alt="placeholder" className="room-image-match"/>
         </div>
       )}
       <div className="room-match-info">
-        <h5>{userToDisplay ? userToDisplay.displayName : (room.email !== userEmail ? room.email : room.usermatch)}</h5>
+        <h5>{userToDisplay ? userToDisplay.displayName : userToDisplayEmail}</h5>
         <p>
           มีความสนใจในเรื่อง {room.title || room.detail} เหมือนคุณ
         </p>
