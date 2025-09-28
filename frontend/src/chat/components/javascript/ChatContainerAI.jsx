@@ -4,7 +4,7 @@ import { TiMicrophoneOutline } from "react-icons/ti";
 import { MdAttachFile, MdSend } from "react-icons/md";
 import { BsEmojiSmile } from "react-icons/bs";
 import { RiRobot2Fill } from "react-icons/ri";
-import { sendMessageToAI } from "../../../../../backend/src/server/aiService";
+import { sendMessageToAI } from "../../../server/aiService";
 import "../css/ChatAI.css";
 
 const ChatContainerAI = ({
