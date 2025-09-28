@@ -1,9 +1,9 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App.jsx";
-import { AuthProvider } from "../backend/src/firebase/Authcontext.jsx";
-import { SocketProvider } from "../frontend/src/context/socketcontext.jsx";
-import { ThemeProvider } from "../frontend/src/context/themecontext.jsx";
+import { AuthProvider } from "../../backend/src/firebase/Authcontext.jsx";
+import { SocketProvider } from "./context/socketcontext.jsx";
+import { ThemeProvider } from "./context/themecontext.jsx";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 // import App from './test/testtheconcert.jsx'
 // import App from './test/test2.jsx'

@@ -1,16 +1,16 @@
 import "./App.css";
 import Navbar from "./Navbar";
-import Profile from "../frontend/src/profile/Profile";
-import Freind from "../frontend/src/friend/friend";
-import LoginForm from "../frontend/src/login/NewLogin";
-import Community from "../frontend/src/community/community";
-import Home from "../frontend/src/home/Home";
-import Chat from "../frontend/src/chat/chat";
-import ChatContainerAI from "../frontend/src/chat/components/javascript/ChatContainerAI";
+import Profile from "./profile/Profile";
+import Freind from "./friend/friend";
+import LoginForm from "./login/NewLogin";
+import Community from "./community/community";
+import Home from "./home/Home";
+import Chat from "./chat/chat";
+import ChatContainerAI from "./chat/components/javascript/ChatContainerAI";
 import { Route, Routes, useLocation } from "react-router-dom";
-import { NotificationProvider } from "../frontend/src/context/notificationContext";
-import { SocketProvider } from "../frontend/src/context/make.com";
-import { useAuth } from "../backend/src/firebase/Authcontext";
+import { NotificationProvider } from "./context/notificationContext";
+import { SocketProvider } from "./context/make.com";
+import { useAuth } from "../../backend/src/firebase/Authcontext";
 // import ForgotPassword from "./Log/ForgotForm";
 
 function App() {

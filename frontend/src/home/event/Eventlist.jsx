@@ -8,12 +8,14 @@ import { MdFavorite, MdFavoriteBorder } from "react-icons/md";
 import { FiCalendar, FiX } from "react-icons/fi";
 import { TbFileDescription } from "react-icons/tb";
 import { toast } from "react-toastify";
+import axios from "axios";
 
 // Helper function to fetch events
 const fetchEvents = async (email) => {
   try {
     const res = await api.get(`/api/events/${email}`);
-    return Array.isArray(res.data) ? res.data : [];w
+    return Array.isArray(res.data) ? res.data : [];
+    w;
   } catch (error) {
     if (error.response && error.response.status === 404) {
       toast.success("ไม่มีกิจกรรมในขณะนี้");
@@ -38,8 +40,12 @@ const EventList = ({ setWaiting, waiting }) => {
   const queryClient = useQueryClient();
 
   // 1. Replaced useState/useEffect with useQuery for fetching events
-  const { data: events = [], isLoading: isLoadingEvents, isError: isErrorEvents } = useQuery({
-    queryKey: ['events', email], // Key for caching
+  const {
+    data: events = [],
+    isLoading: isLoadingEvents,
+    isError: isErrorEvents,
+  } = useQuery({
+    queryKey: ["events", email], // Key for caching
     queryFn: () => fetchEvents(email),
     enabled: !!email, // Only run query if email exists
     staleTime: 1000 * 60 * 2, // 2 minutes
@@ -47,11 +53,42 @@ const EventList = ({ setWaiting, waiting }) => {
 
   // 2. Replaced useState/useEffect with useQuery for fetching favorites
   const { data: favoriteEvents = [] } = useQuery({
-    queryKey: ['favorites', email],
+    queryKey: ["favorites", email],
     queryFn: () => fetchFavoriteEvents(email),
     enabled: !!email,
     staleTime: 1000 * 60 * 2, // 2 minutes
   });
+
+  const [pendingFavorites, setPendingFavorites] = useState([]);
+  const debounceRef = React.useRef(null);
+
+  const sendPendingFavoritesToWebhook = async (pendingArr) => {
+    if (!Array.isArray(pendingArr) || pendingArr.length === 0) return;
+    try {
+      await axios.post(import.meta.env.VITE_APP_MAKE_WEBHOOK_MATCH_URL, {
+        email: email,
+        actions: pendingArr.map((event) => ({ event: event.eventTitle })),
+      });
+    } catch (error) {
+      console.error("Error sending to webhook", error);
+    }
+  };
+
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    console.log("pendingFavorites", pendingFavorites)
+    if (pendingFavorites.length > 0) {
+      console.log("pendingFavoritesRelay", pendingFavorites)
+      debounceRef.current = setTimeout(() => {
+        sendPendingFavoritesToWebhook(pendingFavorites);
+        setPendingFavorites([]);
+      }, 5000);
+    }
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingFavorites]);
 
   // 3. Socket listener to invalidate query on update
   useEffect(() => {
@@ -61,7 +98,7 @@ const EventList = ({ setWaiting, waiting }) => {
       // console.log("Received events_updated from socket, invalidating queries.");
       setWaiting(false);
       // Invalidate the query to trigger a refetch
-      queryClient.invalidateQueries({ queryKey: ['events', email] });
+      queryClient.invalidateQueries({ queryKey: ["events", email] });
     };
 
     socket.on("events_updated", handleEventsUpdated);
@@ -78,8 +115,8 @@ const EventList = ({ setWaiting, waiting }) => {
       onSuccess: () => {
         toast.success(successMessage);
         // Invalidate and refetch both queries to update UI
-        queryClient.invalidateQueries({ queryKey: ['events', email] });
-        queryClient.invalidateQueries({ queryKey: ['favorites', email] });
+        queryClient.invalidateQueries({ queryKey: ["events", email] });
+        queryClient.invalidateQueries({ queryKey: ["favorites", email] });
       },
       onError: (error) => {
         console.error(`❌ Error: ${errorMessage}`, error);
@@ -115,6 +152,7 @@ const EventList = ({ setWaiting, waiting }) => {
   // Handler functions now call the mutations
   const handleLike = (eventId, title) => {
     likeMutation.mutate({ userEmail: email, eventId, eventTitle: title });
+    setPendingFavorites((prev) => [...prev, { eventTitle: title }]);
   };
 
   const handleUnlike = (eventId) => {
@@ -136,7 +174,8 @@ const EventList = ({ setWaiting, waiting }) => {
   };
 
   if (waiting || isLoadingEvents) return <span className="loader"></span>;
-  if (isErrorEvents) return <p className="loading-text">เกิดข้อผิดพลาดในการโหลดข้อมูล</p>;
+  if (isErrorEvents)
+    return <p className="loading-text">เกิดข้อผิดพลาดในการโหลดข้อมูล</p>;
 
   const EventListContent = () => (
     <div className={`event-container ${isDarkMode ? "dark-mode" : ""}`}>
@@ -148,7 +187,12 @@ const EventList = ({ setWaiting, waiting }) => {
         <div className="event-list">
           {events.map((event) => (
             <div key={event._id} className="event-card">
-              <img className="event-image" src={event.image} alt={event.title} width="200" />
+              <img
+                className="event-image"
+                src={event.image}
+                alt={event.title}
+                width="200"
+              />
               <div className="row-favorite">
                 <h3 className="event-name">{event.title}</h3>
                 <button
@@ -161,7 +205,11 @@ const EventList = ({ setWaiting, waiting }) => {
                       handleLike(event._id, event.title);
                     }
                   }}
-                  aria-label={favoriteEvents.includes(event._id) ? "Unfavorite" : "Favorite"}
+                  aria-label={
+                    favoriteEvents.includes(event._id)
+                      ? "Unfavorite"
+                      : "Favorite"
+                  }
                 >
                   {favoriteEvents.includes(event._id) ? (
                     <MdFavorite size={30} color="red" />
@@ -176,23 +224,46 @@ const EventList = ({ setWaiting, waiting }) => {
                   {Object.values(event.genre)
                     .flat()
                     .map((subcategory, index) => (
-                      <span key={index} className="genre-border">{subcategory}</span>
+                      <span key={index} className="genre-border">
+                        {subcategory}
+                      </span>
                     ))}{" "}
                 </p>
               </div>
               <p className="event-description">
                 <TbFileDescription />{" "}
-                <span className="category-label">Description:{event.description}</span>
+                <span className="category-label">
+                  Description:{event.description}
+                </span>
               </p>
               <div className="bottom-event">
-                <a href={event.link} target="_blank" rel="noopener noreferrer" className="event-link">Info more</a>
-                <button onClick={() => handleDelete(event._id)} className="delete-button">🗑️ Delete</button>
+                <a
+                  href={event.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="event-link"
+                >
+                  Info more
+                </a>
+                <button
+                  onClick={() => handleDelete(event._id)}
+                  className="delete-button"
+                >
+                  🗑️ Delete
+                </button>
               </div>
             </div>
           ))}
           <div className="btn-delete-all">
-            <button onClick={handleDeleteAll} className="delete-button-all" title="ลบกิจกรรมทั้งหมด">
-              <span role="img" aria-label="delete">🗑️</span> Delete all
+            <button
+              onClick={handleDeleteAll}
+              className="delete-button-all"
+              title="ลบกิจกรรมทั้งหมด"
+            >
+              <span role="img" aria-label="delete">
+                🗑️
+              </span>{" "}
+              Delete all
             </button>
           </div>
         </div>
@@ -202,19 +273,37 @@ const EventList = ({ setWaiting, waiting }) => {
 
   return (
     <>
-      <button className="eventlist-modal-toggle-btn" onClick={() => setIsModalOpen(true)} aria-label="Open Events">
+      <button
+        className="eventlist-modal-toggle-btn"
+        onClick={() => setIsModalOpen(true)}
+        aria-label="Open Events"
+      >
         <FiCalendar />
       </button>
-      <div className="eventlist-desktop-view"><EventListContent /></div>
-      <div className={`eventlist-modal-overlay ${isModalOpen ? "active" : ""}`} onClick={() => setIsModalOpen(false)}>
-        <div className={`eventlist-modal-sheet ${isModalOpen ? "active" : ""}`} onClick={(e) => e.stopPropagation()}>
+      <div className="eventlist-desktop-view">
+        <EventListContent />
+      </div>
+      <div
+        className={`eventlist-modal-overlay ${isModalOpen ? "active" : ""}`}
+        onClick={() => setIsModalOpen(false)}
+      >
+        <div
+          className={`eventlist-modal-sheet ${isModalOpen ? "active" : ""}`}
+          onClick={(e) => e.stopPropagation()}
+        >
           <div className="eventlist-modal-header">
             <div className="eventlist-modal-handle"></div>
-            <button className="eventlist-modal-close" onClick={() => setIsModalOpen(false)} aria-label="Close Events">
+            <button
+              className="eventlist-modal-close"
+              onClick={() => setIsModalOpen(false)}
+              aria-label="Close Events"
+            >
               <FiX />
             </button>
           </div>
-          <div className="eventlist-modal-content"><EventListContent /></div>
+          <div className="eventlist-modal-content">
+            <EventListContent />
+          </div>
         </div>
       </div>
     </>

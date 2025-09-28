@@ -5,33 +5,31 @@ import bodyParser from "body-parser";
 import dotenv from "dotenv";
 import http from "http";
 import { Server } from "socket.io";
-import userRoutes from "./backend/src/routes/gmail.js";
-import friendRoutes from "./backend/src/routes/friend.js";
-import roomRoutes from "./backend/src/routes/room.js";
+import userRoutes from "./src/routes/gmail.js";
+import friendRoutes from "./src/routes/friend.js";
+import roomRoutes from "./src/routes/room.js";
 import cookieParser from "cookie-parser";
-import infoRoutes from "./backend/src/routes/info.js";
-import eventRoutes from "./backend/src/routes/event.js";
-import likeRoutes from "./backend/src/routes/like.js"; // Routes from "./routes/like.js";
-import roommatchRoutes from "./backend/src/routes/eventmatch.js"; // Routes from "./routes/room.js";
+import infoRoutes from "./src/routes/info.js";
+import eventRoutes from "./src/routes/event.js";
+import likeRoutes from "./src/routes/like.js"; // Routes from "./routes/like.js";
+import roommatchRoutes from "./src/routes/eventmatch.js"; // Routes from "./routes/room.js";
 import mongoose from "mongoose";
-import { Filter } from "./backend/src/model/filter.js";
-import { Event } from "./backend/src/model/event.js";
+import { Filter } from "./src/model/filter.js";
+import { Event } from "./src/model/event.js";
 import axios from "axios";
 
 // Import new routes (ES Modules style)
-import friendRequestRoutes from "./backend/src/routes/friendRequest.js";
-import friendApiRoutes from "./backend/src/routes/friendApi.js";
-import userPhotoRoutes from "./backend/src/routes/userPhoto.js";
-import infoMatchRoutes from "./backend/src/routes/infomatch.js"; // Import info match routes
+import friendRequestRoutes from "./src/routes/friendRequest.js";
+import friendApiRoutes from "./src/routes/friendApi.js";
+import userPhotoRoutes from "./src/routes/userPhoto.js";
+import infoMatchRoutes from "./src/routes/infomatch.js"; // Import info match routes
 import session from "express-session";
 import helmet from "helmet";
 import rateLimit from 'express-rate-limit';
 import MongoStore from "connect-mongo";
 import csrf from 'csurf';
-import { limiter } from "./backend/src/middleware/ratelimit.js";
-import { requireOwner } from "./backend/src/middleware/required.js";
-
-
+import { limiter } from "./src/middleware/ratelimit.js";
+import { requireOwner } from "./src/middleware/required.js";
 
 dotenv.config();
 const allowedOrigins = process.env.VITE_APP_WEB_BASE_URL;
@@ -70,7 +68,7 @@ app.use(cookieParser(COOKIE_SECRET));
 app.use(
   rateLimit({
     windowMs: 1 * 60 * 1000, // 15 minutes
-    max: 500, // limit each IP to 100 requests per windowMs
+    max: 50, // limit each IP to 100 requests per windowMs
   })
 );
 
@@ -114,7 +112,7 @@ app.get('/api/csrf-token', (req, res) => {
 
 
 // Serve static files from the uploads directory
-app.use('/uploads', express.static('uploads'));
+app.use('/uploads', express.static('../uploads'));
 
 
 // ✅ Connect MongoDB
