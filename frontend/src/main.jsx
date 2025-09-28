@@ -1,7 +1,7 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App.jsx";
-import { AuthProvider } from "../../backend/src/firebase/Authcontext.jsx";
+import { AuthProvider } from "./context/Authcontext.jsx";
 import { SocketProvider } from "./context/socketcontext.jsx";
 import { ThemeProvider } from "./context/themecontext.jsx";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";

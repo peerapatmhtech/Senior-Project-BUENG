@@ -3,10 +3,10 @@ import {
   auth,
   provider,
   signInWithPopup,
-} from "../../../backend/src/firebase/firebase";
-import { useAuth } from "../../../backend/src/firebase/Authcontext";
+} from "../firebase/firebase";
+import { useAuth } from "../context/Authcontext";
 import { useNavigate } from "react-router-dom";
-import api from "../../../backend/src/middleware/axiosSecure";
+import api from "../api";
 import "./NewLogin.css";
 
 const NewLogin = () => {

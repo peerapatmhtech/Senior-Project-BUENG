@@ -3,8 +3,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTheme } from "../context/themecontext";
 import { useNotifications } from "../context/notificationContext";
 import "./HeaderProfile.css";
-import { useAuth } from "../../../backend/src/firebase/Authcontext";
-import api from "../../../backend/src/middleware/axiosSecure";
+import { useAuth } from "../context/Authcontext";
+import api from "../api";
 import { Bell, LogOut, Sun, Moon, X, Check, UserPlus } from "lucide-react";
 
 // Helper to fetch user profile
