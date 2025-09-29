@@ -178,7 +178,7 @@ const EventList = ({ setWaiting, waiting }) => {
 
   const EventListContent = () => (
     <div className={`event-container ${isDarkMode ? "dark-mode" : ""}`}>
-      {events.length === 0 ? (
+      {events.length === 0 || events === undefined || events === null ? (
         <div className="eventlist-empty-loading">
           <div className="eventlist-empty-text">ยังไม่มีกิจกรรมในขณะนี้</div>
         </div>
@@ -220,7 +220,7 @@ const EventList = ({ setWaiting, waiting }) => {
               <div className="event-info">
                 <p>
                   <span className="category-label">Category:</span>
-                  {Object.values(event.genre)
+                  {(event.genre ? Object.values(event.genre) : [])
                     .flat()
                     .map((subcategory, index) => (
                       <span key={index} className="genre-border">
