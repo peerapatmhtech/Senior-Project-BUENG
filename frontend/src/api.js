@@ -10,13 +10,14 @@ const api = axios.create({
 let csrfToken = null;
 
 // Function to get the CSRF token
-export const getCsrfToken = async () => {
+const getCsrfToken = async () => {
   if (csrfToken) {
     return csrfToken;
   }
   try {
     const { data } = await api.get('/api/csrf-token');
     csrfToken = data.csrfToken;
+    console.log('🔐 CSRF Token fetched:', csrfToken);
     return csrfToken;
   } catch (error) {
     console.error('❌ Failed to fetch CSRF token', error);
@@ -31,12 +32,14 @@ api.interceptors.request.use(
     // Only attach CSRF token for state-changing methods
     if (['post', 'put', 'delete', 'patch'].includes(method)) {
       const token = await getCsrfToken();
+      console.log('🔐 Attaching CSRF Token:', token);
       if (token) {
         config.headers['X-CSRF-Token'] = token;
       } else {
         console.warn(`⚠️ CSRF Token not available for ${method.toUpperCase()} request to ${config.url}. The request might be rejected.`);
       }
     }
+    console.log(`➡️ ${method.toUpperCase()} ${config.url}`, config);
     return config;
   },
   (error) => {
