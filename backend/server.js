@@ -37,7 +37,12 @@ import { limiter } from "./src/middleware/ratelimit.js";
 dotenv.config();
 
 //////------Server------////
-const allowedOrigins = process.env.VITE_APP_WEB_BASE_URL;
+const allowedOrigins = [
+  process.env.VITE_APP_WEB_BASE_URL, // Deployed frontend URL
+  'http://localhost:5173',             // Common Vite/React dev port
+  'http://localhost:3000',             // Common Create React App dev port
+  'http://127.0.0.1:5173'              // Also allow 127.0.0.1 for different browser behaviors
+];
 
 const app = express();
 const server = http.createServer(app);
