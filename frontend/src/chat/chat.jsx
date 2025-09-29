@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { db } from "../firebase/firebase";
 import RequireLogin from "../ui/RequireLogin";
 import { FaSearch } from "react-icons/fa";
@@ -608,16 +608,16 @@ const Chat = () => {
 
       const filteredMessages = isGroupChat
         ? allMessages.filter(
-            (msg) => msg.type === "group" && msg.roomId === roomId
-          )
+          (msg) => msg.type === "group" && msg.roomId === roomId
+        )
         : allMessages.filter((msg) => {
-            const isMyMsg =
-              msg.sender === userEmail && msg.receiver === activeUser;
-            const isTheirMsg =
-              msg.sender === activeUser &&
-              (msg.receiver === userEmail || !msg.receiver);
-            return isMyMsg || isTheirMsg;
-          });
+          const isMyMsg =
+            msg.sender === userEmail && msg.receiver === activeUser;
+          const isTheirMsg =
+            msg.sender === activeUser &&
+            (msg.receiver === userEmail || !msg.receiver);
+          return isMyMsg || isTheirMsg;
+        });
 
       setMessages(filteredMessages);
       scrollToBottom();
@@ -684,19 +684,23 @@ const Chat = () => {
   const formatOnlineStatus = (user) => {
     if (!user || !user.email) return "";
     if (isOnline(user.email)) return "ออนไลน์";
-    if (onlineUsers[user.email]?.lastActive) {
+    if (onlineUsers?.[user.email]?.lastActive) {
       return `ออฟไลน์ - ${formatRelativeTime(
         new Date(onlineUsers[user.email].lastActive)
       )}`;
     }
     return "ออฟไลน์";
   };
-
-  const friendsWithOnlineStatus = friends.map((friend) => ({
-    ...friend,
-    isOnline: isOnline(friend?.email),
-    lastSeen: onlineUsers[friend?.email]?.lastActive,
-  }));
+  const friendsWithOnlineStatus = useMemo(() =>
+    Array.isArray(friends)
+      ? friends.map((friend) => ({
+        ...friend,
+        isOnline: isOnline(friend?.email),
+        lastSeen: onlineUsers?.[friend?.email]?.lastActive,
+      }))
+      : [],
+    [friends, onlineUsers]
+  );
 
   const sortedFriends = [...friendsWithOnlineStatus].sort((a, b) => {
     if (a?.email && b?.email) {

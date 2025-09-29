@@ -145,8 +145,8 @@ const MatchList = ({
                         (u) => u.email === partnerEmail
                       );
                       setRoombar(
-                        partnerUser?.photoURL || matchingRoom.image,
-                        matchingRoom.title
+                        partnerUser?.photoURL || matchData.image,
+                        matchData.title
                       );
                       setIsGroupChat(false);
 

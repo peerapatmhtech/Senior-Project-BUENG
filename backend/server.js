@@ -8,6 +8,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import session from "express-session";
 import helmet from "helmet";
+import OpenAI from 'openai';
 import rateLimit from 'express-rate-limit';
 import MongoStore from "connect-mongo";
 import csrf from 'csurf';
@@ -457,6 +458,7 @@ app.use("/api", infoRoutes);
 app.use("/api", roommatchRoutes);
 app.use("/api", likeRoutes);
 app.use("/api", infoMatchRoutes(io));
+app.use("/api", aiRoutes);
 
 
 // ลงทะเบียน friendRequest routes โดยตรงเพื่อแก้ปัญหาเรื่อง 404
