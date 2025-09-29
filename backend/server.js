@@ -46,10 +46,8 @@ dotenv.config();
 
 //////------Server------////
 const allowedOrigins = [
-  process.env.VITE_APP_WEB_BASE_URL, // Deployed frontend URL
+  process.env.VITE_APP_WEB_BASE_URL || // Deployed frontend URL
   'http://localhost:5173',             // Common Vite/React dev port
-  'http://localhost:3000',             // Common Create React App dev port
-  'http://127.0.0.1:5173'              // Also allow 127.0.0.1 for different browser behaviors
 ];
 
 const app = express();
@@ -75,7 +73,7 @@ export const openai = new OpenAI({
 
 ////////------Middleware------////////
 app.use(express.json({ limit: '50mb' }));   //////////limit file size
-app.use(helmet());  ///////////security
+app.use(helmet({ crossOriginOpenerPolicy: { policy: "unsafe-none" } }));  ///////////security
 app.use(
   cors({
     origin: allowedOrigins,
@@ -116,19 +114,19 @@ app.use(
 const csrfProtection = csrf();
 
 ////--------CSRF Protection------////
-app.use((req, res, next) => {
-  const excludedPaths = ['/api/save-event', '/api/infomatch/create'];
-  // Only exclude POST requests to specific paths from CSRF protection
-  if (req.method === 'POST' && excludedPaths.includes(req.path)) {
-    return next();
-  }
-  // Apply CSRF protection for all other routes
-  return csrfProtection(req, res, next);
-});   //////////Exclude POST requests
+// app.use((req, res, next) => {
+//   const excludedPaths = ['/api/save-event', '/api/infomatch/create'];
+//   // Only exclude POST requests to specific paths from CSRF protection
+//   if (req.method === 'POST' && excludedPaths.includes(req.path)) {
+//     return next();
+//   }
+//   // Apply CSRF protection for all other routes
+//   return csrfProtection(req, res, next);
+// });   //////////Exclude POST requests
 
-app.get('/api/csrf-token', (req, res) => {
-  res.json({ csrfToken: req.csrfToken() });
-});
+// app.get('/api/csrf-token', (req, res) => {
+//   res.json({ csrfToken: req.csrfToken() });
+// });
 
 
 // Serve static files from the uploads directory
