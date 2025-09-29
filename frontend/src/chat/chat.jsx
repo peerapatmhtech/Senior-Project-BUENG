@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { db } from "../firebase/firebase";
 import RequireLogin from "../ui/RequireLogin";
 import { FaSearch } from "react-icons/fa";
@@ -418,13 +418,13 @@ const Chat = () => {
   const [friends, setFriends] = useState([]);
 
   useEffect(() => {
-    if (communityData) {
+    if (communityData && communityData.length > 0) {
       setJoinedRooms(communityData);
     }
   }, [communityData]);
 
   useEffect(() => {
-    if (infos) {
+    if (infos && infos.length > 0) {
       getNickName(infos);
     }
   }, [infos]);
@@ -457,7 +457,9 @@ const Chat = () => {
   }, [currentUser, users]);
 
   useEffect(() => {
-    setFriends(processedFriends);
+    if (processedFriends && processedFriends.length > 0) {
+      setFriends(processedFriends);
+    }
   }, [processedFriends]);
 
 
@@ -607,16 +609,16 @@ const Chat = () => {
 
       const filteredMessages = isGroupChat
         ? allMessages.filter(
-            (msg) => msg.type === "group" && msg.roomId === roomId
-          )
+          (msg) => msg.type === "group" && msg.roomId === roomId
+        )
         : allMessages.filter((msg) => {
-            const isMyMsg =
-              msg.sender === userEmail && msg.receiver === activeUser;
-            const isTheirMsg =
-              msg.sender === activeUser &&
-              (msg.receiver === userEmail || !msg.receiver);
-            return isMyMsg || isTheirMsg;
-          });
+          const isMyMsg =
+            msg.sender === userEmail && msg.receiver === activeUser;
+          const isTheirMsg =
+            msg.sender === activeUser &&
+            (msg.receiver === userEmail || !msg.receiver);
+          return isMyMsg || isTheirMsg;
+        });
 
       setMessages(filteredMessages);
       scrollToBottom();
@@ -684,32 +686,42 @@ const Chat = () => {
   const formatOnlineStatus = (user) => {
     if (!user || !user.email) return "";
     if (isOnline(user.email)) return "ออนไลน์";
-    if (onlineUsers[user.email]?.lastActive) {
+    if (onlineUsers?.[user.email]?.lastActive) {
       return `ออฟไลน์ - ${formatRelativeTime(
         new Date(onlineUsers[user.email].lastActive)
       )}`;
     }
     return "ออฟไลน์";
   };
+  const friendsWithOnlineStatus = useMemo(() =>
+    Array.isArray(friends)
+      ? friends.map((friend) => ({
+        ...friend,
+        isOnline: isOnline(friend?.email),
+        lastSeen: onlineUsers?.[friend?.email]?.lastActive,
+      }))
+      : [],
+    [friends, onlineUsers]
+  );
 
-  const friendsWithOnlineStatus = friends.map((friend) => ({
-    ...friend,
-    isOnline: isOnline(friend?.email),
-    lastSeen: onlineUsers[friend?.email]?.lastActive,
-  }));
+  const sortedFriends = useMemo(() =>
+    [...friendsWithOnlineStatus].sort((a, b) => {
+      if (a?.email && b?.email) {
+        const aIsOnline = isOnline(a.email);
+        const bIsOnline = isOnline(b.email);
+        if (aIsOnline && !bIsOnline) return -1;
+        if (!aIsOnline && bIsOnline) return 1;
 
-  const sortedFriends = [...friendsWithOnlineStatus].sort((a, b) => {
-    if (a?.email && b?.email) {
-      if (isOnline(a.email) && !isOnline(b.email)) return -1;
-      if (!isOnline(a.email) && isOnline(b.email)) return 1;
-      const timeA =
-        lastMessages[a.email]?.timestamp?.toDate()?.getTime() || 0;
-      const timeB =
-        lastMessages[b.email]?.timestamp?.toDate()?.getTime() || 0;
-      return timeB - timeA;
-    }
-    return 0;
-  });
+        const timeA =
+          lastMessages[a.email]?.timestamp?.toDate()?.getTime() || 0;
+        const timeB =
+          lastMessages[b.email]?.timestamp?.toDate()?.getTime() || 0;
+        return timeB - timeA;
+      }
+      return 0;
+    }),
+    [friendsWithOnlineStatus, lastMessages, onlineUsers]
+  );
 
   if (isLoading) {
     return <LoadingIndicator isDarkMode={isDarkMode} />;

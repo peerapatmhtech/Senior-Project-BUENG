@@ -8,6 +8,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import session from "express-session";
 import helmet from "helmet";
+import OpenAI from 'openai';
 import rateLimit from 'express-rate-limit';
 import MongoStore from "connect-mongo";
 import csrf from 'csurf';
@@ -24,6 +25,7 @@ import friendRequestRoutes from "./src/routes/friendRequest.js";
 import friendApiRoutes from "./src/routes/friendApi.js";
 import userPhotoRoutes from "./src/routes/userPhoto.js";
 import infoMatchRoutes from "./src/routes/infomatch.js";
+import aiRoutes from "./src/routes/ai.js";
 
 ////-------Protocal-------////
 import http from "http";
@@ -61,6 +63,9 @@ const MONGO_URI = process.env.MONGO_URI;
 const MAKE_WEBHOOK_URL = process.env.MAKE_WEBHOOK_URL;
 const COOKIE_SECRET = process.env.COOKIE_SECRET;
 const isProduction = process.env.NODE_ENV === 'production';
+export const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
 ////////------Middleware------////////
 app.use(express.json({ limit: '50mb' }));   //////////limit file size
@@ -79,7 +84,7 @@ app.use(cookieParser(COOKIE_SECRET));//////////////parse cookie
 app.use(
   rateLimit({
     windowMs: 1 * 60 * 1000, // 15 minutes
-    max: 50, // limit each IP to 100 requests per windowMs
+    max: 100, // limit each IP to 100 requests per windowMs
   })
 );
 
@@ -458,6 +463,7 @@ app.use("/api", infoRoutes);
 app.use("/api", roommatchRoutes);
 app.use("/api", likeRoutes);
 app.use("/api", infoMatchRoutes(io));
+app.use("/api", aiRoutes);
 
 
 // ลงทะเบียน friendRequest routes โดยตรงเพื่อแก้ปัญหาเรื่อง 404
