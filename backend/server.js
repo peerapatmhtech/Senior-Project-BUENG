@@ -36,9 +36,13 @@ import { limiter } from "./src/middleware/ratelimit.js";
 
 dotenv.config();
 
+///////------Environment------////
+const port = process.env.PORT || 8080;
+const MONGO_URI = process.env.MONGO_URI;
+const MAKE_WEBHOOK_URL = process.env.MAKE_WEBHOOK_URL;
+const allowedOrigins = process.env.VITE_APP_WEB_BASE_URL;
 //////------Server------////
-const allowedOrigins = process.env.VITE_APP_WEB_BASE_URL; // Common Vite/React dev port
-
+// Common Vite/React dev port
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -52,10 +56,7 @@ export const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-///////------Environment------////
-const port = process.env.PORT || 8080;
-const MONGO_URI = process.env.MONGO_URI;
-const MAKE_WEBHOOK_URL = process.env.MAKE_WEBHOOK_URL;
+
 const COOKIE_SECRET = process.env.COOKIE_SECRET;
 
 app.use(express.json({ limit: "50mb" }));
