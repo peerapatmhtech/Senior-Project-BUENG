@@ -8,7 +8,6 @@ import { Server } from "socket.io";
 import userRoutes from "./src/routes/gmail.js";
 import friendRoutes from "./src/routes/friend.js";
 import roomRoutes from "./src/routes/room.js";
-import cookieParser from "cookie-parser";
 import infoRoutes from "./src/routes/info.js";
 import eventRoutes from "./src/routes/event.js";
 import likeRoutes from "./src/routes/like.js"; // Routes from "./routes/like.js";
@@ -23,13 +22,13 @@ import friendRequestRoutes from "./src/routes/friendRequest.js";
 import friendApiRoutes from "./src/routes/friendApi.js";
 import userPhotoRoutes from "./src/routes/userPhoto.js";
 import infoMatchRoutes from "./src/routes/infomatch.js"; // Import info match routes
-import session from "express-session";
 import helmet from "helmet";
 import rateLimit from 'express-rate-limit';
-import MongoStore from "connect-mongo";
-import csrf from 'csurf';
-import { limiter } from "./src/middleware/ratelimit.js";
+import { authMiddleware } from "./src/middleware/authMiddleware.js";
+
+/////////Midleware for owner and admin/////////
 import { requireOwner } from "./src/middleware/required.js";
+import { limiter } from "./src/middleware/ratelimit.js";
 
 dotenv.config();
 const allowedOrigins = process.env.VITE_APP_WEB_BASE_URL;
@@ -47,12 +46,10 @@ const io = new Server(server, {
 const port = process.env.PORT || 8080;
 const MONGO_URI = process.env.MONGO_URI;
 const MAKE_WEBHOOK_URL = process.env.MAKE_WEBHOOK_URL;
-const COOKIE_SECRET = process.env.COOKIE_SECRET;
 
 
 app.use(express.json({ limit: '50mb' }));
 // ✅ Middleware
-const isProduction = process.env.NODE_ENV === 'production';
 app.use(helmet());
 app.use(
   cors({
@@ -61,55 +58,15 @@ app.use(
   })
 );
 app.use(bodyParser.json());
-app.use(cookieParser(COOKIE_SECRET));
 
 
 ////////Protection Doss and DDos Attack////////
 app.use(
   rateLimit({
-    windowMs: 1 * 60 * 1000, // 15 minutes
-    max: 50, // limit each IP to 100 requests per windowMs
+    windowMs: 1 * 60 * 1000, // 1 minutes
+    max: 100, // limit each IP to 100 requests per windowMs
   })
 );
-
-///////Protection Cross-Site Request Forgery (CSRF)////////
-app.use(
-  session({
-    secret: COOKIE_SECRET,
-    resave: false,
-    saveUninitialized: false,
-    store: MongoStore.create({
-      mongoUrl: MONGO_URI,
-      collectionName: "sessions",
-      ttl: 60 * 60, // อายุ session = 1 ชม.
-    }),
-    cookie: {
-      secure: isProduction, // Use secure cookies in production
-      httpOnly: true, // Prevent client-side script access
-      sameSite: isProduction ? 'strict' : 'lax', // 'none' for cross-site requests, 'lax' for local dev
-      maxAge: 1000 * 60 * 60, // อายุ cookie 30 นาที
-    },
-  })
-);
-const csrfProtection = csrf();
-
-app.use((req, res, next) => {
-  const excludedPaths = ['/api/save-event', '/api/infomatch/create'];
-  // Only exclude POST requests to specific paths from CSRF protection
-  if (req.method === 'POST' && excludedPaths.includes(req.path)) {
-    return next();
-  }
-  // Apply CSRF protection for all other routes
-  return csrfProtection(req, res, next);
-});
-
-app.get('/api/csrf-token', (req, res) => {
-  res.json({ csrfToken: req.csrfToken() });
-});
-
-//////////////////////////
-
-
 
 // Serve static files from the uploads directory
 app.use('/uploads', express.static('../uploads'));
@@ -441,6 +398,9 @@ app.get('/api/debug/routes', (req, res) => {
 });
 
 // ใช้งาน routes ที่แยกไว้
+// ใช้ authMiddleware กับทุก request ที่เข้ามาที่ /api
+app.use("/api", authMiddleware);
+
 app.use("/api", userRoutes);
 app.use("/api", friendRoutes);
 app.use("/api", roomRoutes);

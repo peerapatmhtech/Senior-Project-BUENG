@@ -281,21 +281,21 @@ const AIChatButtonAndModal = ({
 }) => (
   <>
     <button
-      className={`ai-chat-float-button ${hasNewAiMessage ? 'new-message' : ''}`}
+      className={`ai-chat-float-button ${hasNewAiMessage ? "new-message" : ""}`}
       onClick={openAiChat}
       title="แชทกับ AI Assistant"
     >
       <RiRobot2Fill />
       {aiNotificationCount > 0 && (
         <span className="ai-chat-notification-badge">
-          {aiNotificationCount > 9 ? '9+' : aiNotificationCount}
+          {aiNotificationCount > 9 ? "9+" : aiNotificationCount}
         </span>
       )}
     </button>
 
     {isAiChatOpen && (
       <div
-        className={`ai-chat-overlay ${isAiChatOpen ? 'active' : ''}`}
+        className={`ai-chat-overlay ${isAiChatOpen ? "active" : ""}`}
         onClick={handleAiModalClick}
       >
         <div className="ai-chat-modal">
@@ -325,7 +325,6 @@ const AIChatButtonAndModal = ({
   </>
 );
 
-
 import { useQuery } from "@tanstack/react-query";
 import {
   fetchUsers,
@@ -337,7 +336,6 @@ import {
   fetchInfos,
 } from "../lib/queries";
 import { useMemo } from "react";
-
 
 const Chat = () => {
   const { socket, onlineUsers } = useNotifications();
@@ -387,16 +385,18 @@ const Chat = () => {
     enabled: !!userEmail,
   });
 
-  const { data: communityData = [], isLoading: isLoadingCommunityData } = useQuery({
-    queryKey: ["userRooms", userEmail],
-    queryFn: () => fetchUserRooms(userEmail),
-    enabled: !!userEmail,
-  });
+  const { data: communityData = [], isLoading: isLoadingCommunityData } =
+    useQuery({
+      queryKey: ["userRooms", userEmail],
+      queryFn: () => fetchUserRooms(userEmail),
+      enabled: !!userEmail,
+    });
 
-  const { data: userMatchData = [], isLoading: isLoadingUserMatchData } = useQuery({
-    queryKey: ["infoMatch"],
-    queryFn: fetchInfoMatch,
-  });
+  const { data: userMatchData = [], isLoading: isLoadingUserMatchData } =
+    useQuery({
+      queryKey: ["infoMatch"],
+      queryFn: fetchInfoMatch,
+    });
 
   const { data: allRooms = [], isLoading: isLoadingAllRooms } = useQuery({
     queryKey: ["allRooms"],
@@ -418,13 +418,13 @@ const Chat = () => {
   const [friends, setFriends] = useState([]);
 
   useEffect(() => {
-    if (communityData) {
+    if (communityData && communityData.length > 0) {
       setJoinedRooms(communityData);
     }
   }, [communityData]);
 
   useEffect(() => {
-    if (infos) {
+    if (infos && infos.length > 0) {
       getNickName(infos);
     }
   }, [infos]);
@@ -457,9 +457,10 @@ const Chat = () => {
   }, [currentUser, users]);
 
   useEffect(() => {
-    setFriends(processedFriends);
+    if (processedFriends && processedFriends.length > 0) {
+      setFriends(processedFriends);
+    }
   }, [processedFriends]);
-
 
   const handleProfileClick = (user) => {
     setSelectedUser(user);
@@ -662,8 +663,7 @@ const Chat = () => {
       }));
       const latest = {};
       newMessages.forEach((msg) => {
-        const otherEmail =
-          msg.sender === userEmail ? msg.receiver : msg.sender;
+        const otherEmail = msg.sender === userEmail ? msg.receiver : msg.sender;
         if (
           (msg.sender === userEmail ||
             msg.receiver === userEmail ||
@@ -702,10 +702,8 @@ const Chat = () => {
     if (a?.email && b?.email) {
       if (isOnline(a.email) && !isOnline(b.email)) return -1;
       if (!isOnline(a.email) && isOnline(b.email)) return 1;
-      const timeA =
-        lastMessages[a.email]?.timestamp?.toDate()?.getTime() || 0;
-      const timeB =
-        lastMessages[b.email]?.timestamp?.toDate()?.getTime() || 0;
+      const timeA = lastMessages[a.email]?.timestamp?.toDate()?.getTime() || 0;
+      const timeB = lastMessages[b.email]?.timestamp?.toDate()?.getTime() || 0;
       return timeB - timeA;
     }
     return 0;

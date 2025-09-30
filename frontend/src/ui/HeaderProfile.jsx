@@ -30,6 +30,7 @@ const HeaderProfile = ({ className = "", isFriend }) => {
       if (data) {
         localStorage.setItem("userName", data.displayName);
         localStorage.setItem("userPhoto", data.photoURL);
+        localStorage.setItem("userEmail", data.email);
       }
     }
   });
@@ -37,6 +38,7 @@ const HeaderProfile = ({ className = "", isFriend }) => {
   // Use data from query with fallback to localStorage for initial load
   const displayName = userProfile?.displayName || localStorage.getItem("userName");
   const userPhoto = userProfile?.photoURL || localStorage.getItem("userPhoto");
+
 
   // 2. Get notification data and actions from our refactored context
   const {
@@ -54,18 +56,15 @@ const HeaderProfile = ({ className = "", isFriend }) => {
   const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
   const containerRef = useRef(null);
 
-  // 3. Logout Mutation
-  const logoutMutation = useMutation({
-    mutationFn: () => api.post(`/api/logout`, { email: userEmail }),
-    onSuccess: () => {
-      localStorage.removeItem("userName");
-      localStorage.removeItem("userPhoto");
-      localStorage.removeItem("userEmail");
-      logout(); // from useAuth
-      queryClient.clear(); // Clear all caches on logout
-    },
-    onError: (error) => console.error("❌ Logout failed:", error),
-  });
+  // 3. Logout Handler
+  const handleLogout = () => {
+    try {
+      logout(); // from useAuth, handles Firebase sign out and removes token
+      queryClient.clear(); // Clear all react-query caches
+    } catch (error) {
+      console.error("❌ Logout failed:", error);
+    }
+  };
 
   const toggleNotificationDropdown = (value) => setShowNotificationDropdown(val => value !== null ? value : !val);
 
@@ -155,7 +154,7 @@ const HeaderProfile = ({ className = "", isFriend }) => {
             {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
             <span>{isDarkMode ? "Light Mode" : "Dark Mode"}</span>
           </button>
-          <button onClick={() => logoutMutation.mutate()} className="list-profile-menu-item danger">
+          <button onClick={handleLogout} className="list-profile-menu-item danger">
             <LogOut size={20} />
             <span>Logout</span>
           </button>

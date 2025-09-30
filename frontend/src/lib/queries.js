@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import api from "../../../backend/src/middleware/axiosSecure";
+import api from "../api";
 
 // Fetch functions for React Query
 

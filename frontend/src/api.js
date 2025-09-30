@@ -3,39 +3,14 @@ import axios from 'axios';
 // Create an axios instance for authenticated APIs
 const api = axios.create({
   baseURL: import.meta.env.VITE_APP_API_BASE_URL,
-  withCredentials: true, // Crucial for cookies and CSRF
 });
 
-// // --- CSRF Protection ---
-let csrfToken = null;
-
-// Function to get the CSRF token
-export const getCsrfToken = async () => {
-  if (csrfToken) {
-    return csrfToken;
-  }
-  try {
-    const { data } = await api.get('/api/csrf-token');
-    csrfToken = data.csrfToken;
-    return csrfToken;
-  } catch (error) {
-    console.error('❌ Failed to fetch CSRF token', error);
-    return null;
-  }
-};
-
-// Request interceptor to attach CSRF token
+// Request interceptor to attach the Firebase ID token
 api.interceptors.request.use(
-  async (config) => {
-    const method = config.method.toLowerCase();
-    // Only attach CSRF token for state-changing methods
-    if (['post', 'put', 'delete', 'patch'].includes(method)) {
-      const token = await getCsrfToken();
-      if (token) {
-        config.headers['X-CSRF-Token'] = token;
-      } else {
-        console.warn(`⚠️ CSRF Token not available for ${method.toUpperCase()} request to ${config.url}. The request might be rejected.`);
-      }
+  (config) => {
+    const token = localStorage.getItem('idToken');
+    if (token) {
+      config.headers['Authorization'] = `Bearer ${token}`;
     }
     return config;
   },
@@ -44,26 +19,26 @@ api.interceptors.request.use(
   }
 );
 
-
-// Response interceptor for handling token expiration (existing logic)
+// Optional: Response interceptor for handling 401 Unauthorized errors
+// This could be used to automatically log out the user if the token is expired/invalid
 api.interceptors.response.use(
   (response) => {
     return response;
   },
-  async (error) => {
-    const originalRequest = error.config;
-    
-    // Handle CSRF validation failure
-    if (error.response?.status === 403 && error.response?.data?.code === 'EBADCSRFTOKEN') {
-        console.error('❌ CSRF Token validation failed. Refetching token and retrying...');
-        csrfToken = null; // Invalidate the old token
-        const newToken = await getCsrfToken(); // Fetch a new one
-        if (newToken) {
-            originalRequest.headers['X-CSRF-Token'] = newToken;
-            return api(originalRequest); // Retry the request
-        }
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      // For example, clear local storage and redirect to login
+      console.error("Authentication Error: Token is invalid or expired. Logging out.");
+      localStorage.removeItem('idToken');
+      localStorage.removeItem('userName');
+      localStorage.removeItem('userPhoto');
+      localStorage.removeItem('userEmail');
+      // This might cause a hard redirect. A more sophisticated implementation
+      // might use a router instance or a global state to handle this.
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
     }
-    
     return Promise.reject(error);
   }
 );

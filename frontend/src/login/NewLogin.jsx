@@ -104,24 +104,15 @@ const NewLogin = () => {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
 
+      //////เก็บข้อมูล User ใน localStorage//////
+      localStorage.setItem("userName", user.displayName || user.email.split("@")[0]);
+      localStorage.setItem("userPhoto", user.photoURL || "");
+      localStorage.setItem("userEmail", user.email);
+
       // Success animation
       const container = document.getElementById("container");
       container?.classList.add("success-animation");
 
-
-      // ส่งข้อมูลผู้ใช้ไปยัง backend (MongoDB)
-      const response = await api.post(`/api/login`, {
-        displayName: user.displayName,
-        email: user.email,
-        photoURL: user.photoURL,
-      });
-
-      // console.log("Response from backend:", response.data)
-
-      // เก็บข้อมูลลง localStorage
-      localStorage.setItem("userName", user.displayName);
-      localStorage.setItem("userPhoto", user.photoURL);
-      localStorage.setItem("userEmail", user.email);
 
       // Smooth transition to home
       setTimeout(() => {
@@ -160,13 +151,6 @@ const NewLogin = () => {
       // Success animation
       const container = document.getElementById("container");
       container?.classList.add("success-animation");
-
-      // ส่งข้อมูลผู้ใช้ไปยัง backend
-      await api.post(`/api/login`, {
-        displayName: user.displayName || signInForm.email.split("@")[0],
-        email: user.email,
-        photoURL: user.photoURL || null,
-      });
 
       // เก็บข้อมูลลง localStorage
       localStorage.setItem(
@@ -222,14 +206,6 @@ const NewLogin = () => {
       // Success animation
       const container = document.getElementById("container");
       container?.classList.add("success-animation");
-
-
-      // ส่งข้อมูลผู้ใช้ไปยัง backend
-      await api.post(`/api/login`, {
-        displayName: user.displayName,
-        email: user.email,
-        photoURL: user.photoURL || null,
-      });
 
       // เก็บข้อมูลลง localStorage
       localStorage.setItem("userName", user.displayName);
@@ -600,4 +576,4 @@ const NewLogin = () => {
   );
 };
 
-export default NewLogin;
+export default NewLogin; 

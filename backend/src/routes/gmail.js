@@ -2,40 +2,6 @@ import express from "express";
 import { Gmail } from "../model/gmail.js";
 const app = express.Router();
 
-// 📌 3️⃣ API บันทึก/อัปเดตผู้ใช้จาก Google Login และสร้าง Session
-app.post("/login", async (req, res) => {
-  try {
-    const { displayName, email, photoURL } = req.body;
-
-    if (!email) {
-      return res.status(400).json({ message: "Email is required for login." });
-    }
-
-    let user = await Gmail.findOne({ email });
-
-    if (!user) {
-      user = new Gmail({ displayName, email, photoURL });
-    } else {
-      user.displayName = displayName;
-      user.photoURL = photoURL;
-    }
-    // req.session.userId = user._id;
-
-
-    await user.save();
-    let userId = await Gmail.findOne({ email });
-    req.session.userId = userId.email;
-
-    res.status(200).json({
-      message: "Login successful and session created.",
-    });
-
-  } catch (error) {
-    console.error("Error during login:", error);
-    res.status(500).json({ message: "Server error during login." });
-  }
-});
-
 // 📌 4️⃣ API ดึงผู้ใช้ทั้งหมด (สำหรับแสดง Friend List)
 app.get("/users", async (req, res) => {
   try {
@@ -45,6 +11,22 @@ app.get("/users", async (req, res) => {
     res.status(500).json({ error: "ไม่สามารถโหลดผู้ใช้ได้" });
   }
 });
+
+app.get("/users/:email", async (req, res) => {
+  try {
+    if (!req.params.email) {
+      return res.status(400).json({ error: "Email is required" });
+    }
+    const user = await Gmail.findOne({ email: req.params.email });
+    if (!user) {
+      return res.status(404).json({ error: "ไม่พบผู้ใช้" });
+    }
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ error: "ไม่สามารถโหลดผู้ใช้ได้" });
+  }
+});
+
 
 
 // สำหรับดึงข้อมูลเพื่อน (usersfriends)
@@ -58,21 +40,5 @@ app.get("/usersfriends", async (req, res) => {
     res.status(500).send("Server error");
   }
 });
-
-// API สำหรับการ Logout และทำลาย Session
-app.post("/logout", (req, res) => {
-  req.session.destroy((err) => {
-    if (err) {
-      return res.status(500).json({ message: "Could not log out, please try again." });
-    }
-    // Clear the session cookie
-    res.clearCookie('connect.sid'); // The default session cookie name
-    return res.status(200).json({ message: "Logout successful." });
-  });
-});
-
-
-
-
 
 export default app;

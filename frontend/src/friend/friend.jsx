@@ -135,10 +135,10 @@ const Friend = () => {
     followToggleMutation.mutate({ targetEmail, isFollowing });
   };
 
-  const filteredFriends = friends.filter(f => f.displayName.toLowerCase().includes(searchTerm.toLowerCase()));
-  const filteredUsers = users.filter(u => 
-    u.displayName.toLowerCase().includes(searchTerm.toLowerCase()) && 
-    u.email !== userEmail && 
+  const filteredFriends = friends.filter(f => f.displayName && f.displayName.toLowerCase().includes(searchTerm.toLowerCase()));
+  const filteredUsers = users.filter(u =>
+    u.displayName && u.displayName.toLowerCase().includes(searchTerm.toLowerCase()) &&
+    u.email !== userEmail &&
     !friends.some(f => f.email === u.email)
   );
 

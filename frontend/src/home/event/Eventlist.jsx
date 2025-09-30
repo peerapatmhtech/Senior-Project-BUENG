@@ -76,7 +76,6 @@ const EventList = ({ setWaiting, waiting }) => {
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    console.log("pendingFavorites", pendingFavorites)
     if (pendingFavorites.length > 0) {
       console.log("pendingFavoritesRelay", pendingFavorites)
       debounceRef.current = setTimeout(() => {
