@@ -1,15 +1,20 @@
 // auth.js
-export function requireOwner(req, res, next) {
-  // The user object is attached by the authMiddleware
-  if (!req.user) {
-    return res.status(401).json({ error: "Unauthorized: Not logged in" });
-  }
+export function requireLogin(req, res, next) {
+  // if (!req.session.userId) {
+  //   return res.status(401).json({ error: "Not logged in" });
+  // }
+  next();
+}
 
-  // Check if the authenticated user's email matches the email in the request params or body
-  const requestEmail = req.params.email || req.body.email;
-  if (requestEmail && requestEmail !== req.user.email) {
-    return res.status(403).json({ error: "Forbidden: You do not have permission to access this resource." });
-  }
+export function requireOwner(req, res, next) {
+  // if (!req.session.userId) {
+  //   return res.status(401).json({ error: "Not logged in" });
+  // }
+
+  // // ตรวจสอบว่า user ใน session = user ที่ request มาหรือไม่
+  // if (req.params.email && req.params.email !== (req.session.userId)) {
+  //   return res.status(403).json({ error: "Forbidden: not your resource" });
+  // }
 
   next();
 }

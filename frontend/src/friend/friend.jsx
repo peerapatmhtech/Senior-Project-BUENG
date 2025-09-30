@@ -570,23 +570,188 @@ const Friend = () => {
   const handleProfileClick = (user) => {
     setSelectedUser(user);
     setIsModalOpen(true);
-    refetchFollowInfo(); // Manually trigger fetch for this user
   };
 
-  const handleCloseModal = () => setIsModalOpen(false);
-
-  const handleFollow = (targetEmail) => {
-    const isFollowing = currentUser?.following?.includes(targetEmail);
-    followToggleMutation.mutate({ targetEmail, isFollowing });
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedUser(null);
   };
 
-  const filteredFriends = friends.filter(f => f.displayName && f.displayName.toLowerCase().includes(searchTerm.toLowerCase()));
-  const filteredUsers = users.filter(u =>
-    u.displayName && u.displayName.toLowerCase().includes(searchTerm.toLowerCase()) &&
-    u.email !== userEmail &&
-    !friends.some(f => f.email === u.email)
+  const handleClickOutside = (e) => {
+    if (modalRef.current && !modalRef.current.contains(e.target)) {
+      handleCloseModal();
+    }
+  };
+  useEffect(() => {
+    if (!noti) return;
+    try {
+      const friendEmail = noti.from.email;
+      const addedUser = users.find((user) => user.email === friendEmail);
+
+      // เพิ่มเพื่อนใหม่ในรายการ UI
+      if (addedUser) {
+        setFriends((prev) =>
+          [
+            ...prev,
+            {
+              photoURL: addedUser.photoURL,
+              email: addedUser.email,
+              displayName: addedUser.displayName,
+              isOnline: addedUser.isOnline || false,
+            },
+          ].sort((a, b) => a.displayName.localeCompare(b.displayName))
+        );
+      }
+    } catch (err) {}
+  }, [noti]);
+
+  useEffect(() => {
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  const filteredUsers = users.filter(
+    (user) =>
+      user.displayName.toLowerCase().includes(searchTerm) &&
+      user.email !== userEmail
   );
 
+  const fetchCurrentUser = async () => {
+    try {
+      const res = await api.get(
+        `/api/users/${userEmail}`
+      );
+      const userData = {
+        ...res.data,
+        following: Array.isArray(res.data.following) ? res.data.following : [],
+      };
+      setCurrentUser(userData);
+      setLoadingCurrentUser(false);
+    } catch (err) {
+      setError("คุณสามารถเพิ่มเพื่อนได้ทันที");
+      setCurrentUser(null);
+      setLoadingCurrentUser(false);
+    }
+  };
+  const fetchGmailUser = async () => {
+    try {
+      const res = await api.get(
+        `/api/users/${userEmail}`
+      );
+      setCurrentUserfollow(res.data);
+    } catch (err) {
+      setError("โหลด Gmail currentUser ไม่ได้");
+    }
+  };
+
+  const handleFollow = async (targetEmail) => {
+    await fetchGmailUser();
+    if (!currentUserfollow || !Array.isArray(currentUserfollow.following)) {
+      toast.error("ข้อมูลผู้ใช้ยังไม่พร้อม");
+      return;
+    }
+    const isFollowing = currentUserfollow.following.includes(targetEmail);
+    const url = `${
+      import.meta.env.VITE_APP_API_BASE_URL
+    }/api/users/${userEmail}/${
+      isFollowing ? "unfollow" : "follow"
+    }/${targetEmail}`;
+    const method = isFollowing ? "DELETE" : "POST";
+    try {
+      await api({ method, url });
+      await fetchGmailUser();
+      toast.success(isFollowing ? "Unfollowed" : "Followed");
+    } catch (err) {
+      setError("Follow/unfollow error");
+      toast.error("Follow/unfollow error");
+    }
+  };
+
+  useEffect(() => {
+    if (!userEmail) {
+      setCurrentUser(null);
+      setLoadingCurrentUser(false);
+      return;
+    }
+    fetchCurrentUser();
+  }, [userEmail]);
+
+  // Refs for the notification dropdown
+  const notificationDropdownRef = useRef(null);
+  const bellButtonRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      // For normal dropdowns
+      const isClickInsideAny = Object.values(dropdownRefs.current).some((ref) =>
+        ref?.contains(event.target)
+      );
+      if (!isClickInsideAny) {
+        setOpenMenuFor(null);
+      }
+
+      // For notification dropdown
+      if (
+        showNotificationDropdown &&
+        notificationDropdownRef.current &&
+        !notificationDropdownRef.current.contains(event.target) &&
+        bellButtonRef.current &&
+        !bellButtonRef.current.contains(event.target)
+      ) {
+        setShowNotificationDropdown(false);
+      }
+    };
+
+    // เพิ่ม event scroll เพื่อปิด dropdown
+    const handleScroll = () => {
+      setOpenMenuFor(null);
+      setShowNotificationDropdown(false);
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    window.addEventListener("scroll", handleScroll, true); // true เพื่อจับทุก scroll
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      window.removeEventListener("scroll", handleScroll, true);
+    };
+  }, [showNotificationDropdown]);
+
+  const filteredFriends = friends.filter((friend) =>
+    friend.displayName.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const fetchFollowInfo = async (targetEmail) => {
+    try {
+      const res = await api.get(
+        `/api/user/${targetEmail}/follow-info`
+      );
+      setFollowers(res.data.followers);
+      setFollowing(res.data.following);
+    } catch (error) {
+      setError("Error fetching follow info");
+    }
+  };
+
+
+  useEffect(() => {
+    const getNickNameF = async () => {
+      try {
+        const res = await api.get(
+          `/api/infos`
+        );
+        getNickName(res.data);
+      } catch (err) {
+        setError("โหลด nickname ล้มเหลว");
+      }
+    };
+    getNickNameF();
+  }, []);
+
+
+  // ฟังก์ชันสำหรับแปลงเวลา lastSeen
   const formatLastSeen = (lastSeen) => {
     if (!lastSeen) return "ไม่ทราบ";
 

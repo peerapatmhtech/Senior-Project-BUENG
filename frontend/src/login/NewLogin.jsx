@@ -115,6 +115,19 @@ const NewLogin = () => {
       const container = document.getElementById("container");
       container?.classList.add("success-animation");
 
+      // ส่งข้อมูลผู้ใช้ไปยัง backend (MongoDB)
+      const response = await api.post(`/api/login`, {
+        displayName: user.displayName,
+        email: user.email,
+        photoURL: user.photoURL,
+      });
+
+      // console.log("Response from backend:", response.data)
+
+      // เก็บข้อมูลลง localStorage
+      localStorage.setItem("userName", user.displayName);
+      localStorage.setItem("userPhoto", user.photoURL);
+      localStorage.setItem("userEmail", user.email);
 
       // Smooth transition to home
       setTimeout(() => {

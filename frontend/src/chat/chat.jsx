@@ -702,16 +702,24 @@ const Chat = () => {
     [friends, onlineUsers]
   );
 
-  const sortedFriends = [...friendsWithOnlineStatus].sort((a, b) => {
-    if (a?.email && b?.email) {
-      if (isOnline(a.email) && !isOnline(b.email)) return -1;
-      if (!isOnline(a.email) && isOnline(b.email)) return 1;
-      const timeA = lastMessages[a.email]?.timestamp?.toDate()?.getTime() || 0;
-      const timeB = lastMessages[b.email]?.timestamp?.toDate()?.getTime() || 0;
-      return timeB - timeA;
-    }
-    return 0;
-  });
+  const sortedFriends = useMemo(() =>
+    [...friendsWithOnlineStatus].sort((a, b) => {
+      if (a?.email && b?.email) {
+        const aIsOnline = isOnline(a.email);
+        const bIsOnline = isOnline(b.email);
+        if (aIsOnline && !bIsOnline) return -1;
+        if (!aIsOnline && bIsOnline) return 1;
+
+        const timeA =
+          lastMessages[a.email]?.timestamp?.toDate()?.getTime() || 0;
+        const timeB =
+          lastMessages[b.email]?.timestamp?.toDate()?.getTime() || 0;
+        return timeB - timeA;
+      }
+      return 0;
+    }),
+    [friendsWithOnlineStatus, lastMessages, onlineUsers]
+  );
 
   if (isLoading) {
     return <LoadingIndicator isDarkMode={isDarkMode} />;

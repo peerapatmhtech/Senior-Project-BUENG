@@ -24,25 +24,33 @@ import roommatchRoutes from "./src/routes/eventmatch.js";
 import friendRequestRoutes from "./src/routes/friendRequest.js";
 import friendApiRoutes from "./src/routes/friendApi.js";
 import userPhotoRoutes from "./src/routes/userPhoto.js";
-import infoMatchRoutes from "./src/routes/infomatch.js"; // Import info match routes
-import session from "express-session";
-import helmet from "helmet";
-import rateLimit from 'express-rate-limit';
-import MongoStore from "connect-mongo";
-import csrf from 'csurf';
+import infoMatchRoutes from "./src/routes/infomatch.js";
+import aiRoutes from "./src/routes/ai.js";
+
+////-------Protocal-------////
+import http from "http";
+import { Server } from "socket.io";
+
+////-------MONGO DB-------////
+import { Filter } from "./src/model/filter.js";
+import { Event } from "./src/model/event.js";
+
+
+
+////------Middleware------////
+import { requireLogin } from "./src/middleware/required.js";
 import { limiter } from "./src/middleware/ratelimit.js";
 import { requireOwner } from "./src/middleware/required.js";
 import { limiter } from "./src/middleware/ratelimit.js";
 
 dotenv.config();
 
-///////------Environment------////
-const port = process.env.PORT || 8080;
-const MONGO_URI = process.env.MONGO_URI;
-const MAKE_WEBHOOK_URL = process.env.MAKE_WEBHOOK_URL;
-const allowedOrigins = process.env.VITE_APP_WEB_BASE_URL;
 //////------Server------////
-// Common Vite/React dev port
+const allowedOrigins = [
+  process.env.VITE_APP_WEB_BASE_URL || // Deployed frontend URL
+  'http://localhost:5173',             // Common Vite/React dev port
+];
+
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -51,32 +59,35 @@ const io = new Server(server, {
     methods: ["GET", "POST"],
     credentials: true,
   },
-}); ////////enable CORS
+});////////enable CORS
+
+///////------Environment------////
+const port = process.env.PORT || 8080;
+const MONGO_URI = process.env.MONGO_URI;
+const MAKE_WEBHOOK_URL = process.env.MAKE_WEBHOOK_URL;
+const COOKIE_SECRET = process.env.COOKIE_SECRET;
+const isProduction = process.env.NODE_ENV === 'production';
 export const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
 
-const COOKIE_SECRET = process.env.COOKIE_SECRET;
-
-app.use(express.json({ limit: "50mb" }));
-// ✅ Middleware
-const isProduction = process.env.NODE_ENV === 'production';
-app.use(helmet());
-app.use(bodyParser.json());
+////////------Middleware------////////
+app.use(express.json({ limit: '50mb' }));   //////////limit file size
+app.use(helmet({ crossOriginOpenerPolicy: { policy: "unsafe-none" } }));  ///////////security
 app.use(
   cors({
     origin: allowedOrigins,
   })
-);
-app.use(bodyParser.json());
-app.use(cookieParser(COOKIE_SECRET));
+);////////enable CORS
+app.use(bodyParser.json());//////////parse JSON
+app.use(cookieParser(COOKIE_SECRET));//////////////parse cookie
 
 
 ////////Protection Doss and DDos Attack////////
 app.use(
   rateLimit({
-    windowMs: 1 * 60 * 1000, // 1 minutes
+    windowMs: 1 * 60 * 1000, // 15 minutes
     max: 100, // limit each IP to 100 requests per windowMs
   })
 );
@@ -102,22 +113,20 @@ app.use(
 );
 const csrfProtection = csrf();
 
-app.use((req, res, next) => {
-  const excludedPaths = ['/api/save-event', '/api/infomatch/create'];
-  // Only exclude POST requests to specific paths from CSRF protection
-  if (req.method === 'POST' && excludedPaths.includes(req.path)) {
-    return next();
-  }
-  // Apply CSRF protection for all other routes
-  return csrfProtection(req, res, next);
-});
+////--------CSRF Protection------////
+// app.use((req, res, next) => {
+//   const excludedPaths = ['/api/save-event', '/api/infomatch/create'];
+//   // Only exclude POST requests to specific paths from CSRF protection
+//   if (req.method === 'POST' && excludedPaths.includes(req.path)) {
+//     return next();
+//   }
+//   // Apply CSRF protection for all other routes
+//   return csrfProtection(req, res, next);
+// });   //////////Exclude POST requests
 
-app.get('/api/csrf-token', (req, res) => {
-  res.json({ csrfToken: req.csrfToken() });
-});
-
-//////////////////////////
-
+// app.get('/api/csrf-token', (req, res) => {
+//   res.json({ csrfToken: req.csrfToken() });
+// });
 
 
 // Serve static files from the uploads directory
@@ -459,6 +468,7 @@ app.use("/api", roommatchRoutes);
 app.use("/api", likeRoutes);
 app.use("/api", infoMatchRoutes(io));
 app.use("/api", aiRoutes);
+
 
 // ลงทะเบียน friendRequest routes โดยตรงเพื่อแก้ปัญหาเรื่อง 404
 // Log API requests for debugging
