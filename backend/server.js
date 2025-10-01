@@ -1,55 +1,37 @@
-////------Libraries------////
-import bodyParser from "body-parser";
-import dotenv from "dotenv";
-import mongoose from "mongoose";
-import axios from "axios";
+// ✅ Import libraries และตั้งค่าเบื้องต้น
 import express from "express";
 import cors from "cors";
-import cookieParser from "cookie-parser";
-import session from "express-session";
-import helmet from "helmet";
-import OpenAI from 'openai';
-import rateLimit from 'express-rate-limit';
-import MongoStore from "connect-mongo";
-import csrf from 'csurf';
-
-////-------Routes-------////
+import bodyParser from "body-parser";
+import dotenv from "dotenv";
+import http from "http";
+import { Server } from "socket.io";
 import userRoutes from "./src/routes/gmail.js";
 import friendRoutes from "./src/routes/friend.js";
 import roomRoutes from "./src/routes/room.js";
 import infoRoutes from "./src/routes/info.js";
 import eventRoutes from "./src/routes/event.js";
-import likeRoutes from "./src/routes/like.js";
-import roommatchRoutes from "./src/routes/eventmatch.js";
+import likeRoutes from "./src/routes/like.js"; // Routes from "./routes/like.js";
+import roommatchRoutes from "./src/routes/eventmatch.js"; // Routes from "./routes/room.js";
+import mongoose from "mongoose";
+import { Filter } from "./src/model/filter.js";
+import { Event } from "./src/model/event.js";
+import axios from "axios";
+
+// Import new routes (ES Modules style)
 import friendRequestRoutes from "./src/routes/friendRequest.js";
 import friendApiRoutes from "./src/routes/friendApi.js";
 import userPhotoRoutes from "./src/routes/userPhoto.js";
-import infoMatchRoutes from "./src/routes/infomatch.js";
-import aiRoutes from "./src/routes/ai.js";
+import infoMatchRoutes from "./src/routes/infomatch.js"; // Import info match routes
+import helmet from "helmet";
+import rateLimit from 'express-rate-limit';
+import { authMiddleware } from "./src/middleware/authMiddleware.js";
 
-////-------Protocal-------////
-import http from "http";
-import { Server } from "socket.io";
-
-////-------MONGO DB-------////
-import { Filter } from "./src/model/filter.js";
-import { Event } from "./src/model/event.js";
-
-
-
-////------Middleware------////
-import { requireLogin } from "./src/middleware/required.js";
-import { limiter } from "./src/middleware/ratelimit.js";
+/////////Midleware for owner and admin/////////
 import { requireOwner } from "./src/middleware/required.js";
 import { limiter } from "./src/middleware/ratelimit.js";
 
 dotenv.config();
-
-//////------Server------////
-const allowedOrigins = [
-  process.env.VITE_APP_WEB_BASE_URL || // Deployed frontend URL
-  'http://localhost:5173',             // Common Vite/React dev port
-];
+const allowedOrigins = process.env.VITE_APP_WEB_BASE_URL;
 
 const app = express();
 const server = http.createServer(app);
@@ -59,78 +41,36 @@ const io = new Server(server, {
     methods: ["GET", "POST"],
     credentials: true,
   },
-});////////enable CORS
+});
 
-///////------Environment------////
 const port = process.env.PORT || 8080;
 const MONGO_URI = process.env.MONGO_URI;
 const MAKE_WEBHOOK_URL = process.env.MAKE_WEBHOOK_URL;
-const COOKIE_SECRET = process.env.COOKIE_SECRET;
-const isProduction = process.env.NODE_ENV === 'production';
-export const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
 
 
-////////------Middleware------////////
-app.use(express.json({ limit: '50mb' }));   //////////limit file size
-app.use(helmet({ crossOriginOpenerPolicy: { policy: "unsafe-none" } }));  ///////////security
+app.use(express.json({ limit: '50mb' }));
+// ✅ Middleware
+app.use(helmet());
 app.use(
   cors({
     origin: allowedOrigins,
+    credentials: true,
   })
-);////////enable CORS
-app.use(bodyParser.json());//////////parse JSON
-app.use(cookieParser(COOKIE_SECRET));//////////////parse cookie
+);
+app.use(bodyParser.json());
 
 
 ////////Protection Doss and DDos Attack////////
 app.use(
   rateLimit({
-    windowMs: 1 * 60 * 1000, // 15 minutes
+    windowMs: 1 * 60 * 1000, // 1 minutes
     max: 100, // limit each IP to 100 requests per windowMs
   })
 );
 
-///////Protection Cross-Site Request Forgery (CSRF)////////
-app.use(
-  session({
-    secret: COOKIE_SECRET,
-    resave: false,
-    saveUninitialized: false,
-    store: MongoStore.create({
-      mongoUrl: MONGO_URI,
-      collectionName: "sessions",
-      ttl: 60 * 60, // อายุ session = 1 ชม.
-    }),
-    cookie: {
-      secure: isProduction, // Use secure cookies in production
-      httpOnly: true, // Prevent client-side script access
-      sameSite: isProduction ? 'strict' : 'lax', // 'none' for cross-site requests, 'lax' for local dev
-      maxAge: 1000 * 60 * 60, // อายุ cookie 30 นาที
-    },
-  })
-);
-const csrfProtection = csrf();
-
-////--------CSRF Protection------////
-// app.use((req, res, next) => {
-//   const excludedPaths = ['/api/save-event', '/api/infomatch/create'];
-//   // Only exclude POST requests to specific paths from CSRF protection
-//   if (req.method === 'POST' && excludedPaths.includes(req.path)) {
-//     return next();
-//   }
-//   // Apply CSRF protection for all other routes
-//   return csrfProtection(req, res, next);
-// });   //////////Exclude POST requests
-
-// app.get('/api/csrf-token', (req, res) => {
-//   res.json({ csrfToken: req.csrfToken() });
-// });
-
-
 // Serve static files from the uploads directory
-app.use("/uploads", express.static("../uploads"));
+app.use('/uploads', express.static('../uploads'));
+
 
 // ✅ Connect MongoDB
 mongoose.connect(MONGO_URI);
@@ -156,7 +96,7 @@ const broadcastUserStatus = () => {
 
   io.emit("update-users", {
     onlineUsers: onlineUsersEmails,
-    lastSeenTimes: lastSeenObj,
+    lastSeenTimes: lastSeenObj
   });
 };
 
@@ -193,7 +133,7 @@ io.on("connection", (socket) => {
       email,
       displayName,
       photoURL,
-      isOnline: true,
+      isOnline: true
     });
   });
 
@@ -239,7 +179,7 @@ io.on("connection", (socket) => {
             isOnline: false,
             lastSeen: timestamp,
             displayName: userDetails.get(email)?.displayName,
-            photoURL: userDetails.get(email)?.photoURL,
+            photoURL: userDetails.get(email)?.photoURL
           });
         }
       }
@@ -266,7 +206,7 @@ io.on("connection", (socket) => {
           isOnline: false,
           lastSeen: timestamp,
           displayName: userDetails.get(email)?.displayName,
-          photoURL: userDetails.get(email)?.photoURL,
+          photoURL: userDetails.get(email)?.photoURL
         });
       }
     }
@@ -285,10 +225,13 @@ app.post("/api/update-genres", limiter, requireOwner, async (req, res) => {
   }
 
   try {
+
     //////validate email//////////
     if (!email) {
-      return res.status(400).json({ message: "Missing email" });
-    }
+      return res
+        .status(400)
+        .json({ message: "Missing email" });
+    };
 
     /////////////Find user and update genres and subgenres////////////
     const user = await Filter.findOneAndUpdate(
@@ -296,6 +239,7 @@ app.post("/api/update-genres", limiter, requireOwner, async (req, res) => {
       { genres, subGenres: subGenres || {} },
       { new: true, upsert: true } // เพิ่ม upsert เผื่อ user ยังไม่มีใน Filter
     );
+
 
     const filter = {};
 
@@ -339,6 +283,7 @@ app.post("/api/update-genres", limiter, requireOwner, async (req, res) => {
       })
       .filter((f) => f !== null);
 
+
     if (genreFilters.length > 0) {
       if (genreFilters.length === 1) {
         Object.assign(filter, genreFilters[0]);
@@ -370,19 +315,16 @@ app.post("/api/update-genres", limiter, requireOwner, async (req, res) => {
     const duplicateLinks = new Set(duplicateCheck.map((e) => e.link));
 
     const uniqueEvents = events.filter(
-      (e) => !duplicateTitles.has(e.title) && !duplicateLinks.has(e.link)
+      (e) =>
+        !duplicateTitles.has(e.title) && !duplicateLinks.has(e.link)
     );
+
 
     //////////////Send unique events to make.com////////
     if (uniqueEvents.length === 0 || uniqueEvents.length === events.length) {
       // ✅ ส่งข้อมูลไปยัง Make.com เฉพาะกรณีที่ genres/subGenres มีข้อมูล
       const hasGenres = Array.isArray(genres) ? genres.length > 0 : false;
-      const hasSubGenres =
-        subGenres &&
-        typeof subGenres === "object" &&
-        Object.values(subGenres).some((arr) =>
-          Array.isArray(arr) ? arr.length > 0 : false
-        );
+      const hasSubGenres = subGenres && typeof subGenres === "object" && Object.values(subGenres).some(arr => Array.isArray(arr) ? arr.length > 0 : false);
       if (hasGenres && hasSubGenres) {
         await axios.post(MAKE_WEBHOOK_URL, {
           type: "update-genres",
@@ -397,7 +339,7 @@ app.post("/api/update-genres", limiter, requireOwner, async (req, res) => {
     }
 
     if (uniqueEvents.length > 0) {
-      const savePromises = uniqueEvents.map((event) =>
+      const savePromises = uniqueEvents.map(event =>
         axios.post(
           `/api/save-event`,
           {
@@ -427,26 +369,26 @@ app.post("/api/update-genres", limiter, requireOwner, async (req, res) => {
 });
 
 // เก็บ socket instance ไว้ใช้ใน middleware
-app.set("io", io);
-app.set("userSockets", userSockets);
+app.set('io', io);
+app.set('userSockets', userSockets);
 
 // ใช้งานเส้นทาง debug เพื่อตรวจสอบ API routes ทั้งหมด
-app.get("/api/debug/routes", (req, res) => {
+app.get('/api/debug/routes', (req, res) => {
   const routes = [];
-  app._router.stack.forEach((middleware) => {
+  app._router.stack.forEach(middleware => {
     if (middleware.route) {
       // Routes registered directly on the app
       routes.push({
         path: middleware.route.path,
-        methods: Object.keys(middleware.route.methods),
+        methods: Object.keys(middleware.route.methods)
       });
-    } else if (middleware.name === "router") {
+    } else if (middleware.name === 'router') {
       // Router middleware
-      middleware.handle.stack.forEach((handler) => {
+      middleware.handle.stack.forEach(handler => {
         if (handler.route) {
           routes.push({
-            path: "/api" + handler.route.path,
-            methods: Object.keys(handler.route.methods),
+            path: '/api' + handler.route.path,
+            methods: Object.keys(handler.route.methods)
           });
         }
       });
@@ -467,7 +409,6 @@ app.use("/api", infoRoutes);
 app.use("/api", roommatchRoutes);
 app.use("/api", likeRoutes);
 app.use("/api", infoMatchRoutes(io));
-app.use("/api", aiRoutes);
 
 
 // ลงทะเบียน friendRequest routes โดยตรงเพื่อแก้ปัญหาเรื่อง 404
@@ -486,28 +427,28 @@ app.get("/api/secure/me", (req, res) => {
   res.json({
     success: true,
     message: "Token valid",
-    user: req.user,
+    user: req.user
   });
 });
 
 // Endpoint เฉพาะสำหรับ BU students (@bumail.net)
 app.get("/api/secure/bu-student", (req, res) => {
-  if (!req.user.email.endsWith("@bumail.net")) {
+  if (!req.user.email.endsWith('@bumail.net')) {
     return res.status(403).json({
       success: false,
-      message: "Access restricted to @bumail.net email addresses only",
+      message: 'Access restricted to @bumail.net email addresses only'
     });
   }
 
   res.json({
     success: true,
-    message: "Welcome BU student!",
+    message: 'Welcome BU student!',
     user: req.user,
     studentInfo: {
       email: req.user.email,
-      domain: "@bumail.net",
-      verified: true,
-    },
+      domain: '@bumail.net',
+      verified: true
+    }
   });
 });
 
@@ -517,10 +458,11 @@ app.get("/api-status", (req, res) => {
     status: "API is running",
     routes: {
       userPhoto: "/api/test-photo-route",
-      uploadPhoto: "/api/upload-user-photo",
-    },
+      uploadPhoto: "/api/upload-user-photo"
+    }
   });
 });
+
 
 // เริ่มต้นเซิร์ฟเวอร์
 server.listen(port, () =>
