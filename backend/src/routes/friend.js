@@ -4,7 +4,7 @@ import { requireOwner } from "../middleware/required.js";
 const router = express.Router();
 
 // เพิ่มเพื่อน
-router.post("/add-friend",requireOwner, async (req, res) => {
+router.post("/add-friend", async (req, res) => {
     const { userEmail, friendEmail, roomId } = req.body;
     if (!userEmail || !friendEmail || !roomId) {
         return res.status(400).json({ error: "Both userEmail and friendEmail are required." });
@@ -22,7 +22,7 @@ router.post("/add-friend",requireOwner, async (req, res) => {
 });
 
 // ดึงข้อมูลเพื่อน
-router.get("/friends/:email", requireOwner, async (req, res) => {
+router.get("/friends/:email", async (req, res) => {
     const { email } = req.params;
     try {
         if (!email) {
@@ -124,21 +124,21 @@ router.get("/user/:email/follow-info", async (req, res) => {
         res.status(500).json({ message: "Server error", error: err.message });
     }
 });
-router.get("/users/:email", async (req, res) => {
-    const userEmail = req.params.email.toLowerCase();
-    try {
-        if (!userEmail) {
-            return res.status(400).json({ error: "Email is required." });
-        }
-        const user = await Friend.findOne({ email: userEmail });
-        if (!user) {
-            return res.status(204).send("User not found");
-        }
-        res.json(user);
-    } catch (error) {
-        console.error("Error fetching user by email:", error);
-        res.status(500).json({ error: "Failed to fetch user" });
-    }
-});
+// router.get("/users/:email", async (req, res) => {
+//     const userEmail = req.params.email.toLowerCase();
+//     try {
+//         if (!userEmail) {
+//             return res.status(400).json({ error: "Email is required." });
+//         }
+//         const user = await Friend.findOne({ email: userEmail });
+//         if (!user) {
+//             return res.status(204).send("User not found");
+//         }
+//         res.json(user);
+//     } catch (error) {
+//         console.error("Error fetching user by email:", error);
+//         res.status(500).json({ error: "Failed to fetch user" });
+//     }
+// });
 
 export default router;

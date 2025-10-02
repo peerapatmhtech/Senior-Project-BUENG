@@ -79,10 +79,6 @@ const NewLogin = () => {
     };
 
     window.addEventListener("resize", handleResize);
-
-    // Debug log
-    console.log("Screen width:", window.innerWidth, "Is mobile:", isMobile);
-
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
@@ -147,7 +143,6 @@ const NewLogin = () => {
 
     try {
       const user = await loginWithEmail(signInForm.email, signInForm.password);
-
       // Success animation
       const container = document.getElementById("container");
       container?.classList.add("success-animation");

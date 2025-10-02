@@ -65,6 +65,7 @@ app.use(
   rateLimit({
     windowMs: 1 * 60 * 1000, // 1 minutes
     max: 100, // limit each IP to 100 requests per windowMs
+    skip: (req, res) => req.method === "GET",
   })
 );
 
@@ -401,6 +402,9 @@ app.get('/api/debug/routes', (req, res) => {
 // ใช้ authMiddleware กับทุก request ที่เข้ามาที่ /api
 app.use("/api", authMiddleware);
 
+// Register friendRequestRoutes with high priority to prevent 404 issues.
+app.use("/api", friendRequestRoutes);
+
 app.use("/api", userRoutes);
 app.use("/api", friendRoutes);
 app.use("/api", roomRoutes);
@@ -411,14 +415,12 @@ app.use("/api", likeRoutes);
 app.use("/api", infoMatchRoutes(io));
 
 
-// ลงทะเบียน friendRequest routes โดยตรงเพื่อแก้ปัญหาเรื่อง 404
 // Log API requests for debugging
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
   next();
 });
 
-app.use("/api", friendRequestRoutes);
 app.use("/api", friendApiRoutes);
 app.use("/api", userPhotoRoutes);
 

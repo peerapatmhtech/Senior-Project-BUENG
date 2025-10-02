@@ -4,10 +4,12 @@ import User from '../model/userroom.js';
 import Friend from "../model/Friend.js";
 import FriendRequest from "../model/friendRequest.js";
 import { requireOwner } from "../middleware/required.js";
+import { Gmail } from "../model/gmail.js";
 
 // API สำหรับส่งคำขอเป็นเพื่อน
 router.post('/friend-request', async (req, res) => {
   try {
+    console.log("ได้รับคำขอเป็นเพื่อน:", req.body);
     const { from, to, requestId, timestamp, type, roomId } = req.body;
 
     // ตรวจสอบว่า email ไม่เป็นค่าว่าง
@@ -21,13 +23,13 @@ router.post('/friend-request', async (req, res) => {
     }
 
     // ตรวจสอบว่าผู้ใช้มีอยู่จริงหรือไม่
-    const toUser = await Friend.findOne({ email: to });
+    const toUser = await Gmail.findOne({ email: to });
     if (!toUser) {
       return res.status(404).json({ success: false, message: 'ไม่พบผู้ใช้ปลายทาง' });
     }
 
     // ตรวจสอบว่าเป็นเพื่อนกันแล้วหรือไม่
-    const fromUser = await Friend.findOne({ email: from.email });
+    const fromUser = await Gmail.findOne({ email: from.email });
     if (!fromUser) {
       return res.status(404).json({ success: false, message: 'ไม่พบข้อมูลผู้ส่ง' });
     }
@@ -172,9 +174,6 @@ router.post('/friend-request-response', requireOwner, async (req, res) => {
       const user = await Friend.findOne({ email: userEmail });
       const friend = await Friend.findOne({ email: friendEmail });
 
-      if (!user || !friend) {
-        return res.status(404).json({ success: false, message: 'ไม่พบข้อมูลผู้ใช้' });
-      }
 
       // เพิ่มเพื่อนให้กับทั้งสองฝ่าย
       // ตรวจสอบว่ามีอาร์เรย์เพื่อนหรือไม่ ถ้าไม่มีให้สร้างใหม่

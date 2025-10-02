@@ -17,7 +17,6 @@ import HeaderProfile from "../ui/HeaderProfile";
 // แสดงข้อมูลสถานะการเชื่อมต่อ socket อย่างละเอียด
 // socket.on("connect", () => {
 
-
 // การจัดการสถานะการเชื่อมต่อของ socket ทั้งหมดถูกย้ายไปที่ socketcontext.jsx แล้ว
 
 // ฟังก์ชันเพื่อจัดการกับเวลาที่แสดง last seen
@@ -120,24 +119,20 @@ const Friend = () => {
       const encodedEmail = encodeURIComponent(userEmail);
 
       ////////Fetch Online Users////////
-      const allUsersRes = await api.get(
-        `/api/users`
-      );
+      const allUsersRes = await api.get(`/api/users`);
       const allUsers = allUsersRes.data;
 
       /////////Set Online Users////////
       setUsers(allUsers);
 
       //////////Fetch  Favorites////////
-      const userRes = await api.get(
-        `/api/users/${encodedEmail}`
-      );
+      const userRes = await api.get(`/api/friends/${encodedEmail}`);
       const currentUser = userRes.data;
 
       /////////Set Favorites////////
-      if (Array.isArray(currentUser.friends)) {
+      if (Array.isArray(currentUser)) {
         // ดึง email จาก friends array (object)
-        const friendEmails = currentUser.friends.map((f) => f.email);
+        const friendEmails = currentUser.map((f) => f.email);
         const filteredFriends = allUsers
           .filter((user) => friendEmails.includes(user.email))
           .map((user) => ({
@@ -152,8 +147,6 @@ const Friend = () => {
         setFriends([]);
       }
     } catch (error) {
-      setError("เกิดข้อผิดพลาดในการโหลดข้อมูลเพื่อน");
-      toast.error("เกิดข้อผิดพลาดในการโหลดข้อมูลเพื่อน");
     }
     setLoading(false);
   };
@@ -392,8 +385,6 @@ const Friend = () => {
     // ฟังเมื่อเราถูกลบออกจากรายการเพื่อน
     socket.on("notify-friend-removed", async (data) => {
       if (data.to === userEmail) {
-    
-
         // ดึงข้อมูลเพื่อนใหม่
         await fetchCurrentUserAndFriends();
 
@@ -500,15 +491,11 @@ const Friend = () => {
         requestId: requestId,
       };
 
-      const response = await api.post(
-        `/api/friend-request`,
-        requestData,
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      const response = await api.post(`/api/friend-request`, requestData, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
       if (response.status !== 400) {
         toast.error(response.data.message || "ไม่สามารถเพิ่มเพื่อนได้");
       }
@@ -528,9 +515,7 @@ const Friend = () => {
       setLoadingFriendEmail(friendEmail);
 
       // ลบเพื่อนผ่าน REST API
-      await api.delete(
-        `/api/users/${userEmail}/friends/${friendEmail}`
-      );
+      await api.delete(`/api/users/${userEmail}/friends/${friendEmail}`);
       try {
         await api.delete(
           `${
@@ -613,16 +598,15 @@ const Friend = () => {
   }, []);
 
   const filteredUsers = users.filter(
-    (user) =>
-      user.displayName.toLowerCase().includes(searchTerm) &&
-      user.email !== userEmail
+    (u) =>
+      (u.displayName || "").toLowerCase().includes(searchTerm.toLowerCase()) &&
+      u.email !== userEmail &&
+      !friends.some((f) => f.email === u.email)
   );
 
   const fetchCurrentUser = async () => {
     try {
-      const res = await api.get(
-        `/api/users/${userEmail}`
-      );
+      const res = await api.get(`/api/users/${userEmail}`);
       const userData = {
         ...res.data,
         following: Array.isArray(res.data.following) ? res.data.following : [],
@@ -637,9 +621,7 @@ const Friend = () => {
   };
   const fetchGmailUser = async () => {
     try {
-      const res = await api.get(
-        `/api/users/${userEmail}`
-      );
+      const res = await api.get(`/api/users/${userEmail}`);
       setCurrentUserfollow(res.data);
     } catch (err) {
       setError("โหลด Gmail currentUser ไม่ได้");
@@ -725,9 +707,7 @@ const Friend = () => {
 
   const fetchFollowInfo = async (targetEmail) => {
     try {
-      const res = await api.get(
-        `/api/user/${targetEmail}/follow-info`
-      );
+      const res = await api.get(`/api/user/${targetEmail}/follow-info`);
       setFollowers(res.data.followers);
       setFollowing(res.data.following);
     } catch (error) {
@@ -735,13 +715,10 @@ const Friend = () => {
     }
   };
 
-
   useEffect(() => {
     const getNickNameF = async () => {
       try {
-        const res = await api.get(
-          `/api/infos`
-        );
+        const res = await api.get(`/api/infos`);
         getNickName(res.data);
       } catch (err) {
         setError("โหลด nickname ล้มเหลว");
@@ -749,7 +726,6 @@ const Friend = () => {
     };
     getNickNameF();
   }, []);
-
 
   // ฟังก์ชันสำหรับแปลงเวลา lastSeen
   const formatLastSeen = (lastSeen) => {
@@ -832,8 +808,11 @@ const Friend = () => {
                           />
                           <div className="friend-detail-friend">
                             <span className="friend-name-friend">
-                              {Array.isArray(getnickName) && getnickName.find((n) => n.email === friend.email)
-                                ?.nickname || friend.displayName}
+                              {(Array.isArray(getnickName) &&
+                                getnickName.find(
+                                  (n) => n.email === friend.email
+                                )?.nickname) ||
+                                friend.displayName}
                             </span>
                             <span className="friend-email">{friend.email}</span>
                           </div>
