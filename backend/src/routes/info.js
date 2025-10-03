@@ -1,10 +1,10 @@
 import express from "express";
 import { Info } from "../model/info.js";
 import { requireOwner } from "../middleware/required.js";
-const router = express.Router();
+const app = express.Router();
 
 // routes/api.js หรือไฟล์หลักของ backend
-router.post("/join-community", requireOwner, async (req, res) => {
+app.post("/join-community", requireOwner, async (req, res) => {
   const { userEmail, roomId, roomName } = req.body;
   console.log(userEmail, roomId, roomName);
   if (!userEmail || !roomId || !roomName) {
@@ -31,7 +31,7 @@ router.post("/join-community", requireOwner, async (req, res) => {
 });
 
 //////////ดึงห้องที่ผู้ใช้เชื่อมต่อ/////////////////
-router.get("/user-rooms/:email", requireOwner, async (req, res) => {
+app.get("/user-rooms/:email", requireOwner, async (req, res) => {
   const encodedEmail = req.params.email.toLowerCase();
   console.log("Getting rooms for:", encodedEmail);
 
@@ -59,7 +59,7 @@ router.get("/user-rooms/:email", requireOwner, async (req, res) => {
 
 // ดึงข้อมูลผู้ใช้ทั้งหมด (nicknames)
 // ใช้สำหรับแสดงรายชื่อผู้ใช้ในหน้าเพื่อน
-router.get("/infos", async (req, res) => {
+app.get("/infos", async (req, res) => {
   try {
     const users = await Info.find();
     res.json(users);
@@ -68,7 +68,7 @@ router.get("/infos", async (req, res) => {
   }
 });
 // Get user by email (query)
-router.get("/infos/:email", requireOwner, async (req, res) => {
+app.get("/infos/:email", requireOwner, async (req, res) => {
   try {
     if (!req.params.email) {
       return res.status(400).json({ message: "Missing email parameter" });
@@ -84,7 +84,7 @@ router.get("/infos/:email", requireOwner, async (req, res) => {
   }
 });
 // POST /api/save-user-info
-router.post("/save-user-info", requireOwner, async (req, res) => {
+app.post("/save-user-info", requireOwner, async (req, res) => {
   const { email, userInfo } = req.body;
   try {
     const updatedUser = await Info.findOneAndUpdate(
@@ -99,7 +99,7 @@ router.post("/save-user-info", requireOwner, async (req, res) => {
   }
 });
 // GET /api/user-info/:email
-router.get("/user-info/:email", requireOwner, async (req, res) => {
+app.get("/user-info/:email", requireOwner, async (req, res) => {
   const { email } = req.params;
   try {
     if (!email) {
@@ -113,23 +113,8 @@ router.get("/user-info/:email", requireOwner, async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
-// ดึงข้อมูลผู้ใช้ทุกคน ยกเว้นอีเมลที่รับมาจาก params
-router.get("/user-info-except/:email", requireOwner, async (req, res) => {
-  const { email } = req.params;
-  try {
-    const users = await Info.find({ email: { $ne: email } });
-    res
-      .status(200)
-      .json({
-        users: users.map((user) => ({ email: user.email, ...user.userInfo })),
-      });
-  } catch (error) {
-    console.error("❌ Error fetching users:", error);
-    res.status(500).json({ message: "Server error" });
-  }
-});
 // Change Nickname
-router.post("/save-user-name", requireOwner, async (req, res) => {
+app.post("/save-user-name", requireOwner, async (req, res) => {
   const { userEmail, nickName } = req.body;
   try {
     const infoUpdate = await Info.findOneAndUpdate(
@@ -158,4 +143,4 @@ router.post("/save-user-name", requireOwner, async (req, res) => {
 });
 
 // Export the router
-export default router;
+export default app;

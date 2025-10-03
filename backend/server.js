@@ -21,6 +21,7 @@ import axios from "axios";
 import friendRequestRoutes from "./src/routes/friendRequest.js";
 import friendApiRoutes from "./src/routes/friendApi.js";
 import userPhotoRoutes from "./src/routes/userPhoto.js";
+import MakeRoutes from "./src/routes/make.js";
 import infoMatchRoutes from "./src/routes/infomatch.js"; // Import info match routes
 import helmet from "helmet";
 import rateLimit from 'express-rate-limit';
@@ -399,20 +400,23 @@ app.get('/api/debug/routes', (req, res) => {
 });
 
 // ใช้งาน routes ที่แยกไว้
+
+app.use("/api", MakeRoutes(io));
 // ใช้ authMiddleware กับทุก request ที่เข้ามาที่ /api
 app.use("/api", authMiddleware);
 
 // Register friendRequestRoutes with high priority to prevent 404 issues.
+app.use("/api", infoMatchRoutes);
+app.use("/api", eventRoutes);
 app.use("/api", friendRequestRoutes);
-
 app.use("/api", userRoutes);
 app.use("/api", friendRoutes);
 app.use("/api", roomRoutes);
-app.use("/api", eventRoutes(io));
 app.use("/api", infoRoutes);
 app.use("/api", roommatchRoutes);
 app.use("/api", likeRoutes);
-app.use("/api", infoMatchRoutes(io));
+app.use("/api", friendApiRoutes);
+app.use("/api", userPhotoRoutes);
 
 
 // Log API requests for debugging
@@ -420,51 +424,6 @@ app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
   next();
 });
-
-app.use("/api", friendApiRoutes);
-app.use("/api", userPhotoRoutes);
-
-// Test secure endpoint
-app.get("/api/secure/me", (req, res) => {
-  res.json({
-    success: true,
-    message: "Token valid",
-    user: req.user
-  });
-});
-
-// Endpoint เฉพาะสำหรับ BU students (@bumail.net)
-app.get("/api/secure/bu-student", (req, res) => {
-  if (!req.user.email.endsWith('@bumail.net')) {
-    return res.status(403).json({
-      success: false,
-      message: 'Access restricted to @bumail.net email addresses only'
-    });
-  }
-
-  res.json({
-    success: true,
-    message: 'Welcome BU student!',
-    user: req.user,
-    studentInfo: {
-      email: req.user.email,
-      domain: '@bumail.net',
-      verified: true
-    }
-  });
-});
-
-// Fallback route to check if API is working
-app.get("/api-status", (req, res) => {
-  res.json({
-    status: "API is running",
-    routes: {
-      userPhoto: "/api/test-photo-route",
-      uploadPhoto: "/api/upload-user-photo"
-    }
-  });
-});
-
 
 // เริ่มต้นเซิร์ฟเวอร์
 server.listen(port, () =>

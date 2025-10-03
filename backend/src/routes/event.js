@@ -4,337 +4,217 @@ import { Filter } from "../model/filter.js";
 import { Gmail } from "../model/gmail.js";
 import { requireOwner } from "../middleware/required.js"
 
-export default function (io) {
-  const router = express.Router();
+const router = express.Router();
 
-  // Save event
+// Get filter by email
+router.get("/filters/:email", requireOwner, async (req, res) => {
+  try {
+    const filter = await Filter.findOne({ email: req.params.email });
+    res.json(filter || null);
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
+  }
+});
 
-  router.post("/save-event", async (req, res) => {
-    const { data, email, indicesToExclude: rawIndicesToExclude, subGenres, updatedAt } = req.body;
-    let indicesToExclude = [];
-    if (Array.isArray(rawIndicesToExclude) && rawIndicesToExclude.length === 0) {
-      indicesToExclude = [];
+// Route for complex search (e.g., for make.com)
+router.post("/events/genre", requireOwner, async (req, res) => {
+  try {
+    const { subgenres, userEmail } = req.body;
+    const filter = {};
+
+    // Exclude events from the provided userEmail
+    if (userEmail) {
+      filter.email = { $ne: userEmail };
     }
-    if (typeof rawIndicesToExclude === 'string') {
-      indicesToExclude = rawIndicesToExclude
-        .split(',')
-        .map(s => s.trim())
-        .filter(s => s !== '')
-        .map(Number); // Convert to number
-    } else if (Array.isArray(rawIndicesToExclude)) {
-      indicesToExclude = rawIndicesToExclude
-        .map(s => String(s).trim()) // Ensure it's a string before trimming
-        .filter(s => s !== '')
-        .map(Number); // Convert to number
-    }
 
-    // Filter out NaN values and get unique numbers
-    indicesToExclude = [...new Set(indicesToExclude.filter(n => !isNaN(n)))];
-
-    try {
-      // ตรวจสอบ email
-      if (!email) {
-        return res.status(400).json({ message: "Email is required" });
-      }
-
-      // ตรวจสอบ updatedAt
-      if (!updatedAt || String(updatedAt).trim() === "") {
-        return res.status(400).json({ message: "updatedAt is required" });
-      }
-
-      // ตรวจสอบ subGenres ว่ามีข้อมูลหรือไม่
-      if (!subGenres || Object.keys(subGenres).length === 0) {
-        return res.status(400).json({ message: "subGenres is required" });
-      }
-
-      // ตรวจสอบว่า data เป็น array ที่มีข้อมูลหรือไม่
-      if (!Array.isArray(data) || data.length === 0) {
-        return res
-          .status(400)
-          .json({ message: "Data must be a non-empty array" });
-      }
-
-      const newEvents = [];
-      for (let i = 0; i < data.length; i++) {
-        const item = data[i];
-
-        // ตรวจสอบว่า index นี้ควรถูกยกเว้นหรือไม่
-        if (indicesToExclude.includes(i)) {
-          continue; // ข้ามรายการนี้ไป
-        }
-
-        const { title, link, snippet, pagemap } = item;
-
-        // ข้ามถ้าไม่มีข้อมูลสำคัญ
-        if (!title || !link) {
-          continue;
-        }
-
-        // ตรวจสอบว่ามีข้อมูลซ้ำหรือไม่
-        const existingEvent = await Event.findOne({ title, link, email });
-        if (existingEvent) {
-          continue; // ข้ามไปรายการถัดไปถ้ามี event นี้อยู่แล้ว
-        }
-
-        // ดึง URL รูปภาพออกมาอย่างปลอดภัย
-        const image =
-          pagemap?.cse_thumbnail?.[0]?.src || pagemap?.cse_image?.[0]?.src || null;
-
-        // สร้าง event ใหม่
-        const newEvent = new Event({
-          title,
-          description: snippet, // แมพ snippet ไปที่ description
-          link,
-          genre: subGenres,
-          updatedAt,
-          image,
-          createdByAI: true,
-          email,
-        });
-
-        await newEvent.save();
-        newEvents.push(newEvent);
-      }
-
-      // แจ้งเตือนผ่าน socket ถ้ามีการสร้าง event ใหม่อย่างน้อยหนึ่งรายการ
-      if (newEvents.length > 0) {
-        io.emit("events_updated");
-      }
-
-      res.status(201).json({
-        message: `Successfully saved ${newEvents.length} new events.`,
-        events: newEvents,
-      });
-    } catch (error) {
-      console.error("Error saving event:", error);
-
-      // จัดการ validation errors ของ Mongoose
-      if (error.name === "ValidationError") {
-        return res.status(400).json({
-          message: "Validation error",
-          details: error.message,
-        });
-      }
-
-      res.status(500).json({
-        message: "Failed to save event",
-        error:
-          process.env.NODE_ENV === "development" ? error.message : undefined,
+    // Validate subgenres structure - it should be an object
+    if (
+      !subgenres ||
+      typeof subgenres !== "object" ||
+      Array.isArray(subgenres) ||
+      subgenres === null
+    ) {
+      return res.status(400).json({
+        message:
+          "A 'subgenres' object with category filters is required in the request body.",
       });
     }
-  });
 
-  // Get filter by email
-  router.get("/filters/:email", requireOwner, async (req, res) => {
-    try {
-      const filter = await Filter.findOne({ email: req.params.email });
-      res.json(filter || null);
-    } catch (error) {
-      res.status(500).json({ message: "Server error" });
-    }
-  });
+    const subgenresObject = subgenres; // Use subgenres directly
+    const genreFilters = Object.entries(subgenresObject)
+      .map(([category, subgenreList]) => {
+        const trimmedCategory = category.trim();
+        if (!trimmedCategory) return null;
 
-  // Route for complex search (e.g., for make.com)
-  router.post("/events/genre", requireOwner, async (req, res) => {
-    try {
-      const { subgenres, userEmail } = req.body;
-      const filter = {};
-
-      // Exclude events from the provided userEmail
-      if (userEmail) {
-        filter.email = { $ne: userEmail };
-      }
-
-      // Validate subgenres structure - it should be an object
-      if (
-        !subgenres ||
-        typeof subgenres !== "object" ||
-        Array.isArray(subgenres) ||
-        subgenres === null
-      ) {
-        return res.status(400).json({
-          message:
-            "A 'subgenres' object with category filters is required in the request body.",
-        });
-      }
-
-      const subgenresObject = subgenres; // Use subgenres directly
-      const genreFilters = Object.entries(subgenresObject)
-        .map(([category, subgenreList]) => {
-          const trimmedCategory = category.trim();
-          if (!trimmedCategory) return null;
-
-          // If subgenres are provided, filter by them
-          if (Array.isArray(subgenreList) && subgenreList.length > 0) {
-            const cleanSubgenres = subgenreList
-              .map((s) => String(s).trim())
-              .filter((s) => s.length > 0);
-            if (cleanSubgenres.length > 0) {
-              return { [`genre.${trimmedCategory}`]: { $in: cleanSubgenres } };
-            }
+        // If subgenres are provided, filter by them
+        if (Array.isArray(subgenreList) && subgenreList.length > 0) {
+          const cleanSubgenres = subgenreList
+            .map((s) => String(s).trim())
+            .filter((s) => s.length > 0);
+          if (cleanSubgenres.length > 0) {
+            return { [`genre.${trimmedCategory}`]: { $in: cleanSubgenres } };
           }
-
-          // Otherwise, match any event with the category
-          return { [`genre.${trimmedCategory}`]: { $exists: true } };
-        })
-        .filter((f) => f !== null);
-
-      if (genreFilters.length > 0) {
-        if (genreFilters.length === 1) {
-          Object.assign(filter, genreFilters[0]);
-        } else {
-          filter.$or = genreFilters;
         }
+
+        // Otherwise, match any event with the category
+        return { [`genre.${trimmedCategory}`]: { $exists: true } };
+      })
+      .filter((f) => f !== null);
+
+    if (genreFilters.length > 0) {
+      if (genreFilters.length === 1) {
+        Object.assign(filter, genreFilters[0]);
       } else {
-        // If subgenresObject is empty (e.g., subgenres: {}), return no events
-        return res.json([]);
+        filter.$or = genreFilters;
       }
-
-      const events = await Event.find(filter).sort({ date: 1 });
-
-      // หา events ที่มี title หรือ link ซ้ำกับที่มีอยู่แล้ว
-      const duplicateCheck = await Event.find({
-        $and: [
-          { _id: { $nin: events.map((e) => e._id) } }, // ไม่ใช่ตัวมันเอง
-          {
-            $or: [
-              { title: { $in: events.map((e) => e.title) } },
-              { link: { $in: events.map((e) => e.link) } },
-            ],
-          },
-        ],
-      });
-
-      // กรองเอาเฉพาะที่ไม่ซ้ำ
-      const duplicateTitles = new Set(duplicateCheck.map((e) => e.title));
-      const duplicateLinks = new Set(duplicateCheck.map((e) => e.link));
-
-      const uniqueEvents = events.filter(
-        (event) =>
-          !duplicateTitles.has(event.title) && !duplicateLinks.has(event.link)
-      );
-
-      if (uniqueEvents.length === 0) {
-        return res.status(200).json([]);
-      }
-
-      res.status(200).json({
-        message: "Unique events found",
-        events: uniqueEvents,
-        count: uniqueEvents.length,
-      });
-    } catch (error) {
-      console.error("Error searching events:", error);
-      res.status(500).json({ message: "Server error", error: error.message });
+    } else {
+      // If subgenresObject is empty (e.g., subgenres: {}), return no events
+      return res.json([]);
     }
-  });
 
-  // Get events with optional simple filtering
-  router.get("/events/:email", requireOwner, async (req, res) => {
-    const email = req.params;
-    try {
-      if (!email) {
-        return res.status(400).json({ message: "Email is required" });
-      }
+    const events = await Event.find(filter).sort({ date: 1 });
 
-      const events = await Event.find(email).sort({ date: 1 });
+    // หา events ที่มี title หรือ link ซ้ำกับที่มีอยู่แล้ว
+    const duplicateCheck = await Event.find({
+      $and: [
+        { _id: { $nin: events.map((e) => e._id) } }, // ไม่ใช่ตัวมันเอง
+        {
+          $or: [
+            { title: { $in: events.map((e) => e.title) } },
+            { link: { $in: events.map((e) => e.link) } },
+          ],
+        },
+      ],
+    });
 
-      if (!events || events.length === 0) {
-        return res.status(200).json({ message: "No events found" });
-      }
-      if (events.length > 0) {
+    // กรองเอาเฉพาะที่ไม่ซ้ำ
+    const duplicateTitles = new Set(duplicateCheck.map((e) => e.title));
+    const duplicateLinks = new Set(duplicateCheck.map((e) => e.link));
 
-        return res.status(200).json(events);
-      }
-      io.emit("events_updated");
-    } catch (error) {
-      console.error("Error fetching events:", error);
-      res.status(500).json({ message: "Server error", error: error.message });
+    const uniqueEvents = events.filter(
+      (event) =>
+        !duplicateTitles.has(event.title) && !duplicateLinks.has(event.link)
+    );
+
+    if (uniqueEvents.length === 0) {
+      return res.status(200).json([]);
     }
-  });
 
-  //// Get All Events
-  router.get("/events", async (req, res) => {
-    try {
-      const events = await Event.find().sort({ date: 1 });
-      if (!events || events.length === 0) {
-        return res.status(200).json({ message: "No events found" });
-      }
-      if (events.length > 0) {
-        return res.status(200).json(events);
-      }
-    } catch (error) {
-      console.error("Error fetching events:", error);
+    res.status(200).json({
+      message: "Unique events found",
+      events: uniqueEvents,
+      count: uniqueEvents.length,
+    });
+  } catch (error) {
+    console.error("Error searching events:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+});
+
+// Get events with optional simple filtering
+router.get("/events/:email", requireOwner, async (req, res) => {
+  const email = req.params;
+  try {
+    if (!email) {
+      return res.status(400).json({ message: "Email is required" });
     }
-  });
 
-  // Delete event by id
-  router.delete("/events/:id", async (req, res) => {
-    const { id } = req.params;
-    try {
-      const deleted = await Event.findByIdAndDelete(id);
-      if (!deleted) {
-        return res.status(404).json({ message: "Event not found" });
-      }
-      io.emit("events_updated");
-      res.json({ message: "Event deleted", deleted });
-    } catch (err) {
-      console.error(`Delete failed for event ID: ${id}`, err);
-      res.status(500).json({ message: "Delete failed" });
+    const events = await Event.find(email).sort({ date: 1 });
+
+    if (!events || events.length === 0) {
+      return res.status(200).json({ message: "No events found" });
     }
-  });
+    if (events.length > 0) {
 
-  // Delete all events by user
-  router.delete("/events/user/:email", requireOwner, async (req, res) => {
-    const { email } = req.params;
-    try {
-      if (!email) {
-        return res.status(400).json({ message: "Email is required" });
-      }
-      const deleted = await Event.deleteMany({ email: email });
-      if (deleted.deletedCount === 0) {
-        return res.status(404).json({ message: "Events not found" });
-      }
-      io.emit("events_updated");
-      res.status(200).json({ message: "ลบกิจกรรมทั้งหมดเรียบร้อยแล้ว" });
-    } catch (error) {
-      res.status(500).json({ error: "เกิดข้อผิดพลาดในการลบกิจกรรม" });
+      return res.status(200).json(events);
     }
-  });
+    io.emit("events_updated");
+  } catch (error) {
+    console.error("Error fetching events:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+});
 
-  // Friend match
-  router.get("/matches/:email", requireOwner, async (req, res) => {
-    const { email } = req.params;
-    try {
-      if (!email) {
-        return res.status(400).json({ message: "Email is required" });
-      }
-      const user = await Filter.findOne({ email });
-      if (!user) return res.status(404).json({ message: "User not found" });
-      const matches = await Filter.find({
-        email: { $ne: email },
-        genres: { $in: user.genres },
-      });
-      const matchEmails = matches.map((m) => m.email);
-      const gmailUsers = await Gmail.find({ email: { $in: matchEmails } });
-      const combinedMatches = matches.map((match) => {
-        const gmailUser = gmailUsers.find((g) => g.email === match.email);
-        return {
-          ...match.toObject(),
-          displayName: gmailUser?.displayName || "",
-          photoURL: gmailUser?.photoURL || "",
-        };
-      });
-      // Ensure results are unique by email
-      const uniqueMatches = Array.from(
-        new Map(combinedMatches.map((item) => [item.email, item])).values()
-      );
-
-      res.json(uniqueMatches);
-    } catch (error) {
-      res.status(500).json({ message: "Server error" });
+//// Get All Events
+router.get("/events", async (req, res) => {
+  try {
+    const events = await Event.find().sort({ date: 1 });
+    if (!events || events.length === 0) {
+      return res.status(200).json({ message: "No events found" });
     }
-  });
+    if (events.length > 0) {
+      return res.status(200).json(events);
+    }
+  } catch (error) {
+    console.error("Error fetching events:", error);
+  }
+});
 
-  return router;
-}
+// Delete event by id
+router.delete("/events/:id", async (req, res) => {
+  const { id } = req.params;
+  try {
+    const deleted = await Event.findByIdAndDelete(id);
+    if (!deleted) {
+      return res.status(404).json({ message: "Event not found" });
+    }
+    io.emit("events_updated");
+    res.json({ message: "Event deleted", deleted });
+  } catch (err) {
+    console.error(`Delete failed for event ID: ${id}`, err);
+    res.status(500).json({ message: "Delete failed" });
+  }
+});
+
+// Delete all events by user
+router.delete("/events/user/:email", requireOwner, async (req, res) => {
+  const { email } = req.params;
+  try {
+    if (!email) {
+      return res.status(400).json({ message: "Email is required" });
+    }
+    const deleted = await Event.deleteMany({ email: email });
+    if (deleted.deletedCount === 0) {
+      return res.status(404).json({ message: "Events not found" });
+    }
+    io.emit("events_updated");
+    res.status(200).json({ message: "ลบกิจกรรมทั้งหมดเรียบร้อยแล้ว" });
+  } catch (error) {
+    res.status(500).json({ error: "เกิดข้อผิดพลาดในการลบกิจกรรม" });
+  }
+});
+
+// Friend match
+router.get("/matches/:email", requireOwner, async (req, res) => {
+  const { email } = req.params;
+  try {
+    if (!email) {
+      return res.status(400).json({ message: "Email is required" });
+    }
+    const user = await Filter.findOne({ email });
+    if (!user) return res.status(404).json({ message: "User not found" });
+    const matches = await Filter.find({
+      email: { $ne: email },
+      genres: { $in: user.genres },
+    });
+    const matchEmails = matches.map((m) => m.email);
+    const gmailUsers = await Gmail.find({ email: { $in: matchEmails } });
+    const combinedMatches = matches.map((match) => {
+      const gmailUser = gmailUsers.find((g) => g.email === match.email);
+      return {
+        ...match.toObject(),
+        displayName: gmailUser?.displayName || "",
+        photoURL: gmailUser?.photoURL || "",
+      };
+    });
+    // Ensure results are unique by email
+    const uniqueMatches = Array.from(
+      new Map(combinedMatches.map((item) => [item.email, item])).values()
+    );
+
+    res.json(uniqueMatches);
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
+  }
+});
+export default router;

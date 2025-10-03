@@ -78,7 +78,6 @@ const EventList = ({ setWaiting, waiting }) => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     // console.log("pendingFavorites", pendingFavorites)
     if (pendingFavorites.length > 0) {
-      console.log("pendingFavoritesRelay", pendingFavorites)
       debounceRef.current = setTimeout(() => {
         sendPendingFavoritesToWebhook(pendingFavorites);
         setPendingFavorites([]);
@@ -152,7 +151,6 @@ const EventList = ({ setWaiting, waiting }) => {
   // Handler functions now call the mutations
   const handleLike = (eventId, title) => {
     likeMutation.mutate({ userEmail: email, eventId, eventTitle: title });
-    setPendingFavorites((prev) => [...prev, { eventTitle: title }]);
   };
 
   const handleUnlike = (eventId) => {
