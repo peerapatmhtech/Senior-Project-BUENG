@@ -18,6 +18,7 @@ const NotificationContext = createContext();
 export const NotificationProvider = ({ children }) => {
   const [notifications, setNotifications] = useState([]);
   const [newFriendRequest, setNewFriendRequest] = useState(null);
+  const [friends, setFriends] = useState([]);
   const [showNotificationDropdown, setShowNotificationDropdown] =
     useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -417,56 +418,30 @@ export const NotificationProvider = ({ children }) => {
               });
             }
 
+            // Add new friend to UI
+            const newFriend = notification.from;
+            if (newFriend) {
+              const isOnline = onlineUsers[newFriend.email]?.online || false;
+              setFriends((prev) => {
+                if (prev.find((friend) => friend.email === newFriend.email)) {
+                  return prev;
+                }
+                return [
+                  ...prev,
+                  {
+                    photoURL: newFriend.photoURL,
+                    email: newFriend.email,
+                    displayName: newFriend.displayName,
+                    isOnline: isOnline,
+                  },
+                ].sort((a, b) => a.displayName.localeCompare(b.displayName));
+              });
+            }
+
             // Fetch ข้อมูลใหม่เพื่อให้แน่ใจว่า sync กับ database
             setTimeout(() => fetchNotifications(), 1000);
 
             return true;
-          }
-
-          const addedUser = users.find(
-            (user) => user.email === notification.from.email
-          );
-
-          // เพิ่มเพื่อนใหม่ในรายการ UI
-          if (addedUser) {
-            setFriends((prev) =>
-              [
-                ...prev,
-                {
-                  photoURL: addedUser.photoURL,
-                  email: addedUser.email,
-                  displayName: addedUser.displayName,
-                  isOnline: addedUser.isOnline || false,
-                },
-              ].sort((a, b) => a.displayName.localeCompare(b.displayName))
-            );
-          }
-          // ต้องดึงข้อมูลจาก API เพื่อดูว่าใครยอมรับคำขอเพื่อนเรา
-          const response = await api.get(
-            `/api/friend-accepts/${userEmail}`
-          );
-
-          if (response.data && response.data.latestAccept) {
-            const acceptInfo = response.data.latestAccept;
-
-            // แสดง toast notification
-            toast.success(
-              <div className="friend-request-toast">
-                <img
-                  src={acceptInfo.photoURL}
-                  alt={acceptInfo.displayName}
-                  className="toast-profile-img"
-                />
-                <div className="toast-content">
-                  <strong>{acceptInfo.displayName}</strong>{" "}
-                  ได้ตอบรับคำขอเป็นเพื่อนของคุณแล้ว
-                </div>
-              </div>,
-              {
-                autoClose: 5000,
-                position: "bottom-right",
-              }
-            );
           }
         } catch (error) {
           console.error("❌ Error accepting friend request:", error);
@@ -628,6 +603,8 @@ export const NotificationProvider = ({ children }) => {
         onlineUsers,
         isConnected,
         handleFriendRequestResponse,
+        friends,
+        setFriends,
         setNewFriendRequest,
         fetchNotifications,
         noti: notifications,

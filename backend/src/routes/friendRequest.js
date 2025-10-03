@@ -168,65 +168,70 @@ router.post('/friend-request-response', requireOwner, async (req, res) => {
     friendRequest.read = true;
     await friendRequest.save();
 
+    // ถ้าตอบรับ ให้เพิ่มเป็นเพื่อนในฐานข้อมูล
     if (response === 'accept') {
-      // Find user data from the main User collection to ensure they exist
-      const userDataFromMainDB = await User.findOne({ email: userEmail });
-      const friendDataFromMainDB = await User.findOne({ email: friendEmail });
+      // ดึงข้อมูลผู้ใช้ทั้งสองคน
+      const user = await Friend.findOne({ email: userEmail });
+      const friend = await Friend.findOne({ email: friendEmail });
+      if (!user) {
 
-      if (!userDataFromMainDB || !friendDataFromMainDB) {
-        return res.status(404).json({ success: false, message: 'ไม่พบข้อมูลผู้ใช้ในระบบหลัก' });
+        await Friend.addFriend(userEmail, friendEmail, roomId);
+
+      }
+      if (!friend) {
+        await Friend.addFriend(friendEmail, userEmail, roomId);
+
       }
 
-      const finalRoomId = roomId || friendRequest.roomId;
 
-      // Upsert for the user who accepted the request
-      await Friend.findOneAndUpdate(
-        { email: userEmail },
-        {
-          $addToSet: { friends: { email: friendEmail, roomId: finalRoomId } },
-          $setOnInsert: { 
-            email: userEmail,
-            following: [],
-            followers: []
-          }
-        },
-        { upsert: true, new: true }
-      );
+      // เพิ่มเพื่อนให้กับทั้งสองฝ่าย
+      // ตรวจสอบว่ามีอาร์เรย์เพื่อนหรือไม่ ถ้าไม่มีให้สร้างใหม่
+      if (!user.friends) user.friends = [];
+      if (!friend.friends) friend.friends = [];
 
-      // Upsert for the user who sent the request
-      await Friend.findOneAndUpdate(
-        { email: friendEmail },
-        {
-          $addToSet: { friends: { email: userEmail, roomId: finalRoomId } },
-          $setOnInsert: { 
-            email: friendEmail,
-            following: [],
-            followers: []
-          }
-        },
-        { upsert: true, new: true }
-      );
+      // ตรวจสอบว่าเป็นเพื่อนกันอยู่แล้วหรือไม่
+      const userAlreadyFriend = user.friends.some(f => f.email === friendEmail);
+      const friendAlreadyFriend = friend.friends.some(f => f.email === userEmail);
 
-      // Send notification via socket server
+      // เพิ่มเพื่อนให้กับผู้ใช้ถ้ายังไม่เป็นเพื่อนกัน
+      if (!userAlreadyFriend) {
+        user.friends.push({
+          email: friendEmail,
+          roomId: roomId || friendRequest.roomId
+        });
+      }
+
+      // เพิ่มเพื่อนให้กับเพื่อนถ้ายังไม่เป็นเพื่อนกัน
+      if (!friendAlreadyFriend) {
+        friend.friends.push({
+          email: userEmail,
+          roomId: roomId || friendRequest.roomId
+        });
+      }
+
+      // บันทึกข้อมูลลงฐานข้อมูล
+      await user.save();
+      await friend.save();
+
+      // ส่งการแจ้งเตือนผ่าน socket server
       if (req.app.get('io')) {
         const io = req.app.get('io');
         const userSockets = req.app.get('userSockets') || {};
         const recipientSocket = userSockets[friendEmail];
 
         if (recipientSocket) {
-          io.to(recipientSocket).emit('notify-friend-accept', { 
-            from: {
-              email: userDataFromMainDB.email,
-              displayName: userDataFromMainDB.displayName,
-              photoURL: userDataFromMainDB.photoURL
-            }
-          });
+          io.to(recipientSocket).emit('notify-friend-accept', { from: userEmail });
         }
       }
 
       res.status(200).json({
         success: true,
         message: 'ตอบรับคำขอเพื่อนสำเร็จ',
+        user: {
+          email: user.email,
+          displayName: user.displayName,
+          photoURL: user.photoURL
+        }
       });
     } else {
       res.status(200).json({ success: true, message: 'ปฏิเสธคำขอเพื่อนสำเร็จ' });
@@ -239,7 +244,7 @@ router.post('/friend-request-response', requireOwner, async (req, res) => {
 });
 
 // API สำหรับดึงข้อมูลการยอมรับคำขอเพื่อนล่าสุด (สำหรับแสดง Toast)
-router.get('/friend-accepts/:userEmail',requireOwner, async (req, res) => {
+router.get('/friend-accepts/:userEmail', requireOwner, async (req, res) => {
   try {
     const { userEmail } = req.params;
 

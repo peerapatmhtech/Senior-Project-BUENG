@@ -23,7 +23,7 @@ import HeaderProfile from "../ui/HeaderProfile";
 
 const Friend = () => {
   // const { socket, onlineUsers } = useSocket(); // ใช้ socket และ onlineUsers จาก context
-  const { socket, noti } = useNotifications();
+  const { socket, noti, friends, setFriends } = useNotifications();
   // รับ roomId จาก URL ถ้ามี เช่น /friend/:roomId
   const { roomId } = useParams();
 
@@ -35,7 +35,7 @@ const Friend = () => {
   const [users, setUsers] = useState([]);
   const [currentUser, setCurrentUser] = useState([]);
   const [currentUserfollow, setCurrentUserfollow] = useState(null);
-  const [friends, setFriends] = useState([]);
+
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedUser, setSelectedUser] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -567,28 +567,7 @@ const Friend = () => {
       handleCloseModal();
     }
   };
-  useEffect(() => {
-    if (!noti) return;
-    try {
-      const friendEmail = noti.from.email;
-      const addedUser = users.find((user) => user.email === friendEmail);
 
-      // เพิ่มเพื่อนใหม่ในรายการ UI
-      if (addedUser) {
-        setFriends((prev) =>
-          [
-            ...prev,
-            {
-              photoURL: addedUser.photoURL,
-              email: addedUser.email,
-              displayName: addedUser.displayName,
-              isOnline: addedUser.isOnline || false,
-            },
-          ].sort((a, b) => a.displayName.localeCompare(b.displayName))
-        );
-      }
-    } catch (err) {}
-  }, [noti]);
 
   useEffect(() => {
     document.addEventListener("mousedown", handleClickOutside);
@@ -751,7 +730,7 @@ const Friend = () => {
       <div className={`fr-container ${isDarkMode ? "dark-mode" : ""}`}>
         <ToastContainer position="top-right" autoClose={3000} hideProgressBar />
         <header className="header-home">
-          <HeaderProfile userPhoto={photoURL} />
+          <HeaderProfile userPhoto={photoURL} setFriends={setFriends} />
         </header>
         {error && <div className="error-message">{error}</div>}
 

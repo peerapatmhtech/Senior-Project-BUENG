@@ -1,10 +1,9 @@
 import express from "express";
 import Friend from "../model/Friend.js";
-import { requireOwner } from "../middleware/required.js";
-const router = express.Router();
+const app = express.Router();
 
 // เพิ่มเพื่อน
-router.post("/add-friend", async (req, res) => {
+app.post("/add-friend", async (req, res) => {
     const { userEmail, friendEmail, roomId } = req.body;
     if (!userEmail || !friendEmail || !roomId) {
         return res.status(400).json({ error: "Both userEmail and friendEmail are required." });
@@ -22,7 +21,7 @@ router.post("/add-friend", async (req, res) => {
 });
 
 // ดึงข้อมูลเพื่อน
-router.get("/friends/:email", async (req, res) => {
+app.get("/friends/:email", async (req, res) => {
     const { email } = req.params;
     try {
         if (!email) {
@@ -38,7 +37,7 @@ router.get("/friends/:email", async (req, res) => {
 });
 
 // ดึงข้อมูลเพื่อนทั้งหมด
-router.get("/friends", async (req, res) => {
+app.get("/friends", async (req, res) => {
     try {
         const friends = await Friend.find();
         res.json(friends);
@@ -49,7 +48,7 @@ router.get("/friends", async (req, res) => {
 });
 
 // ลบเพื่อนออกจาก list ของ user
-router.delete("/users/:userEmail/friends/:friendEmail", async (req, res) => {
+app.delete("/users/:userEmail/friends/:friendEmail", async (req, res) => {
     const { userEmail, friendEmail } = req.params;
     try {
         const user = await Friend.findOne({ email: userEmail });
@@ -65,7 +64,7 @@ router.delete("/users/:userEmail/friends/:friendEmail", async (req, res) => {
 });
 
 // Follow Friend
-router.post("/users/:userEmail/follow/:targetEmail", async (req, res) => {
+app.post("/users/:userEmail/follow/:targetEmail", async (req, res) => {
     const { userEmail, targetEmail } = req.params;
     if (userEmail === targetEmail)
         return res.status(400).json({ message: "Cannot follow yourself" });
@@ -90,7 +89,7 @@ router.post("/users/:userEmail/follow/:targetEmail", async (req, res) => {
 });
 
 // Unfollow Friend
-router.delete("/users/:userEmail/unfollow/:targetEmail", async (req, res) => {
+app.delete("/users/:userEmail/unfollow/:targetEmail", async (req, res) => {
     const { userEmail, targetEmail } = req.params;
     try {
         const user = await Friend.findOne({ email: userEmail });
@@ -109,7 +108,7 @@ router.delete("/users/:userEmail/unfollow/:targetEmail", async (req, res) => {
 });
 
 // Get follow info
-router.get("/user/:email/follow-info", async (req, res) => {
+app.get("/user/:email/follow-info", async (req, res) => {
     const userEmail = req.params.email;
     try {
         if (!userEmail) {
@@ -124,7 +123,7 @@ router.get("/user/:email/follow-info", async (req, res) => {
         res.status(500).json({ message: "Server error", error: err.message });
     }
 });
-// router.get("/users/:email", async (req, res) => {
+// app.get("/users/:email", async (req, res) => {
 //     const userEmail = req.params.email.toLowerCase();
 //     try {
 //         if (!userEmail) {
@@ -141,4 +140,4 @@ router.get("/user/:email/follow-info", async (req, res) => {
 //     }
 // });
 
-export default router;
+export default app;

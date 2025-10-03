@@ -17,6 +17,7 @@ const HeaderProfile = ({
     showNotificationDropdown,
     toggleNotificationDropdown,
     fetchNotifications,
+    setFriends,
     markNotificationAsRead,
     clearReadNotifications,
     socket,
@@ -190,11 +191,10 @@ const HeaderProfile = ({
                                 {notif.from?.displayName || "User"}
                               </p>
                               <span
-                                className={`notification-item-tag ${
-                                  isFriend && isFriend(notif.from?.email)
+                                className={`notification-item-tag ${isFriend && isFriend(notif.from?.email)
                                     ? "friend"
                                     : "request"
-                                }`}
+                                  }`}
                               >
                                 {isFriend && isFriend(notif.from?.email)
                                   ? "Friend"
@@ -286,9 +286,8 @@ const HeaderProfile = ({
       </div>
 
       <div
-        className={`list-profile ${profileModal ? "active" : ""} ${
-          isDarkMode ? "dark-mode" : ""
-        }`}
+        className={`list-profile ${profileModal ? "active" : ""} ${isDarkMode ? "dark-mode" : ""
+          }`}
       >
         <div className="list-profile-header">
           <img
