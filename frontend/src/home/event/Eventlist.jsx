@@ -151,6 +151,7 @@ const EventList = ({ setWaiting, waiting }) => {
   // Handler functions now call the mutations
   const handleLike = (eventId, title) => {
     likeMutation.mutate({ userEmail: email, eventId, eventTitle: title });
+    setPendingFavorites((prev) => [...prev, { eventId, eventTitle: title }]);
   };
 
   const handleUnlike = (eventId) => {

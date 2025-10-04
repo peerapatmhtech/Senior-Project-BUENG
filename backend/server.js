@@ -103,8 +103,6 @@ const broadcastUserStatus = () => {
 };
 
 io.on("connection", (socket) => {
-  console.log("🟢 New client connected", socket.id);
-
   socket.on("user-online", (user) => {
     console.log("🧑‍💻 User online", user);
     const { email, displayName, photoURL } = user;

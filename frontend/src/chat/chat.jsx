@@ -437,11 +437,11 @@ const Chat = () => {
     isLoadingAllRooms ||
     isLoadingAllEvents ||
     isLoadingInfos;
-
   // Derived state for friends list
+
   const processedFriends = useMemo(() => {
-    if (currentUser && Array.isArray(currentUser.friends) && users.length > 0) {
-      const friendEmails = currentUser.friends.map((f) => f.email);
+    if (currentUser && Array.isArray(currentUser) && users.length > 0) {
+      const friendEmails = currentUser.map((f) => f.email);
       return users
         .filter((user) => friendEmails.includes(user.email))
         .map((user) => ({
@@ -455,7 +455,6 @@ const Chat = () => {
     }
     return [];
   }, [currentUser, users]);
-
   useEffect(() => {
     if (processedFriends && processedFriends.length > 0) {
       setFriends(processedFriends);
@@ -680,7 +679,6 @@ const Chat = () => {
 
   const isOnline = (email) =>
     email && onlineUsers && onlineUsers[email]?.online;
-
   const formatOnlineStatus = (user) => {
     if (!user || !user.email) return "";
     if (isOnline(user.email)) return "ออนไลน์";
@@ -691,7 +689,6 @@ const Chat = () => {
     }
     return "ออฟไลน์";
   };
-
   const friendsWithOnlineStatus = friends.map((friend) => ({
     ...friend,
     isOnline: isOnline(friend?.email),

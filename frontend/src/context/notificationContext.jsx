@@ -528,6 +528,7 @@ export const NotificationProvider = ({ children }) => {
             };
           }
         });
+        console.log("Updated Online Users:", updatedUsers);
         setOnlineUsers(updatedUsers);
       } else if (data && Array.isArray(data.onlineUsers)) {
         setOnlineUsers((prev) => {

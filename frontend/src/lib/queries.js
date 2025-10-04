@@ -11,7 +11,7 @@ export const fetchUsers = async () => {
 export const fetchCurrentUser = async (userEmail) => {
   if (!userEmail) return null;
   const encodedEmail = encodeURIComponent(userEmail);
-  const { data } = await api.get(`/api/users/${encodedEmail}`);
+  const { data } = await api.get(`/api/friends/${encodedEmail}`);
   return data;
 };
 

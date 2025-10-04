@@ -93,11 +93,6 @@ const HeaderProfile = ({
   const handleLogout = async () => {
     if (user && user.email) {
       try {
-        await fetch(`/api/logout`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: user.email }),
-        });
         localStorage.removeItem("userName");
         localStorage.removeItem("userPhoto");
         logout();
