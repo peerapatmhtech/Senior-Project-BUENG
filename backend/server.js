@@ -26,7 +26,7 @@ import userPhotoRoutes from "./src/routes/userPhoto.js";
 import MakeRoutes from "./src/routes/make.js";
 import infoMatchRoutes from "./src/routes/infomatch.js"; // Import info match routes
 import helmet from "helmet";
-import rateLimit from 'express-rate-limit';
+import rateLimit from "express-rate-limit";
 import { authMiddleware } from "./src/middleware/authMiddleware.js";
 
 /////////Midleware for owner and admin/////////
@@ -53,10 +53,23 @@ const port = process.env.PORT || 8080;
 const MONGO_URI = process.env.MONGO_URI;
 const MAKE_WEBHOOK_URL = process.env.MAKE_WEBHOOK_URL;
 
-
-app.use(express.json({ limit: '50mb' }));
+app.use(express.json({ limit: "50mb" }));
 // ✅ Middleware
-app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+    crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        imgSrc: ["'self'", "data:", "https:", "blob:"],
+        scriptSrc: ["'self'", "'unsafe-inline'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        connectSrc: ["'self'", ...allowedOrigins],
+      },
+    },
+  })
+);
 app.use(
   cors({
     origin: allowedOrigins,
@@ -64,7 +77,6 @@ app.use(
   })
 );
 app.use(bodyParser.json());
-
 
 ////////Protection Doss and DDos Attack////////
 app.use(
@@ -76,8 +88,7 @@ app.use(
 );
 
 // Serve static files from the uploads directory
-app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
-
+app.use("/uploads", express.static(path.join(__dirname, "..", "uploads")));
 
 // ✅ Connect MongoDB
 mongoose.connect(MONGO_URI);
@@ -103,7 +114,7 @@ const broadcastUserStatus = () => {
 
   io.emit("update-users", {
     onlineUsers: onlineUsersEmails,
-    lastSeenTimes: lastSeenObj
+    lastSeenTimes: lastSeenObj,
   });
 };
 
@@ -138,7 +149,7 @@ io.on("connection", (socket) => {
       email,
       displayName,
       photoURL,
-      isOnline: true
+      isOnline: true,
     });
   });
 
@@ -184,7 +195,7 @@ io.on("connection", (socket) => {
             isOnline: false,
             lastSeen: timestamp,
             displayName: userDetails.get(email)?.displayName,
-            photoURL: userDetails.get(email)?.photoURL
+            photoURL: userDetails.get(email)?.photoURL,
           });
         }
       }
@@ -211,7 +222,7 @@ io.on("connection", (socket) => {
           isOnline: false,
           lastSeen: timestamp,
           displayName: userDetails.get(email)?.displayName,
-          photoURL: userDetails.get(email)?.photoURL
+          photoURL: userDetails.get(email)?.photoURL,
         });
       }
     }
@@ -230,13 +241,10 @@ app.post("/api/update-genres", limiter, requireOwner, async (req, res) => {
   }
 
   try {
-
     //////validate email//////////
     if (!email) {
-      return res
-        .status(400)
-        .json({ message: "Missing email" });
-    };
+      return res.status(400).json({ message: "Missing email" });
+    }
 
     /////////////Find user and update genres and subgenres////////////
     const user = await Filter.findOneAndUpdate(
@@ -244,7 +252,6 @@ app.post("/api/update-genres", limiter, requireOwner, async (req, res) => {
       { genres, subGenres: subGenres || {} },
       { new: true, upsert: true } // เพิ่ม upsert เผื่อ user ยังไม่มีใน Filter
     );
-
 
     const filter = {};
 
@@ -288,7 +295,6 @@ app.post("/api/update-genres", limiter, requireOwner, async (req, res) => {
       })
       .filter((f) => f !== null);
 
-
     if (genreFilters.length > 0) {
       if (genreFilters.length === 1) {
         Object.assign(filter, genreFilters[0]);
@@ -320,16 +326,19 @@ app.post("/api/update-genres", limiter, requireOwner, async (req, res) => {
     const duplicateLinks = new Set(duplicateCheck.map((e) => e.link));
 
     const uniqueEvents = events.filter(
-      (e) =>
-        !duplicateTitles.has(e.title) && !duplicateLinks.has(e.link)
+      (e) => !duplicateTitles.has(e.title) && !duplicateLinks.has(e.link)
     );
-
 
     //////////////Send unique events to make.com////////
     if (uniqueEvents.length === 0 || uniqueEvents.length === events.length) {
       // ✅ ส่งข้อมูลไปยัง Make.com เฉพาะกรณีที่ genres/subGenres มีข้อมูล
       const hasGenres = Array.isArray(genres) ? genres.length > 0 : false;
-      const hasSubGenres = subGenres && typeof subGenres === "object" && Object.values(subGenres).some(arr => Array.isArray(arr) ? arr.length > 0 : false);
+      const hasSubGenres =
+        subGenres &&
+        typeof subGenres === "object" &&
+        Object.values(subGenres).some((arr) =>
+          Array.isArray(arr) ? arr.length > 0 : false
+        );
       if (hasGenres && hasSubGenres) {
         await axios.post(MAKE_WEBHOOK_URL, {
           type: "update-genres",
@@ -344,7 +353,7 @@ app.post("/api/update-genres", limiter, requireOwner, async (req, res) => {
     }
 
     if (uniqueEvents.length > 0) {
-      const savePromises = uniqueEvents.map(event =>
+      const savePromises = uniqueEvents.map((event) =>
         axios.post(
           `/api/save-event`,
           {
@@ -374,26 +383,26 @@ app.post("/api/update-genres", limiter, requireOwner, async (req, res) => {
 });
 
 // เก็บ socket instance ไว้ใช้ใน middleware
-app.set('io', io);
-app.set('userSockets', userSockets);
+app.set("io", io);
+app.set("userSockets", userSockets);
 
 // ใช้งานเส้นทาง debug เพื่อตรวจสอบ API routes ทั้งหมด
-app.get('/api/debug/routes', (req, res) => {
+app.get("/api/debug/routes", (req, res) => {
   const routes = [];
-  app._router.stack.forEach(middleware => {
+  app._router.stack.forEach((middleware) => {
     if (middleware.route) {
       // Routes registered directly on the app
       routes.push({
         path: middleware.route.path,
-        methods: Object.keys(middleware.route.methods)
+        methods: Object.keys(middleware.route.methods),
       });
-    } else if (middleware.name === 'router') {
+    } else if (middleware.name === "router") {
       // Router middleware
-      middleware.handle.stack.forEach(handler => {
+      middleware.handle.stack.forEach((handler) => {
         if (handler.route) {
           routes.push({
-            path: '/api' + handler.route.path,
-            methods: Object.keys(handler.route.methods)
+            path: "/api" + handler.route.path,
+            methods: Object.keys(handler.route.methods),
           });
         }
       });
@@ -420,7 +429,6 @@ app.use("/api", roommatchRoutes);
 app.use("/api", likeRoutes);
 app.use("/api", friendApiRoutes);
 app.use("/api", userPhotoRoutes);
-
 
 // Log API requests for debugging
 app.use((req, res, next) => {
