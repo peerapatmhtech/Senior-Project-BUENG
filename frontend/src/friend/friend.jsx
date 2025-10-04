@@ -15,7 +15,6 @@ import { useParams } from "react-router-dom";
 import HeaderProfile from "../ui/HeaderProfile";
 import { useQuery } from "@tanstack/react-query";
 import { fetchPhoto } from "../lib/queries";
-import { set } from "mongoose";
 
 // แสดงข้อมูลสถานะการเชื่อมต่อ socket อย่างละเอียด
 // socket.on("connect", () => {
