@@ -210,7 +210,7 @@ const ChatContainerAI = ({
         <div className="chat-input-container">
           <div className="chat-border">
             <div className="emoji-right">
-              <TiMicrophoneOutline />
+              {/* <TiMicrophoneOutline /> */}
             </div>
             <input
               ref={inputRef}
@@ -223,8 +223,8 @@ const ChatContainerAI = ({
               disabled={loading}
             />
             <div className="emoji">
-              <MdAttachFile />
-              <BsEmojiSmile />
+              {/* <MdAttachFile />
+              <BsEmojiSmile /> */}
             </div>
             <button
               onClick={handleSend}

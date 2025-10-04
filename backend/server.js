@@ -5,6 +5,8 @@ import bodyParser from "body-parser";
 import dotenv from "dotenv";
 import http from "http";
 import { Server } from "socket.io";
+import path from "path";
+import { fileURLToPath } from "url";
 import userRoutes from "./src/routes/gmail.js";
 import friendRoutes from "./src/routes/friend.js";
 import roomRoutes from "./src/routes/room.js";
@@ -34,6 +36,9 @@ import { limiter } from "./src/middleware/ratelimit.js";
 dotenv.config();
 const allowedOrigins = process.env.VITE_APP_WEB_BASE_URL;
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -51,7 +56,7 @@ const MAKE_WEBHOOK_URL = process.env.MAKE_WEBHOOK_URL;
 
 app.use(express.json({ limit: '50mb' }));
 // ✅ Middleware
-app.use(helmet());
+app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
 app.use(
   cors({
     origin: allowedOrigins,
@@ -71,7 +76,7 @@ app.use(
 );
 
 // Serve static files from the uploads directory
-app.use('/uploads', express.static('../uploads'));
+app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 
 
 // ✅ Connect MongoDB

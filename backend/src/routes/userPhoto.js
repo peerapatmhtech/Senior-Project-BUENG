@@ -3,12 +3,23 @@ import { UserPhoto } from "../model/userPhoto.js";
 import multer from "multer";
 import fs from "fs";
 import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const router = express.Router();
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    const uploadDir = path.join(process.cwd(), "uploads", "user-photos");
+    const uploadDir = path.resolve(
+      __dirname,
+      "..",
+      "..",
+      "..",
+      "uploads",
+      "user-photos"
+    );
     // Create the directory if it doesn't exist
     if (!fs.existsSync(uploadDir)) {
       fs.mkdirSync(uploadDir, { recursive: true });
@@ -101,6 +112,19 @@ router.get("/user-photos/:email", async (req, res) => {
         .json({ success: false, message: "Empty Photo this user" });
     }
     res.json({ success: true, data: user });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+router.get("/user-photo", async (req, res) => {
+  try {
+    const userPhoto = await UserPhoto.find();
+    if (!userPhoto) {
+      return res
+        .status(404)
+        .json({ success: false, message: "No photos found" });
+    }
+    res.json({ success: true, data: userPhoto });
   } catch (error) {
     res.status(500).json({ success: false, message: "Server error" });
   }

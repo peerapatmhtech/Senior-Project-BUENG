@@ -37,7 +37,7 @@
 
 /* Dark Mode */
 .navbar-container.dark-mode {
-  background-color: var(--nav-background-dark);
+  background-color: #23242b;
   border: 1px solid var(--nav-border-dark);
 }
 

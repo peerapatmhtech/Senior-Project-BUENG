@@ -98,21 +98,6 @@ app.post("/save-user-info", requireOwner, async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
-// GET /api/user-info/:email
-app.get("/user-info/:email", requireOwner, async (req, res) => {
-  const { email } = req.params;
-  try {
-    if (!email) {
-      return res.status(400).json({ message: "Email is required." });
-    }
-    const user = await Info.findOne({ email });
-    if (!user) return res.status(204).json({ message: "User not found" });
-    res.json(user.userInfo || {});
-  } catch (error) {
-    console.error("❌ Error fetching user info:", error);
-    res.status(500).json({ message: "Server error" });
-  }
-});
 // Change Nickname
 app.post("/save-user-name", requireOwner, async (req, res) => {
   const { userEmail, nickName } = req.body;
