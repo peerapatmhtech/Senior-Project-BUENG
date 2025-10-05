@@ -13,7 +13,6 @@ import "../ui/NotificationBell.css";
 import { useNotifications } from "../context/notificationContext";
 import { useParams } from "react-router-dom";
 import HeaderProfile from "../ui/HeaderProfile";
-import { useTransition } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { fetchPhoto } from "../lib/queries";
 
@@ -30,10 +29,9 @@ const Friend = () => {
     queryFn: fetchPhoto,
   });
   // const { socket, onlineUsers } = useSocket(); // ใช้ socket และ onlineUsers จาก context
-  const { socket, noti, friends, setFriends } = useNotifications();
+  const { socket, friends, setFriends } = useNotifications();
   // รับ roomId จาก URL ถ้ามี เช่น /friend/:roomId
   const { roomId } = useParams();
-  const { t } = useTransition();
 
   // ย้ายตัวแปรเหล่านี้มาอยู่ด้านบนก่อนการใช้งานใน useEffect
   const userEmail = localStorage.getItem("userEmail");
