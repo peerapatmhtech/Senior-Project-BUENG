@@ -21,6 +21,7 @@ import axios from "axios";
 
 // Import new routes (ES Modules style)
 import friendRequestRoutes from "./src/routes/friendRequest.js";
+import aiRoute from "./src/routes/ai.js";
 import friendApiRoutes from "./src/routes/friendApi.js";
 import userPhotoRoutes from "./src/routes/userPhoto.js";
 import MakeRoutes from "./src/routes/make.js";
@@ -30,7 +31,6 @@ import rateLimit from "express-rate-limit";
 import { authMiddleware } from "./src/middleware/authMiddleware.js";
 
 /////////Midleware for owner and admin/////////
-import { requireOwner } from "./src/middleware/required.js";
 import { limiter } from "./src/middleware/ratelimit.js";
 
 dotenv.config();
@@ -232,7 +232,7 @@ io.on("connection", (socket) => {
   });
 });
 // 📌 API บันทึกหมวดหมู่เพลงที่ผู้ใช้เลือก
-app.post("/api/update-genres", limiter, requireOwner, async (req, res) => {
+app.post("/api/update-genres", limiter, async (req, res) => {
   const { email, genres, subGenres, updatedAt } = req.body;
   if (!email || !genres || !subGenres) {
     return res
@@ -419,7 +419,8 @@ app.use("/api", authMiddleware);
 
 // Register friendRequestRoutes with high priority to prevent 404 issues.
 app.use("/api", infoMatchRoutes);
-app.use("/api", eventRoutes);
+app.use("/api", aiRoute); // ใช้ aiRoute ก่อน routes อื่นๆ เพื่อป้องกัน 404
+app.use("/api", eventRoutes(io));
 app.use("/api", friendRequestRoutes);
 app.use("/api", userRoutes);
 app.use("/api", friendRoutes);

@@ -15,7 +15,6 @@ const fetchEvents = async (email) => {
   try {
     const res = await api.get(`/api/events/${email}`);
     return Array.isArray(res.data) ? res.data : [];
-    w;
   } catch (error) {
     if (error.response && error.response.status === 404) {
       toast.success("ไม่มีกิจกรรมในขณะนี้");
@@ -59,35 +58,31 @@ const EventList = ({ setWaiting, waiting }) => {
     staleTime: 1000 * 60 * 2, // 2 minutes
   });
 
-  const [pendingFavorites, setPendingFavorites] = useState([]);
-  const debounceRef = React.useRef(null);
+  const pendingFavoritesRef = React.useRef([]);
+  const debounceTimeoutRef = React.useRef(null);
 
-  const sendPendingFavoritesToWebhook = async (pendingArr) => {
+  const sendPendingFavoritesToWebhook = async () => {
+    const pendingArr = pendingFavoritesRef.current;
     if (!Array.isArray(pendingArr) || pendingArr.length === 0) return;
+
     try {
       await axios.post(import.meta.env.VITE_APP_MAKE_WEBHOOK_MATCH_URL, {
         email: email,
         actions: pendingArr.map((event) => ({ event: event.eventTitle })),
       });
+      // Clear the array after successful sending
+      pendingFavoritesRef.current = [];
     } catch (error) {
       console.error("Error sending to webhook", error);
     }
   };
 
-  useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    // console.log("pendingFavorites", pendingFavorites)
-    if (pendingFavorites.length > 0) {
-      debounceRef.current = setTimeout(() => {
-        sendPendingFavoritesToWebhook(pendingFavorites);
-        setPendingFavorites([]);
-      }, 5000);
+  const debouncedSendWebhook = () => {
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
     }
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pendingFavorites]);
+    debounceTimeoutRef.current = setTimeout(sendPendingFavoritesToWebhook, 5000);
+  };
 
   // 3. Socket listener to invalidate query on update
   useEffect(() => {
@@ -108,7 +103,38 @@ const EventList = ({ setWaiting, waiting }) => {
   }, [socket, queryClient, email, setWaiting]);
 
   // 4. Replaced API call functions with useMutation
-  const createMutation = (mutationFn, successMessage, errorMessage) => {
+
+  // Mutations for like/unlike that only refetch favorites to prevent UI jumps
+  const likeMutation = useMutation({
+    mutationFn: (variables) => api.post(`/api/like`, variables),
+    onSuccess: () => {
+      toast.success("เพิ่มในรายการโปรดสำเร็จ");
+      queryClient.invalidateQueries({ queryKey: ["favorites", email] });
+    },
+    onError: (error) => {
+      console.error("❌ Error: เกิดข้อผิดพลาดในการกดไลค์", error);
+      toast.error("เกิดข้อผิดพลาดในการกดไลค์");
+    },
+  });
+
+  const unlikeMutation = useMutation({
+    mutationFn: ({ eventId }) => api.delete(`/api/like/${email}/${eventId}`),
+    onSuccess: () => {
+      toast.success("นำออกจากรายการโปรดสำเร็จ");
+      queryClient.invalidateQueries({ queryKey: ["favorites", email] });
+    },
+    onError: (error) => {
+      console.error("❌ Error: เกิดข้อผิดพลาดในการยกเลิกไลค์", error);
+      toast.error("เกิดข้อผิดพลาดในการยกเลิกไลค์");
+    },
+  });
+
+  // Generic mutation for actions that should refetch the whole event list (e.g., delete)
+  const createListRefetchingMutation = (
+    mutationFn,
+    successMessage,
+    errorMessage
+  ) => {
     return useMutation({
       mutationFn,
       onSuccess: () => {
@@ -124,25 +150,13 @@ const EventList = ({ setWaiting, waiting }) => {
     });
   };
 
-  const likeMutation = createMutation(
-    (variables) => api.post(`/api/like`, variables),
-    "เพิ่มในรายการโปรดสำเร็จ",
-    "เกิดข้อผิดพลาดในการกดไลค์"
-  );
-
-  const unlikeMutation = createMutation(
-    ({ eventId }) => api.delete(`/api/like/${email}/${eventId}`),
-    "นำออกจากรายการโปรดสำเร็จ",
-    "เกิดข้อผิดพลาดในการยกเลิกไลค์"
-  );
-
-  const deleteMutation = createMutation(
+  const deleteMutation = createListRefetchingMutation(
     (eventId) => api.delete(`/api/events/${eventId}`),
     "ลบกิจกรรมสำเร็จ",
     "เกิดข้อผิดพลาดในการลบกิจกรรม"
   );
 
-  const deleteAllMutation = createMutation(
+  const deleteAllMutation = createListRefetchingMutation(
     () => api.delete(`/api/events/${email}`),
     "ลบกิจกรรมทั้งหมดสำเร็จ",
     "เกิดข้อผิดพลาดในการลบกิจกรรมทั้งหมด"
@@ -151,7 +165,8 @@ const EventList = ({ setWaiting, waiting }) => {
   // Handler functions now call the mutations
   const handleLike = (eventId, title) => {
     likeMutation.mutate({ userEmail: email, eventId, eventTitle: title });
-    setPendingFavorites((prev) => [...prev, { eventId, eventTitle: title }]);
+    pendingFavoritesRef.current.push({ eventId, eventTitle: title });
+    debouncedSendWebhook();
   };
 
   const handleUnlike = (eventId) => {

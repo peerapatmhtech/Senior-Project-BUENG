@@ -1,6 +1,15 @@
 import express from 'express';
-import { openai } from '../../server.js';
+import { OpenAI } from 'openai';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+// Initialize OpenAI with your API key from environment variables
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 const router = express.Router();
+
 
 // Define the POST route for the AI chat
 router.post('/ai/chat', async (req, res) => {

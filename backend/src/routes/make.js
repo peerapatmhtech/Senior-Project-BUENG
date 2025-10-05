@@ -53,12 +53,12 @@ export default function (io) {
           detail,
           email: usermatch,
           usermatch: email,
-        });     
+        });
         const isSameUser = email === usermatch;
         if (isSameUser) {
           continue; // ข้ามรายการนี้ไป
         }
-        if (existingMatch) {    
+        if (existingMatch) {
           continue; // ข้ามรายการนี้ไป
         }
         if (existingMatchFriend) {
@@ -202,12 +202,6 @@ export default function (io) {
         await newEvent.save();
         newEvents.push(newEvent);
       }
-
-      // แจ้งเตือนผ่าน socket ถ้ามีการสร้าง event ใหม่อย่างน้อยหนึ่งรายการ
-      if (newEvents.length > 0) {
-        io.emit("events_updated");
-      }
-
       res.status(201).json({
         message: `Successfully saved ${newEvents.length} new events.`,
         events: newEvents,
@@ -228,6 +222,9 @@ export default function (io) {
         error:
           process.env.NODE_ENV === "development" ? error.message : undefined,
       });
+    } finally {
+      // Always emit events_updated to refresh client data
+      io.emit("events_updated");
     }
   });
   // GET /likes/exclude/:email

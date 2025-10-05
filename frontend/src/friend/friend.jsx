@@ -761,7 +761,7 @@ const Friend = () => {
             value={searchTerm}
             onChange={handleSearch}
             className="search-input-chat"
-            aria-label={t("ค้นหาเพื่อน")}
+            aria-label="ค้นหาเพื่อน"
           />
         </div>
         <div className="slide-con">
