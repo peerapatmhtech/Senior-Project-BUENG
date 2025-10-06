@@ -14,7 +14,6 @@ const queryClient = new QueryClient();
 if (import.meta.env.DEV) {
   // ปิด Google Analytics ใน development
   window.gtag = function() {
-    console.log('Google Analytics disabled in development mode');
   };
   
   // จัดการ console errors ที่เกี่ยวกับ Analytics

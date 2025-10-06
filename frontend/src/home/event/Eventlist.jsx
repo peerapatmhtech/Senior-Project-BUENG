@@ -89,7 +89,6 @@ const EventList = ({ setWaiting, waiting }) => {
     if (!socket) return;
 
     const handleEventsUpdated = () => {
-      // console.log("Received events_updated from socket, invalidating queries.");
       setWaiting(false);
       // Invalidate the query to trigger a refetch
       queryClient.invalidateQueries({ queryKey: ["events", email] });

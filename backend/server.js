@@ -206,7 +206,6 @@ io.on("connection", (socket) => {
   });
 
   socket.on("disconnect", () => {
-    console.log("🔴 Client disconnected", socket.id);
     const email = socket.email;
     if (email && onlineUsers.has(email)) {
       onlineUsers.get(email).delete(socket.id);
@@ -433,7 +432,6 @@ app.use("/api", userPhotoRoutes);
 
 // Log API requests for debugging
 app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
   next();
 });
 

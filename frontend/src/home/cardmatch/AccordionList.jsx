@@ -13,7 +13,6 @@ const fetchInitialFilters = async (email) => {
     return res.data;
   } catch (err) {
     // It's okay if it fails, means no filters saved yet.
-    console.log("Could not fetch initial filters or none exist.");
     return null; // Return null to indicate no data
   }
 };
@@ -131,7 +130,6 @@ const AccordionList = ({ items, setWaiting }) => {
     });
 
     setWaiting(true);
-    // console.log("Saving genres:", genres, subGenresObj, email,);
     saveMutation.mutate({ email, genres: Object.keys(subGenresObj), subGenres: subGenresObj, updatedAt: new Date().toISOString() });
   };
 

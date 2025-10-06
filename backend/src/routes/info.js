@@ -6,7 +6,6 @@ const app = express.Router();
 // routes/api.js หรือไฟล์หลักของ backend
 app.post("/join-community", requireOwner, async (req, res) => {
   const { userEmail, roomId, roomName } = req.body;
-  console.log(userEmail, roomId, roomName);
   if (!userEmail || !roomId || !roomName) {
     return res
       .status(400)
@@ -33,7 +32,6 @@ app.post("/join-community", requireOwner, async (req, res) => {
 //////////ดึงห้องที่ผู้ใช้เชื่อมต่อ/////////////////
 app.get("/user-rooms/:email", requireOwner, async (req, res) => {
   const encodedEmail = req.params.email.toLowerCase();
-  console.log("Getting rooms for:", encodedEmail);
 
   try {
     if (!encodedEmail) {
@@ -46,10 +44,8 @@ app.get("/user-rooms/:email", requireOwner, async (req, res) => {
     // ✅ แยกเฉพาะ roomId ออกมา
 
     const roomIds = user.joinedRooms.map((room) => room.roomId);
-    console.log(roomIds);
     // ✅ หาห้องจาก roomIds
     const roomNames = user.joinedRooms.map((room) => room.roomName);
-    console.log(roomNames);
     res.status(200).json({ roomNames, roomIds });
   } catch (error) {
     console.error("Error fetching rooms:", error);

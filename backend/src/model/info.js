@@ -21,7 +21,6 @@ const infoSchema = new mongoose.Schema(
 // Static method to join a room
 infoSchema.statics.joinRoom = async function (userEmail, roomId, roomName) {
   const user = await this.findOne({ email: userEmail });
-  console.log("teset", userEmail, roomId, roomName);
   if (!user) {
     const error = new Error("User not found");
     error.statusCode = 404; // Not Found
@@ -36,7 +35,6 @@ infoSchema.statics.joinRoom = async function (userEmail, roomId, roomName) {
 
   const alreadyJoined = user.joinedRooms.some(room => room.roomId === roomId);
   if (alreadyJoined) {
-    console.log(`User ${userEmail} already in room ${roomId}.`);
     return user;
   }
 

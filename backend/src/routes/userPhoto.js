@@ -49,7 +49,6 @@ const upload = multer({
 });
 
 router.post("/upload-user-photo", upload.single("photo"), async (req, res) => {
-  console.log("Upload photo API called", req.file, req.body);
   try {
     if (!req.file) {
       return res.status(400).json({

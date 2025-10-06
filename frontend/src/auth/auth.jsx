@@ -37,14 +37,12 @@ const NewLogin = () => {
     const loginButton = document.getElementById("login");
 
     const handleRegisterClick = () => {
-      console.log("Register button clicked, switching to sign up");
       setIsActive(true);
       setError(""); // Clear errors when switching
       container?.classList.add("active");
     };
 
     const handleLoginClick = () => {
-      console.log("Login button clicked, switching to sign in");
       setIsActive(false);
       setError(""); // Clear errors when switching
       container?.classList.remove("active");

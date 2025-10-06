@@ -108,24 +108,19 @@ export const NotificationProvider = ({ children }) => {
   // ปรับปรุง handleNotifyFriendRequest function
   const handleNotifyFriendRequest = useCallback(
     async (data) => {
-      console.log("🔄 Processing friend request notification:", data);
 
       // ตรวจสอบว่า notification นี้เป็นของผู้ใช้ปัจจุบันหรือไม่
       if (data?.to === userEmail || data?.targetEmail === userEmail) {
-        console.log("📥 This notification is for current user, fetching...");
 
         // เพิ่ม delay เล็กน้อยเพื่อให้ backend process เสร็จก่อน
         setTimeout(async () => {
           try {
             await fetchNotifications();
-            console.log("✅ Notifications fetched successfully");
           } catch (error) {
             console.error("❌ Error fetching notifications:", error);
           }
         }, 500);
-      } else {
-        console.log("ℹ️ Notification not for current user:", userEmail);
-      }
+      } 
     },
     [userEmail, fetchNotifications]
   );
@@ -134,10 +129,8 @@ export const NotificationProvider = ({ children }) => {
   // ปรับปรุง handleNotifyFriendAccept function
   const handleNotifyFriendAccept = useCallback(
     async (data) => {
-      console.log("🔄 Processing friend accept notification:", data);
 
       if (data?.to === userEmail || data?.targetEmail === userEmail) {
-        console.log("📥 Friend accept notification for current user");
 
         // Refresh notifications
         setTimeout(async () => {
@@ -150,7 +143,6 @@ export const NotificationProvider = ({ children }) => {
               autoClose: 3000,
             });
 
-            console.log("✅ Friend accept processed successfully");
           } catch (error) {
             console.error("❌ Error processing friend accept:", error);
           }
@@ -528,7 +520,6 @@ export const NotificationProvider = ({ children }) => {
             };
           }
         });
-        console.log("Updated Online Users:", updatedUsers);
         setOnlineUsers(updatedUsers);
       } else if (data && Array.isArray(data.onlineUsers)) {
         setOnlineUsers((prev) => {

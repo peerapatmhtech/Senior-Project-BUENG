@@ -9,7 +9,6 @@ import { Gmail } from "../model/gmail.js";
 // API สำหรับส่งคำขอเป็นเพื่อน
 router.post('/friend-request', async (req, res) => {
   try {
-    console.log("ได้รับคำขอเป็นเพื่อน:", req.body);
     const { from, to, requestId, timestamp, type, roomId } = req.body;
 
     // ตรวจสอบว่า email ไม่เป็นค่าว่าง
@@ -154,7 +153,6 @@ router.post('/friend-request-response', requireOwner, async (req, res) => {
 
     // ดึงคำขอเพื่อนจากฐานข้อมูล
     const friendRequest = await FriendRequest.findOne({ requestId });
-    console.log("กำลังตอบรับคำขอเพื่อน:", friendRequest);
     if (!friendRequest) {
       return res.status(404).json({ success: false, message: 'ไม่พบคำขอเพื่อนนี้' });
     }

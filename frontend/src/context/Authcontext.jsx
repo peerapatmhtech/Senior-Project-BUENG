@@ -38,7 +38,6 @@ export const AuthProvider = ({ children }) => {
         const freshToken = await auth.currentUser.getIdToken(true);
         setIdToken(freshToken);
         localStorage.setItem('idToken', freshToken);
-        console.log('🔄 Token refreshed');
         return freshToken;
       } catch (error) {
         console.error('❌ Error refreshing token:', error);

@@ -101,7 +101,6 @@ const RoomMatch = ({ accordionComponent }) => {
   useEffect(() => {
     if (!socket) return;
     const handleMatchUpdate = () => {
-      // console.log("Received match_updated event. Invalidating rooms query...");
       queryClient.invalidateQueries({ queryKey: ['rooms'] });
     };
     socket.on("match_updated", handleMatchUpdate);
