@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { IoMdAddCircle, IoMdCloseCircle } from "react-icons/io";
-import api from "../api";
+import api from "../server/api";
 import { useParams } from "react-router-dom";
 import "./css/createroom.css";
 const CreateRoom = ({ onRoomCreated }) => {

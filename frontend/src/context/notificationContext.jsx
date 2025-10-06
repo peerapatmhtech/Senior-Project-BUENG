@@ -6,7 +6,7 @@ import React, {
   useCallback,
 } from "react";
 import io from "socket.io-client";
-import api from "../api";
+import api from "../server/api";
 import { toast } from "react-toastify";
 
 // สร้าง socket instance พร้อม options เพื่อแก้ปัญหาการเชื่อมต่อ

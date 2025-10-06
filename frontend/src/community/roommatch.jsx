@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import api from "../api";
+import api from "../server/api";
 import { useNavigate } from "react-router-dom";
 import TinderCard from "react-tinder-card";
 import { useTheme } from "../context/themecontext";

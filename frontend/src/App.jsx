@@ -2,7 +2,7 @@ import "./App.css";
 import Navbar from "./Navbar";
 import Profile from "./profile/Profile";
 import Freind from "./friend/friend";
-import LoginForm from "./login/NewLogin";
+import NewLogin from "./auth/auth";
 import Community from "./community/community";
 import Home from "./home/Home";
 import Chat from "./chat/chat";
@@ -11,7 +11,6 @@ import { Route, Routes, useLocation } from "react-router-dom";
 import { NotificationProvider } from "./context/notificationContext";
 import { SocketProvider } from "./context/make.com";
 import { useAuth } from "./context/Authcontext";
-// import ForgotPassword from "./Log/ForgotForm";
 
 function App() {
   const location = useLocation(); // ใช้เพื่อดึงข้อมูล path ปัจจุบัน
@@ -38,7 +37,7 @@ function App() {
           <Routes>
             <Route path="/home" element={<Home />} />
             <Route path="/" element={<Home />} />
-            <Route path="/login" element={<LoginForm />} />
+            <Route path="/login" element={<NewLogin />} />
             <Route path="/friend" element={<Freind />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/community" element={<Community />} />

@@ -28,7 +28,7 @@ app.get("/friends/:email", async (req, res) => {
             return res.status(400).send("Email is required.");
         }
         const user = await Friend.findOne({ email });
-        if (!user) return res.status(404).send("User not found");
+        if (!user) return res.status(204).send("User not found");
         res.json(user.friends);
     } catch (error) {
         console.error("Error fetching friends:", error);

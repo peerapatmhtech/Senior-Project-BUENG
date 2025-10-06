@@ -1,11 +1,11 @@
 import "./Home.css";
 import EventList from "./event/Eventlist";
-import RequireLogin from "../ui/RequireLogin";
+import RequireLogin from "../components/RequireLogin";
 import { useTheme } from "../context/themecontext";
 import RoomMatch from "../community/roommatch";
 import { useState } from "react";
 import AccordionList from "./cardmatch/AccordionList";
-import HeaderProfile from "../ui/HeaderProfile";
+import HeaderProfile from "../components/HeaderProfile";
 
 const Newcommu = () => {
   const { isDarkMode } = useTheme();

@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import api from "../api";
+import api from "../server/api";
 
 // Fetch functions for React Query
 

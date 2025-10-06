@@ -1,5 +1,5 @@
 import  { useEffect, useState } from "react";
-import api from "../api";
+import api from "../server/api";
 import { useNavigate } from "react-router-dom";
 import "./css/roomlist.css";
 import { toast } from "react-toastify";

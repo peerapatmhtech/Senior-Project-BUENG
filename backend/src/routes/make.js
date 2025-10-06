@@ -17,6 +17,7 @@ export default function (io) {
         try {
             // const { detail, email, chance, usermatch, emailjoined, usermatchjoined } = req.body;
             const { data, email } = req.body;
+            // const dataString = data.replace(/```json|```/g, "").trim();
             // ตรวจสอบข้อมูลที่จำเป็น
             if (!email) {
                 return res.status(400).json({
@@ -25,15 +26,15 @@ export default function (io) {
                 });
             }
             const newMatch = []
-            for (let i = 0; i < data.length; i++) {
-                const item = data[i];
+            for (let i = 0; i < dataString.length; i++) {
+                const item = dataString[i];
                 const { detail, chance, usermatch, emailjoined = false, usermatchjoined = false } = item;
 
-                if(!detail || !email || !usermatch){
+                if (!detail || !email || !usermatch) {
                     continue; // ข้ามรายการนี้ไป
                 }
                 const existingMatch = await InfoMatch.findOne({ detail, email, usermatch });
-                if(existingMatch){
+                if (existingMatch) {
                     continue; // ข้ามรายการนี้ไป
                 }
                 const newInfoMatch = new InfoMatch({

@@ -1,13 +1,12 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import "./Profile.css";
-import { Button } from "../ui";
 import { useNavigate } from "react-router-dom";
 import { FaEdit, FaCamera, FaPlus, FaTimes, FaStar } from "react-icons/fa";
 import { useTheme } from "../context/themecontext";
-import api from "../api";
+import api from "../server/api";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import HeaderProfile from "../ui/HeaderProfile";
+import HeaderProfile from "../components/HeaderProfile";
 
 const MAX_CHARS = 400;
 const MAX_NICKNAME = 30;

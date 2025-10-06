@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import api from "../../api";
+import api from "../../server/api";
 import "./Eventlist.css";
 import { useTheme } from "../../context/themecontext";
 import { useSocket } from "../../context/make.com";
@@ -151,6 +151,7 @@ const EventList = ({ setWaiting, waiting }) => {
   // Handler functions now call the mutations
   const handleLike = (eventId, title) => {
     likeMutation.mutate({ userEmail: email, eventId, eventTitle: title });
+    setPendingFavorites((prev) => [...prev, { eventId, eventTitle: title }]);
   };
 
   const handleUnlike = (eventId) => {

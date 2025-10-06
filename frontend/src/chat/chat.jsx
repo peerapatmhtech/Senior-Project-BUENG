@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { db } from "../firebase/firebase";
-import RequireLogin from "../ui/RequireLogin";
+import RequireLogin from "../components/RequireLogin";
 import { FaSearch } from "react-icons/fa";
 import { RiRobot2Fill } from "react-icons/ri";
 import { MdClose } from "react-icons/md";
@@ -19,7 +19,6 @@ import {
   doc,
   where,
 } from "firebase/firestore";
-import api from "../api";
 
 import { useNotifications } from "../context/notificationContext";
 import { useTheme } from "../context/themecontext";

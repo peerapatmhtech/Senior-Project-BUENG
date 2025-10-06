@@ -93,11 +93,7 @@ const HeaderProfile = ({
   const handleLogout = async () => {
     if (user && user.email) {
       try {
-        await fetch(`/api/logout`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: user.email }),
-        });
+
         localStorage.removeItem("userName");
         localStorage.removeItem("userPhoto");
         logout();
@@ -192,8 +188,8 @@ const HeaderProfile = ({
                               </p>
                               <span
                                 className={`notification-item-tag ${isFriend && isFriend(notif.from?.email)
-                                    ? "friend"
-                                    : "request"
+                                  ? "friend"
+                                  : "request"
                                   }`}
                               >
                                 {isFriend && isFriend(notif.from?.email)

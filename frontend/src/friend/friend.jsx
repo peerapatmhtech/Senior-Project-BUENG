@@ -1,19 +1,25 @@
-import React, { useEffect, useState, useRef, useContext } from "react";
-import api from "../api";
+import React, { useEffect, useState, useRef } from "react";
+import api from "../server/api";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import "./friend.css";
-import { FaSearch } from "react-icons/fa";
-import "./OnlineStatus.css";
-import { IoMdPersonAdd } from "react-icons/io";
-import RequireLogin from "../ui/RequireLogin";
-import { BsThreeDots } from "react-icons/bs";
-import { useTheme } from "../context/themecontext";
-import "../ui/NotificationBell.css";
-import { useNotifications } from "../context/notificationContext";
-import { useParams } from "react-router-dom";
-import HeaderProfile from "../ui/HeaderProfile";
 
+import { FaSearch } from "react-icons/fa";
+
+import { IoMdPersonAdd } from "react-icons/io";
+import { useParams } from "react-router-dom";
+import { BsThreeDots } from "react-icons/bs";
+////////-------- Import Contexts ---------////////
+import { useTheme } from "../context/themecontext";
+import { useNotifications } from "../context/notificationContext";
+
+////////-------- Import CSS ---------////////
+import "./friend.css";
+import "./OnlineStatus.css";
+
+////////-------- Import Components ---------////////
+import HeaderProfile from "../components/HeaderProfile";
+import RequireLogin from "../components/RequireLogin";
+import "../components/NotificationBell.css";
 // แสดงข้อมูลสถานะการเชื่อมต่อ socket อย่างละเอียด
 // socket.on("connect", () => {
 

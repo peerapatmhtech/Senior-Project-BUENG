@@ -1,4 +1,4 @@
-import api from '../api'; // Assuming api is an axios instance
+import api from './api'; // Assuming api is an axios instance
 
 /**
  * Sends a message to the backend AI service and returns the AI's response.

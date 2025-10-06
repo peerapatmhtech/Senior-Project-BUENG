@@ -3,13 +3,13 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import "./css/community.css";
 import CreateRoom from "./createroom";
 import RoomList from "./roomlist";
-import RequireLogin from "../ui/RequireLogin";
+import RequireLogin from "../components/RequireLogin";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import api from "../api";
+import api from "../server/api";
 import { useTheme } from "../context/themecontext";
 // import RoomMatch from "./roommatch";
-import HeaderProfile from "../ui/HeaderProfile";
+import HeaderProfile from "../components/HeaderProfile";
 
 // --- API Helper Functions ---
 const fetchAllRooms = () => api.get(`/api/allrooms`).then(res => res.data);
