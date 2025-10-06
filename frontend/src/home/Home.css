@@ -80,10 +80,7 @@
 }
 
 .dark-mode .profile-section {
-  display: flex;
-  align-items: center;
-  width: 100%;
-  background-color: #1e1e1e;
+  background-color: #23242b;
 }
 
 .profile-pic {
@@ -165,9 +162,6 @@
   background-color: #f5f5f5;
 }
 .dark-mode .bg-event-con {
-  display: flex;
-  flex-direction: row;
-  width: 100%;
   background-color: #23242b;
 }
 .show-commu {
@@ -177,9 +171,6 @@
   background-color: #f5f5f5;
 }
 .dark-mode .show-commu {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
   background-color: #23242b;
 }
 
@@ -198,15 +189,8 @@
   border-bottom: 1px solid rgb(194, 181, 181);
 }
 .dark-mode .header-home {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
   background-color: #23242b;
-  padding: 1.2rem 2rem 1.2rem 1rem;
-  /* border-radius: 0 0 1.5rem 1.5rem; */
   box-shadow: 0 2px 20px #23242b22;
-  min-height: 64px;
   border-bottom: 1px solid rgb(0, 0, 0);
 }
 .bell-btn-home {
@@ -269,12 +253,9 @@
     padding-top: 80px; /* เผื่อพื้นที่สำหรับ logo */
     padding-bottom: 100px; /* เผื่อพื้นที่สำหรับ bottom navbar */
   }
-  
+
   .dark-mode .bg-event-con {
-    flex-direction: column;
     background-color: #23242b;
-    padding-top: 80px;
-    padding-bottom: 100px;
   }
 
   .show-commu {
@@ -283,12 +264,9 @@
     order: 2;
     /* Hide EventList desktop view on mobile - it will be shown as modal */
   }
-  
+
   .dark-mode .show-commu {
-    width: 100%;
-    max-width: 100%;
     background-color: #23242b;
-    order: 2;
   }
 
   /* Hide AccordionList on mobile - it will be shown in RoomMatch */
@@ -301,13 +279,10 @@
     font-size: 1.8rem;
     margin: 0;
   }
-  
+
   .dark-mode .event-title {
-    padding: 20px 16px 16px 16px;
-    font-size: 1.8rem;
     color: #f5f5f5;
     background-color: #1e1e1e;
-    margin: 0;
   }
 
   .header-home {
@@ -321,7 +296,7 @@
     background: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(10px);
   }
-  
+
   .dark-mode .header-home {
     background: rgba(35, 36, 43, 0.95);
     backdrop-filter: blur(10px);
@@ -343,17 +318,17 @@
     font-size: 1.6rem;
     padding: 16px 12px 12px 12px;
   }
-  
+
   .header-home {
     padding: 10px 12px;
     min-height: 55px;
   }
-  
+
   .profile-image-home {
     width: 32px;
     height: 32px;
   }
-  
+
   .bell-icon-home {
     font-size: 1.3rem;
   }
@@ -365,31 +340,26 @@
     padding-top: 70px;
     padding-bottom: 90px;
   }
-  
-  .dark-mode .bg-event-con {
-    padding-top: 70px;
-    padding-bottom: 90px;
-  }
-  
+
   .event-title {
     font-size: 1.4rem;
     padding: 12px 10px 10px 10px;
   }
-  
+
   .header-home {
     padding: 8px 10px;
     min-height: 50px;
   }
-  
+
   .profile-image-home {
     width: 30px;
     height: 30px;
   }
-  
+
   .bell-icon-home {
     font-size: 1.2rem;
   }
-  
+
   .divider-home {
     font-size: 2.5rem;
   }
@@ -401,26 +371,26 @@
     padding-top: 65px;
     padding-bottom: 85px;
   }
-  
+
   .event-title {
     font-size: 1.2rem;
     padding: 10px 8px 8px 8px;
   }
-  
+
   .header-home {
     padding: 6px 8px;
     min-height: 45px;
   }
-  
+
   .profile-image-home {
     width: 28px;
     height: 28px;
   }
-  
+
   .bell-icon-home {
     font-size: 1.1rem;
   }
-  
+
   .divider-home {
     font-size: 2rem;
     margin: 0 1px;
@@ -433,16 +403,12 @@
     flex-direction: row;
     padding: 0;
   }
-  
+
   .show-commu {
     width: 60%; /* กลับไปเป็นแบบเดิม */
     order: 1;
   }
-  
-  .dark-mode .show-commu {
-    width: 60%; /* กลับไปเป็นแบบเดิม */
-  }
-  
+
   .header-home {
     position: relative;
     top: auto;
@@ -452,7 +418,7 @@
     background: none;
     backdrop-filter: none;
   }
-  
+
   .dark-mode .header-home {
     background-color: #23242b;
     backdrop-filter: none;
@@ -469,12 +435,7 @@
     width: 60%; /* กลับไปเป็นแบบเดิม */
     max-width: none; /* ลบ max-width เพื่อให้เป็นแบบเดิม */
   }
-  
-  .dark-mode .show-commu {
-    width: 60%; /* กลับไปเป็นแบบเดิม */
-    max-width: none; /* ลบ max-width เพื่อให้เป็นแบบเดิม */
-  }
-  
+
   .event-title {
     font-size: 2rem;
     padding: 40px 0 0 0;
@@ -482,11 +443,6 @@
 }
 @media screen and (max-width: 430px) {
   .event-title {
-    font-size: 1.5rem;
-    padding: 20px 0 0 0;
-  }
-  
-  .dark-mode .event-title {
     font-size: 1.5rem;
     padding: 20px 0 0 0;
   }

@@ -82,7 +82,7 @@ const AccordionList = ({ items, setWaiting }) => {
       queryClient.invalidateQueries({ queryKey: ['events', email] });
     },
     onError: () => toast.error("บันทึกข้อมูลล้มเหลว"),
-    onSettled: () => setWaiting(false),
+    onSettled: () => setWaiting(true),
   });
 
   // 3. Mutation for clearing genres

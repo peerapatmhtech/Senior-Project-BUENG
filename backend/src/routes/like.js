@@ -54,7 +54,7 @@ app.delete("/like/:userEmail/:eventId", async (req, res) => {
     try {
         const result = await Like.deleteOne({ userEmail, eventId });
         if (result.deletedCount === 0) {
-            return res.status(404).json({ message: "Like not found" });
+            return res.status(204).json({ message: "Like not found" });
         }
         res.json({ message: "Unliked!" });
     } catch (err) {

@@ -1,21 +1,26 @@
-# React + Vite
+#Social Hobby Matcher Web App
 
-Install Library
-npm install 
-npm install firebase
-npm install mongoose
-npm install axios
-npm install concurrently
-npm install -D tailwindcss postcss autoprefixer
-npm install lucide-react
-npm create vite@latest Project --template react
-npm install socket.io-client
-npm install -g localtunnel
-npm install react-toastify
-npm install react-tinder-card
+## Description
+AI-powered social recommendation platform that helps users discover events, hobbies, and new friends based on their interests. Users can chat in real-time, get personalized event suggestions, and enjoy a seamless AI-first experience.
 
+---
 
-Run Web and Server
-npm run dev ( Frontend )
-node server.js ( Backend )
-npx lt --port 8080 ( localtunnel)
+## Features
+- Gmail Authentication
+- AI-powered hobby matching
+- Real-time chat rooms with friends
+- Event recommendation via AI recommand
+- User profile management and preference settings
+- Responsive UI
+
+---
+
+## Tech Stack
+- **Frontend:** React, ReactQuery
+- **Backend:** Node.js, Express, Firebase Admin SDK
+- **Database:** MongoDB, Firebase
+- **AI / ML:** Make.com workflow platform for recommendations
+- **Deployment:** Vercel (Frontend), Render (Backend)
+- **Realtime:** Socket.IO for chat functionality
+
+---

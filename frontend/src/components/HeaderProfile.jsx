@@ -1,4 +1,5 @@
 import React, { useRef, useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { useTheme } from "../context/themecontext";
 import { useNotifications } from "../context/notificationContext";
 import "./HeaderProfile.css";
@@ -12,12 +13,12 @@ const HeaderProfile = ({
   notificationDropdownRef: externalDropdownRef,
   isFriend,
 }) => {
+  const { t, i18n } = useTranslation();
   const {
     notifications,
     showNotificationDropdown,
     toggleNotificationDropdown,
     fetchNotifications,
-    setFriends,
     markNotificationAsRead,
     clearReadNotifications,
     socket,
@@ -31,7 +32,6 @@ const HeaderProfile = ({
 
   const { isDarkMode, setIsDarkMode } = useTheme();
   const { user, logout } = useAuth();
-  const [language, setLanguage] = useState("en");
   const [profileModal, setProfileModalOpen] = useState(false);
   const containerRef = useRef(null);
   const localBellButtonRef = useRef(null);
@@ -39,8 +39,16 @@ const HeaderProfile = ({
   const bellButtonRef = externalBellButtonRef || localBellButtonRef;
   const notificationDropdownRef = externalDropdownRef || localDropdownRef;
 
+  const getFullImageUrl = (url) => {
+    if (!url) return ""; // Or a default image
+    if (url.startsWith("http")) {
+      return url; // It's already an absolute URL
+    }
+    return `${import.meta.env.VITE_APP_API_BASE_URL}${url}`;
+  };
+
   const changeLanguage = (lang) => {
-    setLanguage(lang);
+    i18n.changeLanguage(lang);
   };
 
   useEffect(() => {
@@ -93,7 +101,6 @@ const HeaderProfile = ({
   const handleLogout = async () => {
     if (user && user.email) {
       try {
-
         localStorage.removeItem("userName");
         localStorage.removeItem("userPhoto");
         logout();
@@ -133,7 +140,7 @@ const HeaderProfile = ({
                 <div className="notification-header">
                   <h3 className="notification-title">
                     <UserPlus className="notification-title-icon" />
-                    Friend Requests
+                    {t('friendRequests')}
                   </h3>
                   <button
                     onClick={() => toggleNotificationDropdown(false)}
@@ -144,7 +151,7 @@ const HeaderProfile = ({
                 </div>
                 <div className="notification-summary">
                   <span>
-                    Total: {notifications.length} | Requests:{" "}
+                    {t('total')}: {notifications.length} | {t('requests')}:{" "}
                     {
                       notifications.filter((n) => n.type === "friend-request")
                         .length
@@ -154,7 +161,7 @@ const HeaderProfile = ({
                     onClick={clearReadNotifications}
                     className="notification-clear-btn"
                   >
-                    Clear Read
+                    {t('clearRead')}
                   </button>
                 </div>
 
@@ -171,7 +178,7 @@ const HeaderProfile = ({
                           <div className="notification-item-avatar">
                             <img
                               src={
-                                notif.from?.photoURL ||
+                                getFullImageUrl(notif.from?.photoURL) ||
                                 "https://via.placeholder.com/40"
                               }
                               alt={notif.from?.displayName || "User"}
@@ -200,13 +207,13 @@ const HeaderProfile = ({
 
                             <p className="notification-item-message">
                               {isFriend && isFriend(notif.from?.email)
-                                ? "You are now friends"
-                                : "Sent you a friend request"}
+                                ? t('youAreNowFriends')
+                                : t('sentYouAFriendRequest')}
                             </p>
 
                             <p className="notification-item-time">
                               {new Date(notif.timestamp).toLocaleString(
-                                "en-US",
+                                i18n.language,
                                 {
                                   year: "numeric",
                                   month: "short",
@@ -230,7 +237,7 @@ const HeaderProfile = ({
                                   className="btn-accept"
                                 >
                                   <Check size={12} />
-                                  Accept
+                                  {t('accept')}
                                 </button>
                                 <button
                                   onClick={(e) => {
@@ -240,7 +247,7 @@ const HeaderProfile = ({
                                   className="btn-decline"
                                 >
                                   <X size={12} />
-                                  Decline
+                                  {t('decline')}
                                 </button>
                               </div>
                             )}
@@ -251,7 +258,7 @@ const HeaderProfile = ({
                   ) : (
                     <div className="notification-empty">
                       <Bell className="notification-empty-icon" />
-                      <p>No new notifications</p>
+                      <p>{t('noNewNotifications')}</p>
                     </div>
                   )}
                 </div>
@@ -261,7 +268,7 @@ const HeaderProfile = ({
 
           <select
             onChange={(e) => changeLanguage(e.target.value)}
-            value={language}
+            value={i18n.language}
             className={`language-selector ${isDarkMode ? "dark-mode" : ""}`}
           >
             <option value="en">🇺🇸 EN</option>
@@ -278,16 +285,15 @@ const HeaderProfile = ({
           setProfileModalOpen(!profileModal);
         }}
       >
-        <img src={userPhoto} alt="Profile" className="profile-image-header" />
+        <img src={getFullImageUrl(userPhoto) || userPhoto} alt="Profile" className="profile-image-header" />
       </div>
 
       <div
-        className={`list-profile ${profileModal ? "active" : ""} ${isDarkMode ? "dark-mode" : ""
-          }`}
+        className={`list-profile ${profileModal ? "active" : ""} ${isDarkMode ? "dark-mode" : ""}`}
       >
         <div className="list-profile-header">
           <img
-            src={userPhoto}
+            src={getFullImageUrl(userPhoto) || userPhoto}
             alt="Profile"
             className="list-profile-image"
           />
@@ -303,7 +309,7 @@ const HeaderProfile = ({
             className="list-profile-menu-item"
           >
             {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
-            <span>{isDarkMode ? "Light Mode" : "Dark Mode"}</span>
+            <span>{isDarkMode ? t('lightMode') : t('darkMode')}</span>
           </button>
 
           <button
@@ -311,7 +317,7 @@ const HeaderProfile = ({
             className="list-profile-menu-item danger"
           >
             <LogOut size={20} />
-            <span>Logout</span>
+            <span>{t('logout')}</span>
           </button>
         </div>
       </div>

@@ -70,6 +70,11 @@
   transition: background-color 0.3s ease;
   overflow-y: scroll;
 }
+.dark-mode .chat-box-ai {
+  background-color: #242526;
+  color: #f1f5f9;
+  scrollbar-color: #4b5563 #242526;
+}
 
 /* Modal specific styles for chat-box-ai */
 .ai-chat-modal .chat-box-ai {
@@ -273,6 +278,11 @@
   cursor: pointer;
   transition: all 0.3s ease;
   box-shadow: 0 2px 5px rgba(99, 102, 241, 0.3);
+}
+.dark-mode .chat-send-button {
+  background: linear-gradient(135deg, #4b5563 0%, #374151 100%);
+  box-shadow: 0 2px 5px rgba(75, 85, 99, 0.3);
+  color: #242526;
 }
 
 .chat-send-button:hover {

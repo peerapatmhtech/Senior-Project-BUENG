@@ -194,7 +194,7 @@ const ChatPanel = ({
             className="chat-input"
           />
           <div className="emoji">
-            <MdAttachFile />
+            {/* <MdAttachFile /> */}
           </div>
           <div className="emoji-left">
             <IoMdSend onClick={handleSend} />

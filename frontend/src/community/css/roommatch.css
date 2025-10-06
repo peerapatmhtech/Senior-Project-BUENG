@@ -12,6 +12,10 @@
   margin: 0 auto;
   padding: 32px 0 24px 0;
 }
+.dark-mode .roommatch-tindercard-loading {
+  background: rgba(30,32,38,0.92);
+  box-shadow: 0 4px 24px 0 rgba(0,0,0,0.18);
+}
 
 .roommatch-tindercard-spinner {
   display: flex;
@@ -55,6 +59,9 @@
   margin-top: 8px;
   letter-spacing: 0.01em;
   text-align: center;
+}
+.dark-mode .roommatch-tindercard-loading-text {
+  color: #e0e0e0;
 }
 .container-tinder-card{
   margin-top: 0 auto ;

@@ -20,6 +20,11 @@ import "./OnlineStatus.css";
 import HeaderProfile from "../components/HeaderProfile";
 import RequireLogin from "../components/RequireLogin";
 import "../components/NotificationBell.css";
+import { useParams } from "react-router-dom";
+import HeaderProfile from "../ui/HeaderProfile";
+import { useQuery } from "@tanstack/react-query";
+import { fetchPhoto } from "../lib/queries";
+
 // แสดงข้อมูลสถานะการเชื่อมต่อ socket อย่างละเอียด
 // socket.on("connect", () => {
 
@@ -28,8 +33,12 @@ import "../components/NotificationBell.css";
 // ฟังก์ชันเพื่อจัดการกับเวลาที่แสดง last seen
 
 const Friend = () => {
+  const { data: userPhotos = [], refetch: refetchPhoto } = useQuery({
+    queryKey: ["userPhoto"],
+    queryFn: fetchPhoto,
+  });
   // const { socket, onlineUsers } = useSocket(); // ใช้ socket และ onlineUsers จาก context
-  const { socket, noti, friends, setFriends } = useNotifications();
+  const { socket, friends, setFriends } = useNotifications();
   // รับ roomId จาก URL ถ้ามี เช่น /friend/:roomId
   const { roomId } = useParams();
 
@@ -41,7 +50,6 @@ const Friend = () => {
   const [users, setUsers] = useState([]);
   const [currentUser, setCurrentUser] = useState([]);
   const [currentUserfollow, setCurrentUserfollow] = useState(null);
-
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedUser, setSelectedUser] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -64,7 +72,23 @@ const Friend = () => {
   // States for list view toggle
   const [showFriendList, setShowFriendList] = useState(false);
   const [showOnlineUsersList, setShowOnlineUsersList] = useState(false);
+  const [photo, setPhoto] = useState(null);
 
+  const getFullImageUrl = (url) => {
+    if (!url) return ""; // Or a default image
+    if (url.startsWith("http")) {
+      return url; // It's already an absolute URL
+    }
+    // It's a relative URL from our backend, so prepend the API base URL
+    return `${import.meta.env.VITE_APP_API_BASE_URL}${url}`;
+  };
+  useEffect(() => {
+    if (userPhotos && userPhotos.length > 0) {
+      setPhoto(userPhotos);
+    } else {
+      refetchPhoto();
+    }
+  }, [userPhotos]);
   // โหลดการแจ้งเตือนจาก localStorage เมื่อเริ่มต้น
   useEffect(() => {
     if (userEmail) {
@@ -152,8 +176,7 @@ const Friend = () => {
       } else {
         setFriends([]);
       }
-    } catch (error) {
-    }
+    } catch (error) {}
     setLoading(false);
   };
 
@@ -237,7 +260,7 @@ const Friend = () => {
     //     toast.info(
     //       <div className="friend-request-toast">
     //         <img
-    //           src={latestRequest.from.photoURL}
+    //           src={getFullImageUrl(latestRequest.from.photoURL)}
     //           alt={latestRequest.from.displayName}
     //           className="toast-profile-img"
     //         />
@@ -277,7 +300,7 @@ const Friend = () => {
           toast.success(
             <div className="friend-request-toast">
               <img
-                src={acceptInfo.photoURL}
+                src={getFullImageUrl(acceptInfo.photoURL)}
                 alt={acceptInfo.displayName}
                 className="toast-profile-img"
               />
@@ -574,7 +597,6 @@ const Friend = () => {
     }
   };
 
-
   useEffect(() => {
     document.addEventListener("mousedown", handleClickOutside);
     return () => {
@@ -778,16 +800,16 @@ const Friend = () => {
               >
                 <ul className="friend-list">
                   {filteredFriends.length > 0 ? (
-                    filteredFriends.map((friend, index) => (
+                    filteredFriends.map((friend) => (
                       <li
-                        key={index}
+                        key={friend.email}
                         className={`button-friend-item ${
                           openMenuFor === friend.email ? "dropdown-active" : ""
                         }`}
                       >
                         <div className="mobile-small">
                           <img
-                            src={friend.photoURL}
+                            src={getFullImageUrl(friend.photoURL)}
                             className="friend-photo"
                             alt={friend.displayName}
                           />
@@ -978,16 +1000,16 @@ const Friend = () => {
                         (user) =>
                           !isFriend(user.email) && user.isOnline === true
                       )
-                      .map((user, index) => (
+                      .map((user) => (
                         <li
-                          key={index}
+                          key={user.email}
                           className={`button-friend-item ${
                             openMenuFor === user.email ? "dropdown-active" : ""
                           }`}
                         >
                           <div className="mobile-small">
                             <img
-                              src={user.photoURL}
+                              src={getFullImageUrl(user.photoURL)}
                               alt={user.displayName}
                               className="friend-photo"
                             />
@@ -1106,7 +1128,7 @@ const Friend = () => {
             <div className="friend-modal-content" ref={modalRef}>
               <div className="profile-info">
                 <img
-                  src={selectedUser.photoURL}
+                  src={getFullImageUrl(selectedUser.photoURL)}
                   alt={selectedUser.displayName}
                   className="profile-photo"
                 />
@@ -1133,6 +1155,23 @@ const Friend = () => {
                       )}`
                     : "ออฟไลน์"}
                 </p>
+                <div className="photo-modal">
+                  {photo && photo.length > 0
+                    ? photo
+                        .filter((u) => u.email === selectedUser.email)
+                        .map((photoItem) => (
+                          <div
+                            key={photoItem._id}
+                            className="photo-modal-warpper"
+                          >
+                            <img
+                              src={getFullImageUrl(photoItem.url)}
+                              alt={`User Photo`}
+                            />
+                          </div>
+                        ))
+                    : null}
+                </div>
               </div>
             </div>
           </div>
