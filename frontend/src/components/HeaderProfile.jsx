@@ -1,5 +1,4 @@
 import React, { useRef, useState, useEffect } from "react";
-import { useTranslation } from "react-i18next";
 import { useTheme } from "../context/themecontext";
 import { useNotifications } from "../context/notificationContext";
 import "./HeaderProfile.css";
@@ -13,7 +12,6 @@ const HeaderProfile = ({
   notificationDropdownRef: externalDropdownRef,
   isFriend,
 }) => {
-  const { t, i18n } = useTranslation();
   const {
     notifications,
     showNotificationDropdown,
@@ -140,7 +138,7 @@ const HeaderProfile = ({
                 <div className="notification-header">
                   <h3 className="notification-title">
                     <UserPlus className="notification-title-icon" />
-                    {t('friendRequests')}
+                    {'friendRequests'}
                   </h3>
                   <button
                     onClick={() => toggleNotificationDropdown(false)}
@@ -151,7 +149,7 @@ const HeaderProfile = ({
                 </div>
                 <div className="notification-summary">
                   <span>
-                    {t('total')}: {notifications.length} | {t('requests')}:{" "}
+                    {'total'}: {notifications.length} | {'requests'}:{" "}
                     {
                       notifications.filter((n) => n.type === "friend-request")
                         .length
@@ -161,7 +159,7 @@ const HeaderProfile = ({
                     onClick={clearReadNotifications}
                     className="notification-clear-btn"
                   >
-                    {t('clearRead')}
+                    {'clearRead'}
                   </button>
                 </div>
 
@@ -207,8 +205,8 @@ const HeaderProfile = ({
 
                             <p className="notification-item-message">
                               {isFriend && isFriend(notif.from?.email)
-                                ? t('youAreNowFriends')
-                                : t('sentYouAFriendRequest')}
+                                ? 'youAreNowFriends'
+                                : 'sentYouAFriendRequest'}
                             </p>
 
                             <p className="notification-item-time">
@@ -237,7 +235,7 @@ const HeaderProfile = ({
                                   className="btn-accept"
                                 >
                                   <Check size={12} />
-                                  {t('accept')}
+                                  {'accept'}
                                 </button>
                                 <button
                                   onClick={(e) => {
@@ -247,7 +245,7 @@ const HeaderProfile = ({
                                   className="btn-decline"
                                 >
                                   <X size={12} />
-                                  {t('decline')}
+                                  {'decline'}
                                 </button>
                               </div>
                             )}
@@ -258,7 +256,7 @@ const HeaderProfile = ({
                   ) : (
                     <div className="notification-empty">
                       <Bell className="notification-empty-icon" />
-                      <p>{t('noNewNotifications')}</p>
+                      <p>{'noNewNotifications'}</p>
                     </div>
                   )}
                 </div>
@@ -266,14 +264,14 @@ const HeaderProfile = ({
             )}
           </div>
 
-          <select
+          {/* <select
             onChange={(e) => changeLanguage(e.target.value)}
-            value={i18n.language}
+
             className={`language-selector ${isDarkMode ? "dark-mode" : ""}`}
           >
             <option value="en">🇺🇸 EN</option>
             <option value="th">🇹🇭 TH</option>
-          </select>
+          </select> */}
           <span className="profile-divider">|</span>
         </>
       )}
@@ -309,7 +307,7 @@ const HeaderProfile = ({
             className="list-profile-menu-item"
           >
             {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
-            <span>{isDarkMode ? t('lightMode') : t('darkMode')}</span>
+            <span>{isDarkMode ? 'lightMode' : 'DarkMode'}</span>
           </button>
 
           <button
@@ -317,7 +315,7 @@ const HeaderProfile = ({
             className="list-profile-menu-item danger"
           >
             <LogOut size={20} />
-            <span>{t('logout')}</span>
+            <span>{'logout'}</span>
           </button>
         </div>
       </div>

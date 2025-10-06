@@ -17,11 +17,9 @@ import "./friend.css";
 import "./OnlineStatus.css";
 
 ////////-------- Import Components ---------////////
-import HeaderProfile from "../components/HeaderProfile";
 import RequireLogin from "../components/RequireLogin";
 import "../components/NotificationBell.css";
-import { useParams } from "react-router-dom";
-import HeaderProfile from "../ui/HeaderProfile";
+import HeaderProfile from "../components/HeaderProfile";
 import { useQuery } from "@tanstack/react-query";
 import { fetchPhoto } from "../lib/queries";
 

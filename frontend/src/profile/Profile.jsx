@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useTranslation } from "react-i18next";
 import "./Profile.css";
 import { useNavigate } from "react-router-dom";
 import { FaEdit, FaPlus, FaTimes, FaStar } from "react-icons/fa";
@@ -26,7 +25,6 @@ const ProfileStat = ({ count, label }) => (
 );
 
 const Profile = () => {
-  const { t } = useTranslation();
   const userEmail = localStorage.getItem("userEmail");
   const navigate = useNavigate();
   const { isDarkMode } = useTheme();
@@ -95,26 +93,26 @@ const Profile = () => {
 
   const handleSaveNickName = async () => {
     if (!nickName.trim()) {
-      toast.error(t('nicknameCannotBeEmpty'));
+      toast.error('nicknameCannotBeEmpty');
       return;
     }
     if (nickName.length > MAX_NICKNAME) {
-      toast.error(t('nicknameTooLong', { max: MAX_NICKNAME }));
+      toast.error('nicknameTooLong', { max: MAX_NICKNAME });
       return;
     }
 
     try {
       await api.post(`/api/save-user-name`, { userEmail, nickName });
-      toast.success(t('nicknameUpdated'));
+      toast.success('nicknameUpdated');
       setIsEditingName(false);
     } catch (err) {
-      toast.error(t('failedToUpdateNickname'));
+      toast.error('failedToUpdateNickname');
     }
   };
 
   const handleSaveAbout = async () => {
     if (tempInfo.detail.length > MAX_CHARS) {
-      toast.error(t('aboutMeTooLong', { max: MAX_CHARS }));
+      toast.error('aboutMeTooLong', { max: MAX_CHARS });
       return;
     }
 
@@ -125,9 +123,9 @@ const Profile = () => {
       });
       setUserInfo(tempInfo);
       setIsEditingAbout(false);
-      toast.success(t('profileUpdated'));
+      toast.success('profileUpdated');
     } catch (error) {
-      toast.error(t('failedToSaveProfile'));
+      toast.error('failedToSaveProfile');
     }
   };
 
@@ -135,11 +133,11 @@ const Profile = () => {
     const file = e.target.files[0];
     if (!file) return;
     if (!file.type.startsWith("image/")) {
-      toast.error(t('pleaseUploadImage'));
+      toast.error('pleaseUploadImage');
       return;
     }
     if (file.size > 5 * 1024 * 1024) {
-      toast.error(t('fileSizeTooLarge'));
+      toast.error('fileSizeTooLarge');
       return;
     }
 
@@ -152,12 +150,12 @@ const Profile = () => {
       const response = await api.post(`/api/upload-user-photo`, formData);
       if (response.data.success) {
         await refetchPhotos();
-        toast.success(t('photoUploaded'));
+        toast.success('photoUploaded');
       } else {
-        throw new Error(response.data.message || t('uploadFailed'));
+        throw new Error(response.data.message || 'uploadFailed');
       }
     } catch (err) {
-      toast.error(err.message || t('uploadFailed'));
+      toast.error(err.message || 'uploadFailed');
     } finally {
       setUploading(false);
     }
@@ -169,9 +167,9 @@ const Profile = () => {
         email: userEmail,
         photoIds,
       });
-      toast.success(t('profilePhotoUpdated'));
+      toast.success('profilePhotoUpdated');
     } catch (error) {
-      toast.error(t('failedToUpdateProfilePhoto'));
+      toast.error('failedToUpdateProfilePhoto');
     }
   };
 
@@ -223,16 +221,16 @@ const Profile = () => {
   };
 
   if (loading) {
-    return <div className="profile-loading">{t('loadingProfile')}</div>;
+    return <div className="profile-loading">loadingProfile</div>;
   }
 
   if (!userEmail) {
     return (
       <div className={`profile-page ${isDarkMode ? "dark-mode" : ""}`}>
         <div className="login-prompt">
-          <h2>{t('pleaseLogin')}</h2>
-          <p>{t('loginToViewProfile')}</p>
-          <Button onClick={() => navigate("/login")}>{t('goToLogin')}</Button>
+          <h2>{'pleaseLogin'}</h2>
+          <p>{'loginToViewProfile'}</p>
+          <Button onClick={() => navigate("/login")}>{'goToLogin'}</Button>
         </div>
       </div>
     );
@@ -273,13 +271,13 @@ const Profile = () => {
                     className="nickname-input"
                   />
                   <Button onClick={handleSaveNickName} className="save-btn">
-                    {t('save')}
+                    {'save'}
                   </Button>
                   <Button
                     onClick={() => setIsEditingName(false)}
                     className="cancel-btn"
                   >
-                    {t('cancel')}
+                    {'cancel'}
                   </Button>
                 </div>
               ) : (
@@ -292,15 +290,15 @@ const Profile = () => {
                 </h1>
               )}
               <div className="profile-stats">
-                <ProfileStat count={userPhotos.length} label={t('photos')} />
-                <ProfileStat count={followers.length} label={t('followers')} />
-                <ProfileStat count={following.length} label={t('following')} />
+                <ProfileStat count={userPhotos.length} label={'photos'} />
+                <ProfileStat count={followers.length} label={'followers'} />
+                <ProfileStat count={following.length} label={'following'} />
               </div>
             </div>
           </div>
 
           <div className="profile-about">
-            <h3>{t('aboutMe')}</h3>
+            <h3>{'aboutMe'}</h3>
             {isEditingAbout ? (
               <div className="edit-container">
                 <textarea
@@ -315,18 +313,18 @@ const Profile = () => {
                   {tempInfo.detail.length} / {MAX_CHARS}
                 </p>
                 <Button onClick={handleSaveAbout} className="save-btn">
-                  {t('save')}
+                  {'save'}
                 </Button>
                 <Button
                   onClick={() => setIsEditingAbout(false)}
                   className="cancel-btn"
                 >
-                  {t('cancel')}
+                  {'cancel'}
                 </Button>
               </div>
             ) : (
               <p onClick={() => setIsEditingAbout(true)} className="about-text">
-                {userInfo.detail || t('tellUsAboutYourself')}
+                {userInfo.detail || 'tellUsAboutYourself'}
                 <FaEdit className="edit-icon-new" />
               </p>
             )}
@@ -334,7 +332,7 @@ const Profile = () => {
         </div>
 
         <div className="profile-gallery">
-          <h3>{t('myPhotos')}</h3>
+          <h3>{'myPhotos'}</h3>
           <div className="photo-grid">
             {userPhotos.map((photo) => (
               <div key={photo._id} className="photo-wrapper">
@@ -344,14 +342,14 @@ const Profile = () => {
                     <button
                       className="set-main-btn"
                       onClick={() => handleSetMainPhoto(photo)}
-                      title={t('setAsProfilePicture')}
+                      title={'setAsProfilePicture'}
                     >
                       <FaStar />
                     </button>
                   ) : (
                     <div
                       className="main-photo-badge"
-                      title={t('currentProfilePicture')}
+                      title={'currentProfilePicture'}
                     >
                       <FaStar />
                     </div>
@@ -359,7 +357,7 @@ const Profile = () => {
                   <button
                     className="remove-photo-btn-gallery"
                     onClick={() => handleRemovePhoto(photo._id)}
-                    title={t('removePhoto')}
+                    title={'removePhoto'}
                   >
                     <FaTimes />
                   </button>
@@ -376,7 +374,7 @@ const Profile = () => {
                 ) : (
                   <>
                     <FaPlus />
-                    <span>{t('addPhoto')}</span>
+                    <span>{'addPhoto'}</span>
                   </>
                 )}
               </div>
