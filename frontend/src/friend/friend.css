@@ -195,7 +195,7 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  witdh: 100%;
+  width:  100%;
   transform: translateY(0);
   pointer-events: auto; /* อนุญาตการคลิกเมื่อแสดง */
 }
