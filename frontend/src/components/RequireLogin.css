@@ -1,0 +1,49 @@
+.require-login-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  width: 100%;
+  background-color: #ffffff; /* Light mode background */
+  color: #111827; /* Light mode text */
+  transition: background-color 0.3s, color 0.3s;
+}
+
+.dark .require-login-container {
+  background-color: #111827; /* Dark mode background */
+  color: #f3f4f6; /* Dark mode text */
+}
+
+.require-login-content {
+  text-align: center;
+  margin-top: -5rem; /* Adjust as needed to center vertically */
+  width: 100%;
+}
+
+.require-login-heading {
+  font-size: 1.25rem;
+  line-height: 1.75rem;
+  font-weight: 600;
+}
+
+.require-login-button {
+  margin-top: 1rem;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+  font-weight: 600;
+  color: #ffffff;
+  background-image: linear-gradient(to right, #8b5cf6, #3b82f6);
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  cursor: pointer;
+  transition: all 0.3s ease-in-out;
+  display: inline-block; /* To make it behave like a button */
+}
+
+.require-login-button:hover {
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  transform: translateY(-2px);
+}

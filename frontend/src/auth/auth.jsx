@@ -97,6 +97,14 @@ const NewLogin = () => {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
 
+      // Check if the email is from @bumail.net
+      if (!user.email.endsWith("@bumail.net")) {
+        setError("โปรดใช้บัญชี @bumail.net เท่านั้น");
+        await auth.signOut(); // Sign out the user
+        setIsLoading(false);
+        return; // Stop the function
+      }
+
       //////เก็บข้อมูล User ใน localStorage//////
       localStorage.setItem("userName", user.displayName || user.email.split("@")[0]);
       localStorage.setItem("userPhoto", user.photoURL || "");

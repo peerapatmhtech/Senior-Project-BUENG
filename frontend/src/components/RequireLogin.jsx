@@ -1,5 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
+import "./RequireLogin.css";
 
 const RequireLogin = ({ children }) => {
   const navigate = useNavigate();
@@ -7,18 +8,17 @@ const RequireLogin = ({ children }) => {
   const userEmail = localStorage.getItem("userEmail");
   if (!userName || !userEmail) {
     return (
-      <div className="flex flex-col items-center justify-center h-screen w-full">
-        <div className="text-center mt-10 w-full">
-          <h2 className="text-xl font-semibold">
+      <div className="require-login-container">
+        <div className="require-login-content">
+          <h2 className="require-login-heading">
             กรุณาเข้าสู่ระบบก่อนเข้าใช้งาน
           </h2>
-          <Button
-            className="mt-4 px-6 py-2 font-semibold text-white bg-gradient-to-r from-purple-600 to-blue-500 rounded-lg shadow-md hover:shadow-lg hover:-translate-y-0.5 transform transition-all duration-300 ease-in-out"
+          <div
+            className="require-login-button"
             onClick={() => navigate("/login")}
           >
             ไปหน้าเข้าสู่ระบบ
-          </Button>
-
+          </div>
         </div>
       </div>
     );
