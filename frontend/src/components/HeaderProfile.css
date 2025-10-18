@@ -502,3 +502,22 @@
     align-items: flex-start;
   }
 }
+@media screen and (min-width: 375px) {
+  .list-profile {
+    width: 220px;
+  }
+  .list-profile-name {
+    font-size: 12px;
+  }
+  .list-profile-email {
+    font-size: 10px;
+  }
+  .list-profile-menu-item {
+    font-size: 10px;
+    padding: 5px 12px;
+  }
+  .list-profile-image {
+    width: 32px;
+    height: 32px;
+  }
+}

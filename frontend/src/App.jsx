@@ -31,7 +31,7 @@ function App() {
     <SocketProvider>
       <NotificationProvider>
         {/* หากไม่ใช่หน้า login, จะแสดง Navbar */}
-        <div className="reponsive">
+        {/* <div className="reponsive"> */}
           {location.pathname !== "/login" && <Navbar />}
 
           <Routes>
@@ -44,7 +44,7 @@ function App() {
             <Route path="/chat/:roomId" element={<Chat />} />
             <Route path="/ai-chat" element={<ChatContainerAI />} />
           </Routes>
-        </div>
+        {/* </div> */}
       </NotificationProvider>
     </SocketProvider>
   );

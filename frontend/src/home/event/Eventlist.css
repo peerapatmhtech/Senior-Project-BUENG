@@ -169,7 +169,7 @@
 }
 
 /* Responsive behavior */
-@media screen and (max-width: 990px) {
+@media screen and (max-width: 1200px) {
   /* Hide desktop view on mobile */
   .eventlist-desktop-view {
     display: none;
@@ -187,7 +187,7 @@
 }
 
 /* Desktop behavior - ensure modal is hidden on larger screens */
-@media screen and (min-width: 991px) {
+@media screen and (min-width: 1200px) {
   .eventlist-modal-toggle-btn {
     display: none !important;
   }
@@ -839,7 +839,7 @@
 }
 
 /* Desktop Medium (991px - 1199px) */
-@media screen and (min-width: 991px) and (max-width: 1199px) {
+@media screen and (max-width: 1250px) {
   .event-container {
     height: calc(100vh - 100px);
     padding: 0px 32px 40px 32px;
@@ -854,7 +854,7 @@
   }
 
   .event-card {
-    min-height: 420px;
+    min-height: 320px;
     padding: 28px 22px;
     width: 100%;
   }
@@ -874,7 +874,7 @@
   }
 }
 
-@media screen and (max-width: 990px) {
+@media screen and (max-width: 1250px) {
   .event-container {
     height: calc(100vh - 80px);
     /* ปรับให้เหมาะกับ bottom navbar */
@@ -937,7 +937,7 @@
 /* Extra Small Mobile (280px - 320px) */
 
 /* Dark Mode Responsive Adjustments */
-@media screen and (max-width: 990px) {
+@media screen and (max-width: 1200px) {
   .dark-mode .event-container {
     background-color: #1e1e1e;
   }

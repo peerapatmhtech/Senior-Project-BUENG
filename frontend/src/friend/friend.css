@@ -345,13 +345,7 @@
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
   border-left: 4px solid #818cf8;
 }
-
-/* Search animation */
-.search-friend-con {
-  position: relative;
-  overflow: hidden;
-  margin-top: 100px;
-}
+s
 
 .search-friend-con::after {
   content: "";
@@ -555,7 +549,7 @@
   align-items: center;
   border-radius: 28px;
   padding: 8px 10px;
-  margin: 1rem 5px;
+  margin: 0 5px 1rem;
   background-color: #f8f9fa;
   border: 1px solid #e2e8f0;
   transition: border-color 0.2s, box-shadow 0.2s;

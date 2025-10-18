@@ -197,3 +197,8 @@
 .dark-mode .notification-header {
   border-color: #444;
 }
+@media sreen and (min-width: 375px) {
+  .notification-title {
+    font-size: 10px;
+  }
+}

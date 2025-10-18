@@ -270,15 +270,15 @@ const Profile = () => {
                     maxLength={MAX_NICKNAME}
                     className="nickname-input"
                   />
-                  <Button onClick={handleSaveNickName} className="save-btn">
+                  <div onClick={handleSaveNickName} className="save-btn">
                     {'save'}
-                  </Button>
-                  <Button
+                  </div>
+                  <div
                     onClick={() => setIsEditingName(false)}
                     className="cancel-btn"
                   >
                     {'cancel'}
-                  </Button>
+                  </div>
                 </div>
               ) : (
                 <h1 className="profile-nickname">
