@@ -243,93 +243,7 @@ const Friend = () => {
       }
     });
 
-    // ฟังสถานะอัปเดตผู้ใช้ออนไลน์ (ยังคงใช้ WebSocket สำหรับข้อมูลแบบ real-time)
-    socket.on("update-users", (data) => {
-      // เช็คว่า data เป็น array หรือ object
 
-      // ถ้าข้อมูลเป็น array ใช้ตามเดิม
-      if (Array.isArray(data)) {
-        setUsers((prevUsers) =>
-          prevUsers.map((user) => ({
-            ...user,
-            isOnline: data.some(
-              (onlineUser) => onlineUser.email === user.email
-            ),
-            lastSeen:
-              data.find((onlineUser) => onlineUser.email === user.email)
-                ?.lastSeen || user.lastSeen,
-          }))
-        );
-        setFriends((prevFriends) =>
-          prevFriends.map((friend) => ({
-            ...friend,
-            isOnline: data.some(
-              (onlineUser) => onlineUser.email === friend.email
-            ),
-            lastSeen:
-              data.find((onlineUser) => onlineUser.email === friend.email)
-                ?.lastSeen || friend.lastSeen,
-          }))
-        );
-      }
-      // ถ้าข้อมูลเป็น object มี onlineUsers เป็น array
-      else if (data && Array.isArray(data.onlineUsers)) {
-        setUsers((prevUsers) =>
-          prevUsers.map((user) => ({
-            ...user,
-            isOnline: data.onlineUsers.includes(user.email),
-            lastSeen:
-              (data.lastSeenTimes && data.lastSeenTimes[user.email]) ||
-              user.lastSeen,
-          }))
-        );
-        setFriends((prevFriends) =>
-          prevFriends.map((friend) => ({
-            ...friend,
-            isOnline: data.onlineUsers.includes(friend.email),
-            lastSeen:
-              (data.lastSeenTimes && data.lastSeenTimes[friend.email]) ||
-              friend.lastSeen,
-          }))
-        );
-      }
-    });
-
-    // ฟังเมื่อมีผู้ใช้ออฟไลน์
-    socket.on("user-offline", (userData) => {
-      setUsers((prevUsers) =>
-        prevUsers.map((user) =>
-          user.email === userData.email
-            ? { ...user, isOnline: false, lastSeen: userData.lastSeen }
-            : user
-        )
-      );
-      setFriends((prevFriends) =>
-        prevFriends.map((friend) =>
-          friend.email === userData.email
-            ? { ...friend, isOnline: false, lastSeen: userData.lastSeen }
-            : friend
-        )
-      );
-    });
-
-    // ฟังเมื่อมีผู้ใช้ออนไลน์
-    socket.on("user-online", (userData) => {
-      setUsers((prevUsers) =>
-        prevUsers.map((user) =>
-          user.email === userData.email
-            ? { ...user, isOnline: true, lastSeen: null }
-            : user
-        )
-      );
-      setFriends((prevFriends) =>
-        prevFriends.map((friend) =>
-          friend.email === userData.email
-            ? { ...friend, isOnline: true, lastSeen: null }
-            : friend
-        )
-      );
-    });
 
     // ฟังเมื่อเราถูกลบออกจากรายการเพื่อน
     socket.on("notify-friend-removed", async (data) => {
@@ -349,9 +263,7 @@ const Friend = () => {
     return () => {
       socket.emit("user-offline", { email: userEmail });
       clearInterval(socketCheckInterval);
-      socket.off("update-users");
-      socket.off("user-offline");
-      socket.off("user-online");
+
       socket.off("notify-friend-request");
       socket.off("notify-friend-accept");
       socket.off("notify-friend-removed");

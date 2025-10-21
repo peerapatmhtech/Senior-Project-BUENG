@@ -190,10 +190,10 @@ const EventList = ({ setWaiting, waiting }) => {
   if (waiting || isLoadingEvents) return <span className="loader"></span>;
   if (isErrorEvents)
     return <p className="loading-text">เกิดข้อผิดพลาดในการโหลดข้อมูล</p>;
-
+  console.log(events);
   const EventListContent = () => (
     <div className={`event-container ${isDarkMode ? "dark-mode" : ""}`}>
-      {events.length === 0 || events === undefined || events === null ? (
+      {events.length < 0 ? (
         <div className="eventlist-empty-loading">
           <div className="eventlist-empty-text">ยังไม่มีกิจกรรมในขณะนี้</div>
         </div>
