@@ -659,14 +659,14 @@ const Friend = () => {
                         <div className="con-right">
                           <span
                             className={`status ${
-                              friend.isOnline ? "online" : "offline"
+                              onlineUsers[friend.email]?.online ? "online" : "offline"
                             }`}
-                            aria-label={friend.isOnline ? "ออนไลน์" : "ออฟไลน์"}
+                            aria-label={onlineUsers[friend.email]?.online ? "ออนไลน์" : "ออฟไลน์"}
                           >
-                            {friend.isOnline
+                            {onlineUsers[friend.email]?.online
                               ? "ออนไลน์"
-                              : friend.lastSeen
-                              ? `ออฟไลน์ - ${formatLastSeen(friend.lastSeen)}`
+                              : onlineUsers[friend.email]?.lastActive
+                              ? `ออฟไลน์ - ${formatLastSeen(onlineUsers[friend.email]?.lastActive)}`
                               : "ออฟไลน์"}
                           </span>
                           <div
@@ -784,7 +784,7 @@ const Friend = () => {
                 Online Users (
                 {
                   filteredUsers.filter(
-                    (user) => !isFriend(user.email) && user.isOnline === true
+                    (user) => !isFriend(user.email) && onlineUsers[user.email]?.online
                   ).length
                 }
                 )
@@ -803,19 +803,19 @@ const Friend = () => {
               <div
                 className={
                   filteredUsers.filter(
-                    (user) => !isFriend(user.email) && user.isOnline === true
+                    (user) => !isFriend(user.email) && onlineUsers[user.email]?.online
                   ).length > 0 && filteredFriends.length === 0
                     ? "special-friend-recommand"
                     : filteredUsers.filter(
                         (user) =>
-                          !isFriend(user.email) && user.isOnline === true
+                          !isFriend(user.email) && onlineUsers[user.email]?.online
                       ).length === 0
                     ? "empty-friend-recommand"
                     : "con-friend-recommand"
                 }
               >
                 {filteredUsers.filter(
-                  (user) => !isFriend(user.email) && user.isOnline === true
+                  (user) => !isFriend(user.email) && onlineUsers[user.email]?.online
                 ).length === 0 && (
                   <div className="empty-friend">
                     <div className="roomlist-empty-loading">
@@ -830,7 +830,7 @@ const Friend = () => {
                     filteredUsers
                       .filter(
                         (user) =>
-                          !isFriend(user.email) && user.isOnline === true
+                          !isFriend(user.email) && onlineUsers[user.email]?.online
                       )
                       .map((user) => (
                         <li
@@ -856,14 +856,14 @@ const Friend = () => {
                           <div className="con-right">
                             <span
                               className={`status ${
-                                user.isOnline ? "online" : "offline"
+                                onlineUsers[user.email]?.online ? "online" : "offline"
                               }`}
-                              aria-label={user.isOnline ? "ออนไลน์" : "ออฟไลน์"}
+                              aria-label={onlineUsers[user.email]?.online ? "ออนไลน์" : "ออฟไลน์"}
                             >
-                              {user.isOnline
+                              {onlineUsers[user.email]?.online
                                 ? "ออนไลน์"
-                                : user.lastSeen
-                                ? `ออฟไลน์ - ${formatLastSeen(user.lastSeen)}`
+                                : onlineUsers[user.email]?.lastActive
+                                ? `ออฟไลน์ - ${formatLastSeen(onlineUsers[user.email]?.lastActive)}`
                                 : "ออฟไลน์"}
                             </span>
                             <button
@@ -979,11 +979,11 @@ const Friend = () => {
                 <p>Email: {selectedUser.email}</p>
                 <p>
                   สถานะ:{" "}
-                  {selectedUser.isOnline
+                  {onlineUsers[selectedUser.email]?.online
                     ? "ออนไลน์"
-                    : selectedUser.lastSeen
+                    : onlineUsers[selectedUser.email]?.lastActive
                     ? `ออฟไลน์ - เห็นล่าสุด ${formatLastSeen(
-                        selectedUser.lastSeen
+                        onlineUsers[selectedUser.email]?.lastActive
                       )}`
                     : "ออฟไลน์"}
                 </p>

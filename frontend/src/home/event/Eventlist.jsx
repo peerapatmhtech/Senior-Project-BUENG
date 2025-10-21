@@ -122,7 +122,6 @@ const EventList = ({ setWaiting, waiting }) => {
   const unlikeMutation = useMutation({
     mutationFn: ({ eventId }) => api.delete(`/api/like/${email}/${eventId}`),
     onSuccess: () => {
-      toast.success("นำออกจากรายการโปรดสำเร็จ");
       queryClient.invalidateQueries({ queryKey: ["favorites", email] });
     },
     onError: (error) => {
@@ -190,7 +189,6 @@ const EventList = ({ setWaiting, waiting }) => {
   if (waiting || isLoadingEvents) return <span className="loader"></span>;
   if (isErrorEvents)
     return <p className="loading-text">เกิดข้อผิดพลาดในการโหลดข้อมูล</p>;
-  console.log(events);
   const EventListContent = () => (
     <div className={`event-container ${isDarkMode ? "dark-mode" : ""}`}>
       {events.length < 0 ? (
