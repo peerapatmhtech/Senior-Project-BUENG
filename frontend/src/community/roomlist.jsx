@@ -1,4 +1,4 @@
-import  { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import api from "../server/api";
 import { useNavigate } from "react-router-dom";
 import "./css/roomlist.css";
@@ -29,14 +29,10 @@ const RoomList = ({
   useEffect(() => {
     const fetchRooms = async () => {
       try {
-        const res = await api.get(
-          `/api/allrooms`
-        );
-        
+        const res = await api.get(`/api/allrooms`);
+
         // ดึงห้องที่ user join แล้ว
-        const filterjoinedRooms = await api.get(
-          `/api/user-rooms/${userEmail}`
-        );
+        const filterjoinedRooms = await api.get(`/api/user-rooms/${userEmail}`);
         // สมมติ API ส่งกลับเป็น { roomNames: [{ _id, name, ... }] }
         const joinedIds = Array.isArray(filterjoinedRooms.data.roomIds)
           ? filterjoinedRooms.data.roomIds.filter((id) => !!id)
@@ -64,15 +60,21 @@ const RoomList = ({
   }
 
   const handleAddCommunity = async (roomId, roomName) => {
+    // console.log(roomId, roomName);
     try {
-      await api.post(
-        `/api/join-community`,
-        {
-          userEmail,
-          roomId,
-          roomName,
-        }
-      );
+      const res = await api.post(`/api/join-community`, {
+        userEmail,
+        roomId,
+        roomName,
+      });
+      if (res.status !== 200) {
+        toast.error("ไม่สามารถเข้าร่วมห้องได้");
+        return;
+      }
+      if (res.status === 200) {
+        navigate(`/chat/${roomId}`);
+        toast.success("เข้าร่วมห้องสําเร็จ!");
+      }
       toast.success("เข้าร่วมห้องสําเร็จ!");
     } catch (error) {
       console.error("Error adding friend:", error);
@@ -81,7 +83,6 @@ const RoomList = ({
   };
 
   const handleEnterRoom = (roomId, roomName) => {
-    navigate(`/chat/${roomId}`);
     handleAddCommunity(roomId, roomName);
   };
 

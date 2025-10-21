@@ -31,14 +31,12 @@ app.post("/join-community", requireOwner, async (req, res) => {
 
 //////////ดึงห้องที่ผู้ใช้เชื่อมต่อ/////////////////
 app.get("/user-rooms/:email", requireOwner, async (req, res) => {
-  const encodedEmail = req.params.email.toLowerCase();
-
   try {
-    if (!encodedEmail) {
+    if (!req.params.email) {
       return res.status(400).json({ error: "Email is required." });
     }
 
-    const user = await Info.findOne({ email: encodedEmail });
+    const user = await Info.findOne({ email: req.params.email });
     if (!user) return res.status(204).json({ error: "User not found" });
 
     // ✅ แยกเฉพาะ roomId ออกมา
