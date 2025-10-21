@@ -81,7 +81,10 @@ const EventList = ({ setWaiting, waiting }) => {
     if (debounceTimeoutRef.current) {
       clearTimeout(debounceTimeoutRef.current);
     }
-    debounceTimeoutRef.current = setTimeout(sendPendingFavoritesToWebhook, 5000);
+    debounceTimeoutRef.current = setTimeout(
+      sendPendingFavoritesToWebhook,
+      5000
+    );
   };
 
   // 3. Socket listener to invalidate query on update
@@ -156,7 +159,7 @@ const EventList = ({ setWaiting, waiting }) => {
   );
 
   const deleteAllMutation = createListRefetchingMutation(
-    () => api.delete(`/api/events/${email}`),
+    () => api.delete(`/api/events/user/${email}`),
     "ลบกิจกรรมทั้งหมดสำเร็จ",
     "เกิดข้อผิดพลาดในการลบกิจกรรมทั้งหมด"
   );
@@ -173,11 +176,9 @@ const EventList = ({ setWaiting, waiting }) => {
   };
 
   const handleDelete = (id) => {
-    if (window.confirm("คุณแน่ใจว่าต้องการลบกิจกรรมนี้หรือไม่?")) {
-      deleteMutation.mutate(id);
-      // Also unlike it to clean up references
-      unlikeMutation.mutate({ eventId: id });
-    }
+    deleteMutation.mutate(id);
+    // Also unlike it to clean up references
+    unlikeMutation.mutate({ eventId: id });
   };
 
   const handleDeleteAll = () => {
