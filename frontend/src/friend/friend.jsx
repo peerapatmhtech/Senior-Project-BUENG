@@ -11,6 +11,7 @@ import { BsThreeDots } from "react-icons/bs";
 ////////-------- Import Contexts ---------////////
 import { useTheme } from "../context/themecontext";
 import { useNotifications } from "../context/notificationContext";
+import { useSocket } from "../context/socketcontext";
 
 ////////-------- Import CSS ---------////////
 import "./friend.css";
@@ -35,8 +36,8 @@ const Friend = () => {
     queryKey: ["userPhoto"],
     queryFn: fetchPhoto,
   });
-  // const { socket, onlineUsers } = useSocket(); // ใช้ socket และ onlineUsers จาก context
-  const { socket, friends, setFriends } = useNotifications();
+  const { socket, onlineUsers } = useSocket();
+  const { friends, setFriends } = useNotifications();
   // รับ roomId จาก URL ถ้ามี เช่น /friend/:roomId
   const { roomId } = useParams();
 

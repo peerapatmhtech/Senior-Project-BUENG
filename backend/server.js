@@ -79,13 +79,13 @@ app.use(
 app.use(bodyParser.json());
 
 ////////Protection Doss and DDos Attack////////
-app.use(
-  rateLimit({
-    windowMs: 1 * 60 * 1000, // 1 minutes
-    max: 100, // limit each IP to 100 requests per windowMs
-    skip: (req, res) => req.method === "GET",
-  })
-);
+// app.use(
+//   rateLimit({
+//     windowMs: 1 * 60 * 1000, // 1 minutes
+//     max: 500, // limit each IP to 100 requests per windowMs
+//     skip: (req, res) => req.method === "GET",
+//   })
+// );
 
 // Serve static files from the uploads directory
 app.use("/uploads", express.static(path.join(__dirname, "..", "uploads")));

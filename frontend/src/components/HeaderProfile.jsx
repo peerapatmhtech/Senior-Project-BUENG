@@ -45,10 +45,6 @@ const HeaderProfile = ({
     return `${import.meta.env.VITE_APP_API_BASE_URL}${url}`;
   };
 
-  const changeLanguage = (lang) => {
-    i18n.changeLanguage(lang);
-  };
-
   useEffect(() => {
     fetchNotifications();
   }, [fetchNotifications]);
@@ -132,13 +128,15 @@ const HeaderProfile = ({
 
             {showNotificationDropdown && (
               <div
-                className={`notification-dropdown ${isDarkMode ? "dark-mode" : ""}`}
+                className={`notification-dropdown ${
+                  isDarkMode ? "dark-mode" : ""
+                }`}
                 ref={notificationDropdownRef}
               >
                 <div className="notification-header">
                   <h3 className="notification-title">
                     <UserPlus className="notification-title-icon" />
-                    {'friendRequests'}
+                    Friend Requests
                   </h3>
                   <button
                     onClick={() => toggleNotificationDropdown(false)}
@@ -149,7 +147,7 @@ const HeaderProfile = ({
                 </div>
                 <div className="notification-summary">
                   <span>
-                    {'total'}: {notifications.length} | {'requests'}:{" "}
+                    {notifications.length}{" "}
                     {
                       notifications.filter((n) => n.type === "friend-request")
                         .length
@@ -159,7 +157,7 @@ const HeaderProfile = ({
                     onClick={clearReadNotifications}
                     className="notification-clear-btn"
                   >
-                    {'clearRead'}
+                    Clear Read
                   </button>
                 </div>
 
@@ -169,7 +167,9 @@ const HeaderProfile = ({
                       <div
                         key={notif.id}
                         data-notification-id={notif.id}
-                        className={`notification-item ${notif.read ? "read" : "unread"}`}
+                        className={`notification-item ${
+                          notif.read ? "read" : "unread"
+                        }`}
                         onClick={() => markNotificationAsRead(notif.id)}
                       >
                         <div className="notification-item-content">
@@ -192,10 +192,11 @@ const HeaderProfile = ({
                                 {notif.from?.displayName || "User"}
                               </p>
                               <span
-                                className={`notification-item-tag ${isFriend && isFriend(notif.from?.email)
-                                  ? "friend"
-                                  : "request"
-                                  }`}
+                                className={`notification-item-tag ${
+                                  isFriend && isFriend(notif.from?.email)
+                                    ? "friend"
+                                    : "request"
+                                }`}
                               >
                                 {isFriend && isFriend(notif.from?.email)
                                   ? "Friend"
@@ -205,13 +206,13 @@ const HeaderProfile = ({
 
                             <p className="notification-item-message">
                               {isFriend && isFriend(notif.from?.email)
-                                ? 'youAreNowFriends'
-                                : 'sentYouAFriendRequest'}
+                                ? "youAreNowFriends"
+                                : "sentYouAFriendRequest"}
                             </p>
 
                             <p className="notification-item-time">
                               {new Date(notif.timestamp).toLocaleString(
-                                i18n.language,
+                                undefined,
                                 {
                                   year: "numeric",
                                   month: "short",
@@ -235,7 +236,7 @@ const HeaderProfile = ({
                                   className="btn-accept"
                                 >
                                   <Check size={12} />
-                                  {'accept'}
+                                         Accept
                                 </button>
                                 <button
                                   onClick={(e) => {
@@ -245,7 +246,7 @@ const HeaderProfile = ({
                                   className="btn-decline"
                                 >
                                   <X size={12} />
-                                  {'decline'}
+                                          Decline
                                 </button>
                               </div>
                             )}
@@ -256,7 +257,7 @@ const HeaderProfile = ({
                   ) : (
                     <div className="notification-empty">
                       <Bell className="notification-empty-icon" />
-                      <p>{'noNewNotifications'}</p>
+                       <p>No new notifications</p>
                     </div>
                   )}
                 </div>
@@ -283,11 +284,17 @@ const HeaderProfile = ({
           setProfileModalOpen(!profileModal);
         }}
       >
-        <img src={getFullImageUrl(userPhoto) || userPhoto} alt="Profile" className="profile-image-header" />
+        <img
+          src={getFullImageUrl(userPhoto) || userPhoto}
+          alt="Profile"
+          className="profile-image-header"
+        />
       </div>
 
       <div
-        className={`list-profile ${profileModal ? "active" : ""} ${isDarkMode ? "dark-mode" : ""}`}
+        className={`list-profile ${profileModal ? "active" : ""} ${
+          isDarkMode ? "dark-mode" : ""
+        }`}
       >
         <div className="list-profile-header">
           <img
@@ -307,7 +314,7 @@ const HeaderProfile = ({
             className="list-profile-menu-item"
           >
             {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
-            <span>{isDarkMode ? 'lightMode' : 'DarkMode'}</span>
+            <span>{isDarkMode ? "lightMode" : "DarkMode"}</span>
           </button>
 
           <button
@@ -315,7 +322,7 @@ const HeaderProfile = ({
             className="list-profile-menu-item danger"
           >
             <LogOut size={20} />
-            <span>{'logout'}</span>
+            <span>{"logout"}</span>
           </button>
         </div>
       </div>
