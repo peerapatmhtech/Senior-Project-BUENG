@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { auth, provider, signInWithPopup } from "../firebase/firebase";
 import { useAuth } from "../context/Authcontext";
 import { useNavigate } from "react-router-dom";
@@ -271,18 +271,18 @@ const NewLogin = () => {
         <div className="form-container sign-in">
           <form onSubmit={handleEmailSignIn}>
             <h1>ยินดีต้อนรับกลับ</h1>
-            <div className="social-icons">
+            <div className="social-icons" onClick={handleGoogleSignIn}>
               <a
                 href="#"
                 className="icon"
-                onClick={handleGoogleSignIn}
+                // onClick={handleGoogleSignIn}
                 aria-label="Sign in with Google"
               >
                 <i className="fa-brands fa-google"></i>
               </a>
               <p className="text-google">เชื่อมต่อด้วย Google</p>
             </div>
-            <span>หรือใช้อีเมล @bumail.net ของคุณ</span>
+            {/* <span>หรือใช้อีเมล @bumail.net ของคุณ</span> */}
 
             <input
               type="email"
@@ -351,18 +351,18 @@ const NewLogin = () => {
         <div className="form-container sign-up">
           <form onSubmit={handleEmailSignUp}>
             <h1>สร้างบัญชีใหม่</h1>
-            <div className="social-icons">
+            <div className="social-icons" onClick={handleGoogleSignIn}>
               <a
                 href="#"
                 className="icon"
-                onClick={handleGoogleSignIn}
+                // onClick={handleGoogleSignIn}
                 aria-label="Sign up with Google"
               >
                 <i className="fa-brands fa-google"></i>
               </a>
-               <p className="text-google">สร้างบัญชีใหม่ด้วย Google</p>
+              <p className="text-google">สร้างบัญชีใหม่ด้วย Google</p>
             </div>
-            <span>หรือใช้อีเมล @bumail.net สำหรับการสมัครสมาชิก</span>
+            {/* <span>หรือใช้อีเมล @bumail.net สำหรับการสมัครสมาชิก</span> */}
 
             <input
               type="text"
