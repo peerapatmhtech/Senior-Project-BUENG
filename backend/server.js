@@ -82,7 +82,7 @@ app.use(bodyParser.json());
 app.use(
   rateLimit({
     windowMs: 1 * 60 * 1000, // 1 minutes
-    max: 100, // limit each IP to 100 requests per windowMs
+    max: 500, // limit each IP to 100 requests per windowMs
     skip: (req, res) => req.method === "GET",
   })
 );

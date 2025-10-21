@@ -79,7 +79,6 @@ router.post('/friend-request', async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: 'ส่งคำขอเพื่อนสำเร็จ',
       requestId: newFriendRequest.requestId
     });
 

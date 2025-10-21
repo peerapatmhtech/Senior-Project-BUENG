@@ -11,6 +11,7 @@ import { BsThreeDots } from "react-icons/bs";
 ////////-------- Import Contexts ---------////////
 import { useTheme } from "../context/themecontext";
 import { useNotifications } from "../context/notificationContext";
+import { useSocket } from "../context/socketcontext";
 
 ////////-------- Import CSS ---------////////
 import "./friend.css";
@@ -35,8 +36,8 @@ const Friend = () => {
     queryKey: ["userPhoto"],
     queryFn: fetchPhoto,
   });
-  // const { socket, onlineUsers } = useSocket(); // ใช้ socket และ onlineUsers จาก context
-  const { socket, friends, setFriends } = useNotifications();
+  const { socket, onlineUsers } = useSocket();
+  const { friends, setFriends } = useNotifications();
   // รับ roomId จาก URL ถ้ามี เช่น /friend/:roomId
   const { roomId } = useParams();
 
@@ -242,93 +243,7 @@ const Friend = () => {
       }
     });
 
-    // ฟังสถานะอัปเดตผู้ใช้ออนไลน์ (ยังคงใช้ WebSocket สำหรับข้อมูลแบบ real-time)
-    socket.on("update-users", (data) => {
-      // เช็คว่า data เป็น array หรือ object
 
-      // ถ้าข้อมูลเป็น array ใช้ตามเดิม
-      if (Array.isArray(data)) {
-        setUsers((prevUsers) =>
-          prevUsers.map((user) => ({
-            ...user,
-            isOnline: data.some(
-              (onlineUser) => onlineUser.email === user.email
-            ),
-            lastSeen:
-              data.find((onlineUser) => onlineUser.email === user.email)
-                ?.lastSeen || user.lastSeen,
-          }))
-        );
-        setFriends((prevFriends) =>
-          prevFriends.map((friend) => ({
-            ...friend,
-            isOnline: data.some(
-              (onlineUser) => onlineUser.email === friend.email
-            ),
-            lastSeen:
-              data.find((onlineUser) => onlineUser.email === friend.email)
-                ?.lastSeen || friend.lastSeen,
-          }))
-        );
-      }
-      // ถ้าข้อมูลเป็น object มี onlineUsers เป็น array
-      else if (data && Array.isArray(data.onlineUsers)) {
-        setUsers((prevUsers) =>
-          prevUsers.map((user) => ({
-            ...user,
-            isOnline: data.onlineUsers.includes(user.email),
-            lastSeen:
-              (data.lastSeenTimes && data.lastSeenTimes[user.email]) ||
-              user.lastSeen,
-          }))
-        );
-        setFriends((prevFriends) =>
-          prevFriends.map((friend) => ({
-            ...friend,
-            isOnline: data.onlineUsers.includes(friend.email),
-            lastSeen:
-              (data.lastSeenTimes && data.lastSeenTimes[friend.email]) ||
-              friend.lastSeen,
-          }))
-        );
-      }
-    });
-
-    // ฟังเมื่อมีผู้ใช้ออฟไลน์
-    socket.on("user-offline", (userData) => {
-      setUsers((prevUsers) =>
-        prevUsers.map((user) =>
-          user.email === userData.email
-            ? { ...user, isOnline: false, lastSeen: userData.lastSeen }
-            : user
-        )
-      );
-      setFriends((prevFriends) =>
-        prevFriends.map((friend) =>
-          friend.email === userData.email
-            ? { ...friend, isOnline: false, lastSeen: userData.lastSeen }
-            : friend
-        )
-      );
-    });
-
-    // ฟังเมื่อมีผู้ใช้ออนไลน์
-    socket.on("user-online", (userData) => {
-      setUsers((prevUsers) =>
-        prevUsers.map((user) =>
-          user.email === userData.email
-            ? { ...user, isOnline: true, lastSeen: null }
-            : user
-        )
-      );
-      setFriends((prevFriends) =>
-        prevFriends.map((friend) =>
-          friend.email === userData.email
-            ? { ...friend, isOnline: true, lastSeen: null }
-            : friend
-        )
-      );
-    });
 
     // ฟังเมื่อเราถูกลบออกจากรายการเพื่อน
     socket.on("notify-friend-removed", async (data) => {
@@ -348,9 +263,7 @@ const Friend = () => {
     return () => {
       socket.emit("user-offline", { email: userEmail });
       clearInterval(socketCheckInterval);
-      socket.off("update-users");
-      socket.off("user-offline");
-      socket.off("user-online");
+
       socket.off("notify-friend-request");
       socket.off("notify-friend-accept");
       socket.off("notify-friend-removed");
@@ -746,14 +659,14 @@ const Friend = () => {
                         <div className="con-right">
                           <span
                             className={`status ${
-                              friend.isOnline ? "online" : "offline"
+                              onlineUsers[friend.email]?.online ? "online" : "offline"
                             }`}
-                            aria-label={friend.isOnline ? "ออนไลน์" : "ออฟไลน์"}
+                            aria-label={onlineUsers[friend.email]?.online ? "ออนไลน์" : "ออฟไลน์"}
                           >
-                            {friend.isOnline
+                            {onlineUsers[friend.email]?.online
                               ? "ออนไลน์"
-                              : friend.lastSeen
-                              ? `ออฟไลน์ - ${formatLastSeen(friend.lastSeen)}`
+                              : onlineUsers[friend.email]?.lastActive
+                              ? `ออฟไลน์ - ${formatLastSeen(onlineUsers[friend.email]?.lastActive)}`
                               : "ออฟไลน์"}
                           </span>
                           <div
@@ -871,7 +784,7 @@ const Friend = () => {
                 Online Users (
                 {
                   filteredUsers.filter(
-                    (user) => !isFriend(user.email) && user.isOnline === true
+                    (user) => !isFriend(user.email) && onlineUsers[user.email]?.online
                   ).length
                 }
                 )
@@ -890,19 +803,19 @@ const Friend = () => {
               <div
                 className={
                   filteredUsers.filter(
-                    (user) => !isFriend(user.email) && user.isOnline === true
+                    (user) => !isFriend(user.email) && onlineUsers[user.email]?.online
                   ).length > 0 && filteredFriends.length === 0
                     ? "special-friend-recommand"
                     : filteredUsers.filter(
                         (user) =>
-                          !isFriend(user.email) && user.isOnline === true
+                          !isFriend(user.email) && onlineUsers[user.email]?.online
                       ).length === 0
                     ? "empty-friend-recommand"
                     : "con-friend-recommand"
                 }
               >
                 {filteredUsers.filter(
-                  (user) => !isFriend(user.email) && user.isOnline === true
+                  (user) => !isFriend(user.email) && onlineUsers[user.email]?.online
                 ).length === 0 && (
                   <div className="empty-friend">
                     <div className="roomlist-empty-loading">
@@ -917,7 +830,7 @@ const Friend = () => {
                     filteredUsers
                       .filter(
                         (user) =>
-                          !isFriend(user.email) && user.isOnline === true
+                          !isFriend(user.email) && onlineUsers[user.email]?.online
                       )
                       .map((user) => (
                         <li
@@ -943,14 +856,14 @@ const Friend = () => {
                           <div className="con-right">
                             <span
                               className={`status ${
-                                user.isOnline ? "online" : "offline"
+                                onlineUsers[user.email]?.online ? "online" : "offline"
                               }`}
-                              aria-label={user.isOnline ? "ออนไลน์" : "ออฟไลน์"}
+                              aria-label={onlineUsers[user.email]?.online ? "ออนไลน์" : "ออฟไลน์"}
                             >
-                              {user.isOnline
+                              {onlineUsers[user.email]?.online
                                 ? "ออนไลน์"
-                                : user.lastSeen
-                                ? `ออฟไลน์ - ${formatLastSeen(user.lastSeen)}`
+                                : onlineUsers[user.email]?.lastActive
+                                ? `ออฟไลน์ - ${formatLastSeen(onlineUsers[user.email]?.lastActive)}`
                                 : "ออฟไลน์"}
                             </span>
                             <button
@@ -1066,11 +979,11 @@ const Friend = () => {
                 <p>Email: {selectedUser.email}</p>
                 <p>
                   สถานะ:{" "}
-                  {selectedUser.isOnline
+                  {onlineUsers[selectedUser.email]?.online
                     ? "ออนไลน์"
-                    : selectedUser.lastSeen
+                    : onlineUsers[selectedUser.email]?.lastActive
                     ? `ออฟไลน์ - เห็นล่าสุด ${formatLastSeen(
-                        selectedUser.lastSeen
+                        onlineUsers[selectedUser.email]?.lastActive
                       )}`
                     : "ออฟไลน์"}
                 </p>

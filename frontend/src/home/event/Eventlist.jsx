@@ -81,7 +81,10 @@ const EventList = ({ setWaiting, waiting }) => {
     if (debounceTimeoutRef.current) {
       clearTimeout(debounceTimeoutRef.current);
     }
-    debounceTimeoutRef.current = setTimeout(sendPendingFavoritesToWebhook, 5000);
+    debounceTimeoutRef.current = setTimeout(
+      sendPendingFavoritesToWebhook,
+      5000
+    );
   };
 
   // 3. Socket listener to invalidate query on update
@@ -119,7 +122,6 @@ const EventList = ({ setWaiting, waiting }) => {
   const unlikeMutation = useMutation({
     mutationFn: ({ eventId }) => api.delete(`/api/like/${email}/${eventId}`),
     onSuccess: () => {
-      toast.success("นำออกจากรายการโปรดสำเร็จ");
       queryClient.invalidateQueries({ queryKey: ["favorites", email] });
     },
     onError: (error) => {
@@ -156,7 +158,7 @@ const EventList = ({ setWaiting, waiting }) => {
   );
 
   const deleteAllMutation = createListRefetchingMutation(
-    () => api.delete(`/api/events/${email}`),
+    () => api.delete(`/api/events/user/${email}`),
     "ลบกิจกรรมทั้งหมดสำเร็จ",
     "เกิดข้อผิดพลาดในการลบกิจกรรมทั้งหมด"
   );
@@ -173,11 +175,9 @@ const EventList = ({ setWaiting, waiting }) => {
   };
 
   const handleDelete = (id) => {
-    if (window.confirm("คุณแน่ใจว่าต้องการลบกิจกรรมนี้หรือไม่?")) {
-      deleteMutation.mutate(id);
-      // Also unlike it to clean up references
-      unlikeMutation.mutate({ eventId: id });
-    }
+    deleteMutation.mutate(id);
+    // Also unlike it to clean up references
+    unlikeMutation.mutate({ eventId: id });
   };
 
   const handleDeleteAll = () => {
@@ -189,10 +189,9 @@ const EventList = ({ setWaiting, waiting }) => {
   if (waiting || isLoadingEvents) return <span className="loader"></span>;
   if (isErrorEvents)
     return <p className="loading-text">เกิดข้อผิดพลาดในการโหลดข้อมูล</p>;
-
   const EventListContent = () => (
     <div className={`event-container ${isDarkMode ? "dark-mode" : ""}`}>
-      {events.length === 0 || events === undefined || events === null ? (
+      {events.length < 0 ? (
         <div className="eventlist-empty-loading">
           <div className="eventlist-empty-text">ยังไม่มีกิจกรรมในขณะนี้</div>
         </div>

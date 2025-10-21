@@ -1,9 +1,5 @@
 import React, { useState, useEffect } from "react";
-import {
-  auth,
-  provider,
-  signInWithPopup,
-} from "../firebase/firebase";
+import { auth, provider, signInWithPopup } from "../firebase/firebase";
 import { useAuth } from "../context/Authcontext";
 import { useNavigate } from "react-router-dom";
 import "./auth.css";
@@ -106,14 +102,16 @@ const NewLogin = () => {
       }
 
       //////เก็บข้อมูล User ใน localStorage//////
-      localStorage.setItem("userName", user.displayName || user.email.split("@")[0]);
+      localStorage.setItem(
+        "userName",
+        user.displayName || user.email.split("@")[0]
+      );
       localStorage.setItem("userPhoto", user.photoURL || "");
       localStorage.setItem("userEmail", user.email);
 
       // Success animation
       const container = document.getElementById("container");
       container?.classList.add("success-animation");
-
 
       // Smooth transition to home
       setTimeout(() => {
@@ -282,6 +280,7 @@ const NewLogin = () => {
               >
                 <i className="fa-brands fa-google"></i>
               </a>
+              <p className="text-google">เชื่อมต่อด้วย Google</p>
             </div>
             <span>หรือใช้อีเมล @bumail.net ของคุณ</span>
 
@@ -361,6 +360,7 @@ const NewLogin = () => {
               >
                 <i className="fa-brands fa-google"></i>
               </a>
+               <p className="text-google">สร้างบัญชีใหม่ด้วย Google</p>
             </div>
             <span>หรือใช้อีเมล @bumail.net สำหรับการสมัครสมาชิก</span>
 
@@ -576,4 +576,4 @@ const NewLogin = () => {
   );
 };
 
-export default NewLogin; 
+export default NewLogin;
