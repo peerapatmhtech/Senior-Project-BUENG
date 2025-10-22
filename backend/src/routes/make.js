@@ -13,7 +13,7 @@ export default function (io) {
   const app = express.Router();
 
   // CREATE - สร้าง InfoMatch ใหม่
-  app.post("/infomatch/create", limiter, async (req, res) => {
+  app.post("/infomatch/create", async (req, res) => {
     try {
       // const { detail, email, chance, usermatch, emailjoined, usermatchjoined } = req.body;
       const { data, email } = req.body;
@@ -105,7 +105,7 @@ export default function (io) {
       });
     }
   });
-  app.post("/save-event", limiter, async (req, res) => {
+  app.post("/save-event", async (req, res) => {
     const {
       data,
       email,
