@@ -274,7 +274,7 @@ app.post("/api/update-genres", limiter, async (req, res) => {
     }
 
     const subgenresObject = user.subGenres;
-    const genreFilters = Object.entries(subgenresObject)
+    const genreFilters = Array.from(subgenresObject.entries())
       .map(([category, subgenreList]) => {
         const trimmedCategory = category.trim();
         if (!trimmedCategory) return null;
@@ -293,7 +293,6 @@ app.post("/api/update-genres", limiter, async (req, res) => {
         return { [`genre.${trimmedCategory}`]: { $exists: true } };
       })
       .filter((f) => f !== null);
-
     if (genreFilters.length > 0) {
       if (genreFilters.length === 1) {
         Object.assign(filter, genreFilters[0]);
@@ -351,27 +350,36 @@ app.post("/api/update-genres", limiter, async (req, res) => {
       }
     }
 
-    if (uniqueEvents.length > 0) {
-      const savePromises = uniqueEvents.map((event) =>
-        axios.post(
-          `/api/save-event`,
-          {
-            email: user.email,
-            title: event.title,
-            description: event.description,
-            link: event.link,
-            image: event.image,
-            genre: event.subgenre,
-            createdByAI: true,
+    ///////////Prepare response data//////////
+    if (uniqueEvents.length === 0) {
+      return res.status(200).json([]);
+    }
+
+    //////////Prepare data to save//////////
+    const data = uniqueEvents.map((e) => ({
+      title: e.title,
+      snippet: e.description,
+      link: e.link,
+      image: e.image,
+    }));
+
+    //////////Send data to save-event API//////////
+    if (data.length > 0) {
+      await axios.post(
+        `http://localhost:${port}/api/save-event`,
+        {
+          data: data,
+          email: user.email,
+          indicesToExclude: [],
+          updatedAt: new Date().toISOString(),
+          subGenres: user.subGenres,
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
           },
-          {
-            headers: {
-              "Content-Type": "application/json",
-            },
-          }
-        )
+        }
       );
-      await Promise.all(savePromises);
     }
 
     res.json(uniqueEvents);

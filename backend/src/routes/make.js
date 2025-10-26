@@ -168,7 +168,7 @@ export default function (io) {
           continue; // ข้ามรายการนี้ไป
         }
 
-        const { title, link, snippet, pagemap } = item;
+        const { title, link, snippet, pagemap, image } = item;
 
         // ข้ามถ้าไม่มีข้อมูลสำคัญ
         if (!title || !link) {
@@ -182,9 +182,10 @@ export default function (io) {
         }
 
         // ดึง URL รูปภาพออกมาอย่างปลอดภัย
-        const image =
+        const eventImage =
           pagemap?.cse_thumbnail?.[0]?.src ||
           pagemap?.cse_image?.[0]?.src ||
+          image ||
           null;
 
         // สร้าง event ใหม่
@@ -194,7 +195,7 @@ export default function (io) {
           link,
           genre: subGenres,
           updatedAt,
-          image,
+          image: eventImage,
           createdByAI: true,
           email,
         });

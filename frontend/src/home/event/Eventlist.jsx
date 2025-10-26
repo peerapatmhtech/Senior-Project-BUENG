@@ -31,6 +31,110 @@ const fetchFavoriteEvents = async (email) => {
   return Array.isArray(res.data) ? res.data.map((like) => like.eventId) : [];
 };
 
+// Moved EventListContent outside of EventList to prevent re-mounting on re-renders.
+const EventListContent = ({
+  isDarkMode,
+  events,
+  favoriteEvents,
+  handleUnlike,
+  handleLike,
+  handleDelete,
+  handleDeleteAll,
+}) => (
+  <div className={`event-container ${isDarkMode ? "dark-mode" : ""}`}>
+    {events.length === 0 ? ( // Fixed bug: was events.length < 0
+      <div className="eventlist-empty-loading">
+        <div className="eventlist-empty-text">ยังไม่มีกิจกรรมในขณะนี้</div>
+      </div>
+    ) : (
+      <div className="event-list">
+        {events.map((event) => (
+          <div key={event._id} className="event-card">
+            <img
+              className="event-image"
+              src={event.image}
+              alt={event.title}
+              width="200"
+            />
+            <div className="row-favorite">
+              <h3 className="event-name">{event.title}</h3>
+              <button
+                className="favorite-button"
+                onClick={() => {
+                  const isFav = favoriteEvents.includes(event._id);
+                  if (isFav) {
+                    handleUnlike(event._id);
+                  } else {
+                    handleLike(event._id, event.title);
+                  }
+                }}
+                aria-label={
+                  favoriteEvents.includes(event._id)
+                    ? "Unfavorite"
+                    : "Favorite"
+                }
+              >
+                {favoriteEvents.includes(event._id) ? (
+                  <MdFavorite size={30} color="red" />
+                ) : (
+                  <MdFavoriteBorder size={30} />
+                )}
+              </button>
+            </div>
+            <div className="event-info">
+              <p>
+                <span className="category-label">Category:</span>
+                {(event.genre ? Object.values(event.genre) : [])
+                  .flat()
+                  .map((subcategory, index) => (
+                    <span key={index} className="genre-border">
+                      {subcategory}
+                    </span>
+                  ))}
+                {" "}
+              </p>
+            </div>
+            <p className="event-description">
+              <TbFileDescription />{" "}
+              <span className="category-label">
+                Description:{event.description}
+              </span>
+            </p>
+            <div className="bottom-event">
+              <a
+                href={event.link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="event-link"
+              >
+                Info more
+              </a>
+              <button
+                onClick={() => handleDelete(event._id)}
+                className="delete-button"
+              >
+                🗑️ Delete
+              </button>
+            </div>
+          </div>
+        ))}
+        <div className="btn-delete-all">
+          <button
+            onClick={handleDeleteAll}
+            className="delete-button-all"
+            title="ลบกิจกรรมทั้งหมด"
+          >
+            <span role="img" aria-label="delete">
+              🗑️
+            </span>{" "}
+            Delete all
+          </button>
+        </div>
+      </div>
+    )}
+  </div>
+);
+
 const EventList = ({ setWaiting, waiting }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const email = localStorage.getItem("userEmail");
@@ -38,24 +142,22 @@ const EventList = ({ setWaiting, waiting }) => {
   const socket = useSocket();
   const queryClient = useQueryClient();
 
-  // 1. Replaced useState/useEffect with useQuery for fetching events
   const {
     data: events = [],
     isLoading: isLoadingEvents,
     isError: isErrorEvents,
   } = useQuery({
-    queryKey: ["events", email], // Key for caching
+    queryKey: ["events", email],
     queryFn: () => fetchEvents(email),
-    enabled: !!email, // Only run query if email exists
-    staleTime: 1000 * 60 * 2, // 2 minutes
+    enabled: !!email,
+    staleTime: 1000 * 60 * 2,
   });
 
-  // 2. Replaced useState/useEffect with useQuery for fetching favorites
   const { data: favoriteEvents = [] } = useQuery({
     queryKey: ["favorites", email],
     queryFn: () => fetchFavoriteEvents(email),
     enabled: !!email,
-    staleTime: 1000 * 60 * 2, // 2 minutes
+    staleTime: 1000 * 60 * 2,
   });
 
   const pendingFavoritesRef = React.useRef([]);
@@ -70,7 +172,6 @@ const EventList = ({ setWaiting, waiting }) => {
         email: email,
         actions: pendingArr.map((event) => ({ event: event.eventTitle })),
       });
-      // Clear the array after successful sending
       pendingFavoritesRef.current = [];
     } catch (error) {
       console.error("Error sending to webhook", error);
@@ -81,19 +182,16 @@ const EventList = ({ setWaiting, waiting }) => {
     if (debounceTimeoutRef.current) {
       clearTimeout(debounceTimeoutRef.current);
     }
-    debounceTimeoutRef.current = setTimeout(
-      sendPendingFavoritesToWebhook,
-      5000
-    );
+    debounceTimeoutRef.current = setTimeout(sendPendingFavoritesToWebhook, 5000);
   };
 
-  // 3. Socket listener to invalidate query on update
+  // The original socket logic is correct for handling external updates,
+  // now that the component structure is fixed.
   useEffect(() => {
     if (!socket) return;
 
     const handleEventsUpdated = () => {
       setWaiting(false);
-      // Invalidate the query to trigger a refetch
       queryClient.invalidateQueries({ queryKey: ["events", email] });
     };
 
@@ -104,33 +202,53 @@ const EventList = ({ setWaiting, waiting }) => {
     };
   }, [socket, queryClient, email, setWaiting]);
 
-  // 4. Replaced API call functions with useMutation
-
-  // Mutations for like/unlike that only refetch favorites to prevent UI jumps
   const likeMutation = useMutation({
     mutationFn: (variables) => api.post(`/api/like`, variables),
+    onMutate: async (newData) => {
+      await queryClient.cancelQueries({ queryKey: ["favorites", email] });
+      const previousFavorites = queryClient.getQueryData(["favorites", email]);
+      queryClient.setQueryData(["favorites", email], (old = []) => [
+        ...old,
+        newData.eventId,
+      ]);
+      return { previousFavorites };
+    },
     onSuccess: () => {
       toast.success("เพิ่มในรายการโปรดสำเร็จ");
-      queryClient.invalidateQueries({ queryKey: ["favorites", email] });
     },
-    onError: (error) => {
-      console.error("❌ Error: เกิดข้อผิดพลาดในการกดไลค์", error);
+    onError: (err, newData, context) => {
+      queryClient.setQueryData(["favorites", email], context.previousFavorites);
+      console.error("❌ Error: เกิดข้อผิดพลาดในการกดไลค์", err);
       toast.error("เกิดข้อผิดพลาดในการกดไลค์");
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["favorites", email] });
     },
   });
 
   const unlikeMutation = useMutation({
     mutationFn: ({ eventId }) => api.delete(`/api/like/${email}/${eventId}`),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["favorites", email] });
+    onMutate: async ({ eventId }) => {
+      await queryClient.cancelQueries({ queryKey: ["favorites", email] });
+      const previousFavorites = queryClient.getQueryData(["favorites", email]);
+      queryClient.setQueryData(["favorites", email], (old = []) =>
+        old.filter((id) => id !== eventId)
+      );
+      return { previousFavorites };
     },
-    onError: (error) => {
-      console.error("❌ Error: เกิดข้อผิดพลาดในการยกเลิกไลค์", error);
+    onSuccess: () => {
+      // Optional: Can show a success toast if desired, but UI is already updated.
+    },
+    onError: (err, newData, context) => {
+      queryClient.setQueryData(["favorites", email], context.previousFavorites);
+      console.error("❌ Error: เกิดข้อผิดพลาดในการยกเลิกไลค์", err);
       toast.error("เกิดข้อผิดพลาดในการยกเลิกไลค์");
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["favorites", email] });
     },
   });
 
-  // Generic mutation for actions that should refetch the whole event list (e.g., delete)
   const createListRefetchingMutation = (
     mutationFn,
     successMessage,
@@ -140,7 +258,6 @@ const EventList = ({ setWaiting, waiting }) => {
       mutationFn,
       onSuccess: () => {
         toast.success(successMessage);
-        // Invalidate and refetch both queries to update UI
         queryClient.invalidateQueries({ queryKey: ["events", email] });
         queryClient.invalidateQueries({ queryKey: ["favorites", email] });
       },
@@ -163,7 +280,6 @@ const EventList = ({ setWaiting, waiting }) => {
     "เกิดข้อผิดพลาดในการลบกิจกรรมทั้งหมด"
   );
 
-  // Handler functions now call the mutations
   const handleLike = (eventId, title) => {
     likeMutation.mutate({ userEmail: email, eventId, eventTitle: title });
     pendingFavoritesRef.current.push({ eventId, eventTitle: title });
@@ -176,7 +292,6 @@ const EventList = ({ setWaiting, waiting }) => {
 
   const handleDelete = (id) => {
     deleteMutation.mutate(id);
-    // Also unlike it to clean up references
     unlikeMutation.mutate({ eventId: id });
   };
 
@@ -189,99 +304,6 @@ const EventList = ({ setWaiting, waiting }) => {
   if (waiting || isLoadingEvents) return <span className="loader"></span>;
   if (isErrorEvents)
     return <p className="loading-text">เกิดข้อผิดพลาดในการโหลดข้อมูล</p>;
-  const EventListContent = () => (
-    <div className={`event-container ${isDarkMode ? "dark-mode" : ""}`}>
-      {events.length < 0 ? (
-        <div className="eventlist-empty-loading">
-          <div className="eventlist-empty-text">ยังไม่มีกิจกรรมในขณะนี้</div>
-        </div>
-      ) : (
-        <div className="event-list">
-          {events.map((event) => (
-            <div key={event._id} className="event-card">
-              <img
-                className="event-image"
-                src={event.image}
-                alt={event.title}
-                width="200"
-              />
-              <div className="row-favorite">
-                <h3 className="event-name">{event.title}</h3>
-                <button
-                  className="favorite-button"
-                  onClick={() => {
-                    const isFav = favoriteEvents.includes(event._id);
-                    if (isFav) {
-                      handleUnlike(event._id);
-                    } else {
-                      handleLike(event._id, event.title);
-                    }
-                  }}
-                  aria-label={
-                    favoriteEvents.includes(event._id)
-                      ? "Unfavorite"
-                      : "Favorite"
-                  }
-                >
-                  {favoriteEvents.includes(event._id) ? (
-                    <MdFavorite size={30} color="red" />
-                  ) : (
-                    <MdFavoriteBorder size={30} />
-                  )}
-                </button>
-              </div>
-              <div className="event-info">
-                <p>
-                  <span className="category-label">Category:</span>
-                  {(event.genre ? Object.values(event.genre) : [])
-                    .flat()
-                    .map((subcategory, index) => (
-                      <span key={index} className="genre-border">
-                        {subcategory}
-                      </span>
-                    ))}{" "}
-                </p>
-              </div>
-              <p className="event-description">
-                <TbFileDescription />{" "}
-                <span className="category-label">
-                  Description:{event.description}
-                </span>
-              </p>
-              <div className="bottom-event">
-                <a
-                  href={event.link}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="event-link"
-                >
-                  Info more
-                </a>
-                <button
-                  onClick={() => handleDelete(event._id)}
-                  className="delete-button"
-                >
-                  🗑️ Delete
-                </button>
-              </div>
-            </div>
-          ))}
-          <div className="btn-delete-all">
-            <button
-              onClick={handleDeleteAll}
-              className="delete-button-all"
-              title="ลบกิจกรรมทั้งหมด"
-            >
-              <span role="img" aria-label="delete">
-                🗑️
-              </span>{" "}
-              Delete all
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
 
   return (
     <>
@@ -293,7 +315,15 @@ const EventList = ({ setWaiting, waiting }) => {
         <FiCalendar />
       </button>
       <div className="eventlist-desktop-view">
-        <EventListContent />
+        <EventListContent
+          isDarkMode={isDarkMode}
+          events={events}
+          favoriteEvents={favoriteEvents}
+          handleUnlike={handleUnlike}
+          handleLike={handleLike}
+          handleDelete={handleDelete}
+          handleDeleteAll={handleDeleteAll}
+        />
       </div>
       <div
         className={`eventlist-modal-overlay ${isModalOpen ? "active" : ""}`}
@@ -314,7 +344,15 @@ const EventList = ({ setWaiting, waiting }) => {
             </button>
           </div>
           <div className="eventlist-modal-content">
-            <EventListContent />
+            <EventListContent
+              isDarkMode={isDarkMode}
+              events={events}
+              favoriteEvents={favoriteEvents}
+              handleUnlike={handleUnlike}
+              handleLike={handleLike}
+              handleDelete={handleDelete}
+              handleDeleteAll={handleDeleteAll}
+            />
           </div>
         </div>
       </div>

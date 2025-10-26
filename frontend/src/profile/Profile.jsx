@@ -89,43 +89,75 @@ const Profile = () => {
     } finally {
       setLoading(false);
     }
-  }, [userEmail, userInfo, currentUser, photoUsers, refetchCurrentUser, refetchPhotos, refetchUserInfo]);
+  }, [
+    userEmail,
+    userInfo,
+    currentUser,
+    photoUsers,
+    refetchCurrentUser,
+    refetchPhotos,
+    refetchUserInfo,
+  ]);
 
   const handleSaveNickName = async () => {
     if (!nickName.trim()) {
-      toast.error('nicknameCannotBeEmpty');
+      toast.error("nicknameCannotBeEmpty");
       return;
     }
     if (nickName.length > MAX_NICKNAME) {
-      toast.error('nicknameTooLong', { max: MAX_NICKNAME });
+      toast.error("nicknameTooLong", { max: MAX_NICKNAME });
       return;
     }
 
     try {
       await api.post(`/api/save-user-name`, { userEmail, nickName });
-      toast.success('nicknameUpdated');
+      toast.success("nicknameUpdated");
       setIsEditingName(false);
     } catch (err) {
-      toast.error('failedToUpdateNickname');
+      toast.error("failedToUpdateNickname");
     }
   };
 
   const handleSaveAbout = async () => {
     if (tempInfo.detail.length > MAX_CHARS) {
-      toast.error('aboutMeTooLong', { max: MAX_CHARS });
+      toast.error("aboutMeTooLong", { max: MAX_CHARS });
       return;
     }
 
     try {
-      await api.post(`/api/save-user-info`, {
+      const res = await api.post(`/api/save-user-info`, {
         email: userEmail,
         userInfo: tempInfo,
       });
-      setUserInfo(tempInfo);
-      setIsEditingAbout(false);
-      toast.success('profileUpdated');
+      if (res.status === 200) {
+        setUserInfo(tempInfo);
+        setIsEditingAbout(false);
+        toast.success("profileUpdated");
+      } else {
+        toast.error("failedToSaveProfile");
+      }
+
+      // ส่งข้อมูลไปยัง Make.com webhook
+      const webhookResponse = await fetch(
+        import.meta.env.VITE_APP_MAKE_WEBHOOK_MATCH_ABOUT_URL,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            detail: tempInfo.detail,
+            userEmail: userEmail,
+          }),
+        }
+      );
+      if (!webhookResponse.ok) {
+        console.error(
+          "ข้อผิดพลาดในการส่งข้อมูลไปยัง Make.com webhook:",
+          webhookResponse.statusText
+        );
+      } 
     } catch (error) {
-      toast.error('failedToSaveProfile');
+      console.error("เกิดข้อผิดพลาดในการบันทึกข้อมูล:", error);
+      toast.error("failedToSaveProfile");
     }
   };
 
@@ -133,11 +165,11 @@ const Profile = () => {
     const file = e.target.files[0];
     if (!file) return;
     if (!file.type.startsWith("image/")) {
-      toast.error('pleaseUploadImage');
+      toast.error("pleaseUploadImage");
       return;
     }
     if (file.size > 5 * 1024 * 1024) {
-      toast.error('fileSizeTooLarge');
+      toast.error("fileSizeTooLarge");
       return;
     }
 
@@ -150,12 +182,12 @@ const Profile = () => {
       const response = await api.post(`/api/upload-user-photo`, formData);
       if (response.data.success) {
         await refetchPhotos();
-        toast.success('photoUploaded');
+        toast.success("photoUploaded");
       } else {
-        throw new Error(response.data.message || 'uploadFailed');
+        throw new Error(response.data.message || "uploadFailed");
       }
     } catch (err) {
-      toast.error(err.message || 'uploadFailed');
+      toast.error(err.message || "uploadFailed");
     } finally {
       setUploading(false);
     }
@@ -167,9 +199,9 @@ const Profile = () => {
         email: userEmail,
         photoIds,
       });
-      toast.success('profilePhotoUpdated');
+      toast.success("profilePhotoUpdated");
     } catch (error) {
-      toast.error('failedToUpdateProfilePhoto');
+      toast.error("failedToUpdateProfilePhoto");
     }
   };
 
@@ -198,7 +230,7 @@ const Profile = () => {
       });
       if (response.data.success) {
         setUserPhotos(remainingPhotos);
-        toast.success(t('photoDeleted'));
+        toast.success(t("photoDeleted"));
 
         if (isMainPhoto && remainingPhotos.length > 0) {
           localStorage.setItem("userPhoto", remainingPhotos[0].url);
@@ -206,10 +238,10 @@ const Profile = () => {
           localStorage.removeItem("userPhoto");
         }
       } else {
-        throw new Error(response.data.message || t('deletionFailed'));
+        throw new Error(response.data.message || t("deletionFailed"));
       }
     } catch (err) {
-      toast.error(err.message || t('deletionFailed'));
+      toast.error(err.message || t("deletionFailed"));
     }
   };
   const getFullImageUrl = (url) => {
@@ -228,9 +260,9 @@ const Profile = () => {
     return (
       <div className={`profile-page ${isDarkMode ? "dark-mode" : ""}`}>
         <div className="login-prompt">
-          <h2>{'pleaseLogin'}</h2>
-          <p>{'loginToViewProfile'}</p>
-          <Button onClick={() => navigate("/login")}>{'goToLogin'}</Button>
+          <h2>{"pleaseLogin"}</h2>
+          <p>{"loginToViewProfile"}</p>
+          <Button onClick={() => navigate("/login")}>{"goToLogin"}</Button>
         </div>
       </div>
     );
@@ -271,13 +303,13 @@ const Profile = () => {
                     className="nickname-input"
                   />
                   <div onClick={handleSaveNickName} className="save-btn">
-                    {'save'}
+                    {"save"}
                   </div>
                   <div
                     onClick={() => setIsEditingName(false)}
                     className="cancel-btn"
                   >
-                    {'cancel'}
+                    {"cancel"}
                   </div>
                 </div>
               ) : (
@@ -290,15 +322,15 @@ const Profile = () => {
                 </h1>
               )}
               <div className="profile-stats">
-                <ProfileStat count={userPhotos.length} label={'photos'} />
-                <ProfileStat count={followers.length} label={'followers'} />
-                <ProfileStat count={following.length} label={'following'} />
+                <ProfileStat count={userPhotos.length} label={"photos"} />
+                <ProfileStat count={followers.length} label={"followers"} />
+                <ProfileStat count={following.length} label={"following"} />
               </div>
             </div>
           </div>
 
           <div className="profile-about">
-            <h3>{'aboutMe'}</h3>
+            <h3>{"aboutMe"}</h3>
             {isEditingAbout ? (
               <div className="edit-container">
                 <textarea
@@ -312,19 +344,19 @@ const Profile = () => {
                 <p className="char-counter">
                   {tempInfo.detail.length} / {MAX_CHARS}
                 </p>
-                <Button onClick={handleSaveAbout} className="save-btn">
-                  {'save'}
-                </Button>
-                <Button
+                <div onClick={handleSaveAbout} className="save-btn">
+                  {"save"}
+                </div>
+                <div
                   onClick={() => setIsEditingAbout(false)}
                   className="cancel-btn"
                 >
-                  {'cancel'}
-                </Button>
+                  {"cancel"}
+                </div>
               </div>
             ) : (
               <p onClick={() => setIsEditingAbout(true)} className="about-text">
-                {userInfo.detail || 'tellUsAboutYourself'}
+                {userInfo.detail || "tellUsAboutYourself"}
                 <FaEdit className="edit-icon-new" />
               </p>
             )}
@@ -332,7 +364,7 @@ const Profile = () => {
         </div>
 
         <div className="profile-gallery">
-          <h3>{'myPhotos'}</h3>
+          <h3>{"myPhotos"}</h3>
           <div className="photo-grid">
             {userPhotos.map((photo) => (
               <div key={photo._id} className="photo-wrapper">
@@ -342,14 +374,14 @@ const Profile = () => {
                     <button
                       className="set-main-btn"
                       onClick={() => handleSetMainPhoto(photo)}
-                      title={'setAsProfilePicture'}
+                      title={"setAsProfilePicture"}
                     >
                       <FaStar />
                     </button>
                   ) : (
                     <div
                       className="main-photo-badge"
-                      title={'currentProfilePicture'}
+                      title={"currentProfilePicture"}
                     >
                       <FaStar />
                     </div>
@@ -357,7 +389,7 @@ const Profile = () => {
                   <button
                     className="remove-photo-btn-gallery"
                     onClick={() => handleRemovePhoto(photo._id)}
-                    title={'removePhoto'}
+                    title={"removePhoto"}
                   >
                     <FaTimes />
                   </button>
@@ -374,7 +406,7 @@ const Profile = () => {
                 ) : (
                   <>
                     <FaPlus />
-                    <span>{'addPhoto'}</span>
+                    <span>{"addPhoto"}</span>
                   </>
                 )}
               </div>
