@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import api from "../server/api";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -242,8 +242,6 @@ const Friend = () => {
         );
       }
     });
-
-
 
     // ฟังเมื่อเราถูกลบออกจากรายการเพื่อน
     socket.on("notify-friend-removed", async (data) => {
@@ -659,14 +657,22 @@ const Friend = () => {
                         <div className="con-right">
                           <span
                             className={`status ${
-                              onlineUsers[friend.email]?.online ? "online" : "offline"
+                              onlineUsers[friend.email]?.online
+                                ? "online"
+                                : "offline"
                             }`}
-                            aria-label={onlineUsers[friend.email]?.online ? "ออนไลน์" : "ออฟไลน์"}
+                            aria-label={
+                              onlineUsers[friend.email]?.online
+                                ? "ออนไลน์"
+                                : "ออฟไลน์"
+                            }
                           >
                             {onlineUsers[friend.email]?.online
                               ? "ออนไลน์"
                               : onlineUsers[friend.email]?.lastActive
-                              ? `ออฟไลน์ - ${formatLastSeen(onlineUsers[friend.email]?.lastActive)}`
+                              ? `ออฟไลน์ - ${formatLastSeen(
+                                  onlineUsers[friend.email]?.lastActive
+                                )}`
                               : "ออฟไลน์"}
                           </span>
                           <div
@@ -784,7 +790,8 @@ const Friend = () => {
                 Online Users (
                 {
                   filteredUsers.filter(
-                    (user) => !isFriend(user.email) && onlineUsers[user.email]?.online
+                    (user) =>
+                      !isFriend(user.email) && onlineUsers[user.email]?.online
                   ).length
                 }
                 )
@@ -803,19 +810,22 @@ const Friend = () => {
               <div
                 className={
                   filteredUsers.filter(
-                    (user) => !isFriend(user.email) && onlineUsers[user.email]?.online
+                    (user) =>
+                      !isFriend(user.email) && onlineUsers[user.email]?.online
                   ).length > 0 && filteredFriends.length === 0
                     ? "special-friend-recommand"
                     : filteredUsers.filter(
                         (user) =>
-                          !isFriend(user.email) && onlineUsers[user.email]?.online
+                          !isFriend(user.email) &&
+                          onlineUsers[user.email]?.online
                       ).length === 0
                     ? "empty-friend-recommand"
                     : "con-friend-recommand"
                 }
               >
                 {filteredUsers.filter(
-                  (user) => !isFriend(user.email) && onlineUsers[user.email]?.online
+                  (user) =>
+                    !isFriend(user.email) && onlineUsers[user.email]?.online
                 ).length === 0 && (
                   <div className="empty-friend">
                     <div className="roomlist-empty-loading">
@@ -830,7 +840,8 @@ const Friend = () => {
                     filteredUsers
                       .filter(
                         (user) =>
-                          !isFriend(user.email) && onlineUsers[user.email]?.online
+                          !isFriend(user.email) &&
+                          onlineUsers[user.email]?.online
                       )
                       .map((user) => (
                         <li
@@ -856,14 +867,22 @@ const Friend = () => {
                           <div className="con-right">
                             <span
                               className={`status ${
-                                onlineUsers[user.email]?.online ? "online" : "offline"
+                                onlineUsers[user.email]?.online
+                                  ? "online"
+                                  : "offline"
                               }`}
-                              aria-label={onlineUsers[user.email]?.online ? "ออนไลน์" : "ออฟไลน์"}
+                              aria-label={
+                                onlineUsers[user.email]?.online
+                                  ? "ออนไลน์"
+                                  : "ออฟไลน์"
+                              }
                             >
                               {onlineUsers[user.email]?.online
                                 ? "ออนไลน์"
                                 : onlineUsers[user.email]?.lastActive
-                                ? `ออฟไลน์ - ${formatLastSeen(onlineUsers[user.email]?.lastActive)}`
+                                ? `ออฟไลน์ - ${formatLastSeen(
+                                    onlineUsers[user.email]?.lastActive
+                                  )}`
                                 : "ออฟไลน์"}
                             </span>
                             <button

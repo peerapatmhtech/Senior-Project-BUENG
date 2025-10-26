@@ -64,17 +64,17 @@ router.post("/delete-rooms", async (req, res) => {
 });
 
 // Delete joined room
-router.delete("/delete-joined-rooms/:roomId/:userEmail", async (req, res) => {
-  const { roomId, userEmail } = req.params;
+router.delete("/delete-joined-rooms/:roomName/:userEmail", async (req, res) => {
+  const { roomName, userEmail } = req.params;
   try {
     const result = await Info.updateOne(
       { email: userEmail },
-      { $pull: { joinedRooms: { roomId: roomId } } }
+      { $pull: { joinedRooms: { roomName: roomName } } }
     );
     if (result.modifiedCount === 0) {
       return res.status(404).json({ success: false, message: "User or room not found in joinedRooms" });
     }
-    res.json({ success: true, message: "Room removed from user's joinedRooms", roomId, userEmail });
+    res.json({ success: true, message: "Room removed from user's joinedRooms", roomName, userEmail });
   } catch (err) {
     res.status(500).json({ success: false, message: "Delete failed", error: err.message });
   }

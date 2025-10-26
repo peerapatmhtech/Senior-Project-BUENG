@@ -67,7 +67,7 @@ export const fetchInfos = async () => {
 export const fetchPhoto = async () => {
   const { data } = await api.get(`/api/user-photo`);
   return data.data; // Note: response is nested under .data
-}
+};
 
 // Mutation Hooks
 
@@ -100,29 +100,47 @@ export const useDeleteFriend = () => {
   const userEmail = localStorage.getItem("userEmail");
 
   return useMutation({
-    mutationFn: async ({ userToDelete, roomName, infoMatchId }) => {
-      const promises = [];
+    mutationFn: async ({ type, userToDelete, roomName, infoMatchId }) => {
+      // console.log(type, userToDelete, roomName, infoMatchId);
+      switch (type) {
+        case "friend":
+          try {
+            // Delete from infomatch (for matches)
+            if (infoMatchId && infoMatchId !== undefined) {
+              const responseMatch = await api.delete(
+                `/api/infomatch/${infoMatchId}`
+              );
+              // Delete from user's friends list
+              if (responseMatch.status === 200) {
+                return responseMatch;
+              }
+            }
+            // Delete from user's friends list
+            if (userToDelete && userToDelete !== undefined) {
+              const responseUser = await api.delete(
+                `/api/users/${userEmail}/friends/${userToDelete}`
+              );
+              if (responseUser.status === 200) {
+                return responseUser;
+              }
+            }
+          } catch (err) {
+            throw new Error("");
+          }
+          break;
 
-      // Delete from infomatch (for matches)
-      if (infoMatchId) {
-        promises.push(api.delete(`/api/infomatch/${infoMatchId}`));
+        case "room":
+          // Delete from user's joined rooms (for communities)
+          if (roomName && roomName !== undefined) {
+            return api.delete(
+              `/api/delete-joined-rooms/${roomName}/${userEmail}`
+            );
+          }
+          break;
+
+        default:
+          throw new Error(`Invalid deletion type: ${type}`);
       }
-
-      // Delete from user's friends list
-      if (userToDelete) {
-        promises.push(
-          api.delete(`/api/users/${userEmail}/friends/${userToDelete}`)
-        );
-      }
-
-      // Delete from user's joined rooms (for communities)
-      if (infoMatchId && roomName) {
-        promises.push(
-          api.delete(`/api/delete-joined-rooms/${infoMatchId}/${userEmail}`)
-        );
-      }
-
-      return Promise.all(promises);
     },
     onSuccess: () => {
       // Invalidate all relevant queries to trigger a global refetch
