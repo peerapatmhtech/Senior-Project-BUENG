@@ -143,7 +143,6 @@ const ChatSidebar = ({
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value.toLowerCase())}
         className="search-input-chat"
-        autoFocus
       />
     </div>
     <div className="slide-chat">

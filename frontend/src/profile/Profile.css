@@ -253,6 +253,7 @@
   margin: 10px 0 0 10px;
   padding: 1.5rem;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  margin-bottom: 100px;
 }
 
 .dark-mode .profile-gallery {
