@@ -53,7 +53,6 @@ const port = process.env.PORT || 8080;
 const MONGO_URI = process.env.MONGO_URI;
 const MAKE_WEBHOOK_URL = process.env.MAKE_WEBHOOK_URL;
 
-app.use(express.json({ limit: "50mb" }));
 // ✅ Middleware
 // app.use(
 //   helmet({
@@ -420,10 +419,16 @@ app.get("/api/debug/routes", (req, res) => {
 
 // ใช้งาน routes ที่แยกไว้
 
-app.use("/api", MakeRoutes(io));
 // ใช้ authMiddleware กับทุก request ที่เข้ามาที่ /api
 app.use("/api", authMiddleware);
 
+// userPhotoRoutes must come before express.json() to handle multipart/form-data
+app.use("/api", userPhotoRoutes);
+
+// All routes after this will have their body parsed as JSON
+app.use(express.json({ limit: "5mb" }));
+
+app.use("/api", MakeRoutes(io));
 // Register friendRequestRoutes with high priority to prevent 404 issues.
 app.use("/api", infoMatchRoutes);
 app.use("/api", aiRoute); // ใช้ aiRoute ก่อน routes อื่นๆ เพื่อป้องกัน 404
@@ -436,7 +441,6 @@ app.use("/api", infoRoutes);
 app.use("/api", roommatchRoutes);
 app.use("/api", likeRoutes);
 app.use("/api", friendApiRoutes);
-app.use("/api", userPhotoRoutes);
 
 // Log API requests for debugging
 app.use((req, res, next) => {

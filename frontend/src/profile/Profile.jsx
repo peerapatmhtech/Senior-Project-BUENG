@@ -1,6 +1,5 @@
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import "./Profile.css";
-import { useNavigate } from "react-router-dom";
 import { FaEdit, FaPlus, FaTimes, FaStar } from "react-icons/fa";
 import { useTheme } from "../context/themecontext";
 import api from "../server/api";
@@ -8,6 +7,7 @@ import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import HeaderProfile from "../components/HeaderProfile";
 import { useQuery } from "@tanstack/react-query";
+import PropTypes from "prop-types";
 import {
   fetchUserPhotos,
   fetchCurrentUser,
@@ -24,9 +24,13 @@ const ProfileStat = ({ count, label }) => (
   </div>
 );
 
+ProfileStat.propTypes = {
+  count: PropTypes.number.isRequired,
+  label: PropTypes.string.isRequired,
+};
+
 const Profile = () => {
   const userEmail = localStorage.getItem("userEmail");
-  const navigate = useNavigate();
   const { isDarkMode } = useTheme();
 
   const [userInfo, setUserInfo] = useState({ detail: "" });
@@ -37,7 +41,7 @@ const Profile = () => {
   const [followers, setFollowers] = useState([]);
   const [following, setFollowing] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [setError] = useState("");
   const [userPhotos, setUserPhotos] = useState([]);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef(null);
@@ -154,7 +158,7 @@ const Profile = () => {
           "ข้อผิดพลาดในการส่งข้อมูลไปยัง Make.com webhook:",
           webhookResponse.statusText
         );
-      } 
+      }
     } catch (error) {
       console.error("เกิดข้อผิดพลาดในการบันทึกข้อมูล:", error);
       toast.error("failedToSaveProfile");
@@ -230,7 +234,7 @@ const Profile = () => {
       });
       if (response.data.success) {
         setUserPhotos(remainingPhotos);
-        toast.success(t("photoDeleted"));
+        toast.success("photoDeleted");
 
         if (isMainPhoto && remainingPhotos.length > 0) {
           localStorage.setItem("userPhoto", remainingPhotos[0].url);
@@ -238,10 +242,10 @@ const Profile = () => {
           localStorage.removeItem("userPhoto");
         }
       } else {
-        throw new Error(response.data.message || t("deletionFailed"));
+        throw new Error("deletionFailed");
       }
     } catch (err) {
-      toast.error(err.message || t("deletionFailed"));
+      toast.error("deletionFailed");
     }
   };
   const getFullImageUrl = (url) => {
@@ -254,18 +258,6 @@ const Profile = () => {
 
   if (loading) {
     return <div className="profile-loading">loadingProfile</div>;
-  }
-
-  if (!userEmail) {
-    return (
-      <div className={`profile-page ${isDarkMode ? "dark-mode" : ""}`}>
-        <div className="login-prompt">
-          <h2>{"pleaseLogin"}</h2>
-          <p>{"loginToViewProfile"}</p>
-          <Button onClick={() => navigate("/login")}>{"goToLogin"}</Button>
-        </div>
-      </div>
-    );
   }
 
   const mainProfilePhoto =
