@@ -16,7 +16,6 @@ router.post("/events/match", async (req, res) => {
     }
 
     const currentUserEventTitles = action.eventsTitle;
-    console.log(currentUserEventTitles);
 
     const matchedLikes = [];
 
@@ -26,7 +25,6 @@ router.post("/events/match", async (req, res) => {
         matchedLikes.push(like);
       }
     } 
-    console.log(matchedLikes);
 
     if (matchedLikes.length === 0) {
       return res.status(404).json({ message: "No matching events found" });

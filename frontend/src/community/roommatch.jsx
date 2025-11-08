@@ -180,9 +180,7 @@ const RoomMatch = ({ accordionComponent }) => {
               <div className="roommatch-tindercard-bar"></div>
             </div>
             <div className="roommatch-tindercard-loading-text">
-              ไม่พบห้องที่เหมาะสม หรือคุณปัดหมดแล้ว
-              <br />
-              กำลังค้นหาห้องใหม่...
+             ยังไม่พบผู้คนที่เหมาะสมกับคุณในขณะนี้
             </div>
           </div>
         )}
