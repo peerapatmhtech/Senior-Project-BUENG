@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../../server/api";
 import "./Eventlist.css";
@@ -9,6 +9,7 @@ import { FiCalendar, FiX } from "react-icons/fi";
 import { TbFileDescription } from "react-icons/tb";
 import { toast } from "react-toastify";
 import axios from "axios";
+import PropTypes from "prop-types";
 
 // Helper function to fetch events
 const fetchEvents = async (email) => {
@@ -168,6 +169,11 @@ const EventList = ({ setWaiting, waiting }) => {
     if (!Array.isArray(pendingArr) || pendingArr.length === 0) return;
 
     try {
+      console.log(pendingArr)
+      await api.post(`/api/events/match`,{
+        email: email,
+        action: { eventsTitle: pendingArr.map((event) => event.eventTitle) },
+      });
       await axios.post(import.meta.env.VITE_APP_MAKE_WEBHOOK_MATCH_URL, {
         email: email,
         actions: pendingArr.map((event) => ({ event: event.eventTitle })),
@@ -254,7 +260,7 @@ const EventList = ({ setWaiting, waiting }) => {
     successMessage,
     errorMessage
   ) => {
-    return useMutation({
+    return useMutation({ // This is the line that needs to be moved
       mutationFn,
       onSuccess: () => {
         toast.success(successMessage);
@@ -361,3 +367,18 @@ const EventList = ({ setWaiting, waiting }) => {
 };
 
 export default EventList;
+
+EventListContent.propTypes = {
+  isDarkMode: PropTypes.bool.isRequired,
+  events: PropTypes.array.isRequired,
+  favoriteEvents: PropTypes.array.isRequired,
+  handleUnlike: PropTypes.func.isRequired,
+  handleLike: PropTypes.func.isRequired,
+  handleDelete: PropTypes.func.isRequired,
+  handleDeleteAll: PropTypes.func.isRequired,
+};
+
+EventList.propTypes = {
+  setWaiting: PropTypes.func.isRequired,
+  waiting: PropTypes.bool.isRequired,
+};

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useMemo } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../server/api";
 import { useNavigate } from "react-router-dom";
@@ -6,15 +6,16 @@ import TinderCard from "react-tinder-card";
 import { useTheme } from "../context/themecontext";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { FiX } from "react-icons/fi";
 import { FaHeart } from "react-icons/fa";
 import "./css/roommatch.css";
 import { useSocket } from "../context/make.com";
+import PropTypes from "prop-types";
 import UserCard from "./UserCard";
 
 // --- API Helper Functions ---
-const fetchRooms = async () => {
-  const response = await api.get(`/api/infomatch/all`);
+const fetchRoomsForUser = async (email) => {
+  if (!email) return [];
+  const response = await api.get(`/api/infomatch/${email}`);
   return response.data.data || [];
 };
 
@@ -31,15 +32,16 @@ const RoomMatch = ({ accordionComponent }) => {
   const socket = useSocket();
 
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isModalOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 990);
   const [showMatchModal, setShowMatchModal] = useState(false);
   const [matchedRoom, setMatchedRoom] = useState(null);
 
   // --- Queries ---
-  const { data: rooms = [], isLoading: isLoadingRooms } = useQuery({
-    queryKey: ["rooms"],
-    queryFn: fetchRooms,
+  const { data: filteredRooms = [], isLoading: isLoadingRooms } = useQuery({
+    queryKey: ["rooms", userEmail],
+    queryFn: () => fetchRoomsForUser(userEmail),
+    enabled: !!userEmail,
     staleTime: 1000 * 60 * 2, // 2 minutes
   });
   const { data: users = [], isLoading: isLoadingUsers } = useQuery({
@@ -65,7 +67,7 @@ const RoomMatch = ({ accordionComponent }) => {
         setShowMatchModal(true);
         localStorage.setItem(`match_shown_${updatedRoom._id}`, "true");
       }
-      queryClient.invalidateQueries({ queryKey: ["rooms"] });
+      queryClient.invalidateQueries({ queryKey: ["rooms", userEmail] });
     },
     onError: () => toast.error("ไม่สามารถกดไลค์ได้"),
   });
@@ -73,26 +75,12 @@ const RoomMatch = ({ accordionComponent }) => {
   const skipMutation = useMutation({
     mutationFn: (roomId) => api.delete(`/api/infomatch/${roomId}`),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["rooms"] });
+      queryClient.invalidateQueries({ queryKey: ["rooms", userEmail] });
     },
     onError: () => toast.error("เกิดข้อผิดพลาดในการข้าม"),
   });
 
   // --- Memoized Derived State ---
-  const filteredRooms = useMemo(() => {
-    return Array.isArray(rooms)
-      ? rooms.filter((room) => {
-          const isUserInRoom =
-            room.usermatch === userEmail || room.email === userEmail;
-          if (!isUserInRoom) return false;
-          if (room.usermatch === userEmail && room.usermatchjoined)
-            return false;
-          if (room.email === userEmail && room.emailjoined) return false;
-          return true;
-        })
-      : [];
-  }, [rooms, userEmail]);
-
   const childRefs = useMemo(
     () =>
       Array(filteredRooms.length)
@@ -155,9 +143,6 @@ const RoomMatch = ({ accordionComponent }) => {
       }
     }
   };
-
-  const openModal = () => setIsModalOpen(true);
-  const closeModal = () => setIsModalOpen(false);
 
   const getHighResPhoto = (url) =>
     url ? url.replace(/=s\d+-c(?=[&?]|$)/, "=s400-c") : url;
@@ -247,7 +232,7 @@ const RoomMatch = ({ accordionComponent }) => {
                 <FaHeart className="heart heart-5" />
               </div>
               <div className="match-text">
-                <h1>IT'S A MATCH!</h1>
+                <h1>ITS A MATCH!</h1>
                 <p>
                   You and{" "}
                   {matchedRoom.email !== userEmail
@@ -313,3 +298,7 @@ const RoomMatch = ({ accordionComponent }) => {
 };
 
 export default RoomMatch;
+
+RoomMatch.propTypes = {
+  accordionComponent: PropTypes.node,
+};

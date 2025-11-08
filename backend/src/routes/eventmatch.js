@@ -1,29 +1,53 @@
 import express from "express";
 import { EventMatch } from "../model/eventmatch.js";
+import { Like } from "../model/like.js";
+import { InfoMatch } from "../model/infomatch.js";
 const router = express.Router();
 
-router.post("/events-match", async (req, res) => {
-  const { title, email, usermatch, chance, usermatchjoined, emailjoined } = req.body;
+router.post("/events/match", async (req, res) => {
+  const { email, action } = req.body;
 
   try {
-    if (!title || !email || !usermatch || !chance || usermatchjoined === undefined || emailjoined === undefined) {
-      return res.status(400).json({ error: "Title, email, usermatch, chance, usermatchjoined, emailjoined are required." });
+    // Find likes from other users
+    const otherUserLikes = await Like.find({ userEmail: { $ne: email } });
+
+    if (!otherUserLikes || otherUserLikes.length === 0) {
+      return res.status(404).json({ message: "No likes found from other users" });
     }
 
-    const newEvent = new EventMatch({
-      title,
-      email, 
-      usermatchjoined,
-      emailjoined, // Assuming this is false by default
-      chance,
-      usermatch, // Assuming this is a string field for user match
-    });
+    const currentUserEventTitles = action.eventsTitle;
+    console.log(currentUserEventTitles);
 
-    await newEvent.save();
-    res.status(201).json({ message: "Event saved", event: newEvent });
+    const matchedLikes = [];
+
+    // Loop through other users' likes and find matches
+    for (const like of otherUserLikes) {
+      if (currentUserEventTitles.includes(like.eventTitle)) {
+        matchedLikes.push(like);
+      }
+    } 
+    console.log(matchedLikes);
+
+    if (matchedLikes.length === 0) {
+      return res.status(404).json({ message: "No matching events found" });
+    }
+
+    for (const like of matchedLikes) {
+      const newInfoMatch = new InfoMatch({
+        detail: like.eventTitle,
+        usermatchjoined: false,
+        emailjoined: false,
+        email: req.body.email,
+        chance: 40,
+        usermatch: like.userEmail,
+      });
+      await newInfoMatch.save();
+    }
+
+    res.status(200).json({ message: "Matching events found", matchedLikes });
   } catch (error) {
-    console.error("❌ Error saving event:", error);
-    res.status(500).json({ message: "Failed to save event" });
+    console.error("Error matching events:", error);
+    res.status(500).json({ message: "Server error" });
   }
 });
 
@@ -35,7 +59,7 @@ router.get("/events-match/:email", async (req, res) => {
     console.error("❌ Error fetching events:", error);
     res.status(500).json({ message: "Server error" });
   }
-})
+});
 router.delete("/events-match", async (req, res) => {
   try {
     await EventMatch.deleteMany({}); // ลบทุกเอกสารใน collection
@@ -69,6 +93,5 @@ router.delete("/delete-event-match-all", async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
-
 
 export default router;
