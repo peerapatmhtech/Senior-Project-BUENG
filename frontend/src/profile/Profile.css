@@ -419,4 +419,7 @@
     width: 100%;
     text-align: center;
   }
+  .profile-gallery{
+    margin-bottom: 200px ;
+  }
 }
