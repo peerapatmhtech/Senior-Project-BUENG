@@ -639,7 +639,10 @@ const Friend = () => {
                       >
                         <div className="mobile-small">
                           <img
-                            src={getFullImageUrl(friend.photoURL)}
+                            src={
+                              getFullImageUrl(friend.photoURL) ||
+                              "https://cdn.pixabay.com/photo/2023/02/18/11/00/icon-7797704_640.png"
+                            }
                             className="friend-photo"
                             alt={friend.displayName}
                           />
@@ -786,10 +789,11 @@ const Friend = () => {
               className="list-header"
               onClick={() => setShowOnlineUsersList(!showOnlineUsersList)}
             >
-              <h2>Recommend ({
-                  filteredUsers.filter(user => !isFriend(user.email)).length
-                })</h2>
-              
+              <h2>
+                Recommend (
+                {filteredUsers.filter((user) => !isFriend(user.email)).length})
+              </h2>
+
               <span
                 className={`toggle-icon ${showOnlineUsersList ? "open" : ""}`}
               >
@@ -803,9 +807,11 @@ const Friend = () => {
             >
               <div
                 className={
-                  filteredUsers.filter(user => !isFriend(user.email)).length > 0 && filteredFriends.length === 0
+                  filteredUsers.filter((user) => !isFriend(user.email)).length >
+                    0 && filteredFriends.length === 0
                     ? "special-friend-recommand"
-                    : filteredUsers.filter(user => !isFriend(user.email)).length === 0
+                    : filteredUsers.filter((user) => !isFriend(user.email))
+                        .length === 0
                     ? "empty-friend-recommand"
                     : "con-friend-recommand"
                 }
@@ -824,7 +830,8 @@ const Friend = () => {
                 )} */}
                 <ul className="friend-recommend">
                   {!loadingCurrentUser &&
-                    filteredUsers.filter((user) => !isFriend(user.email))
+                    filteredUsers
+                      .filter((user) => !isFriend(user.email))
                       .map((user) => (
                         <li
                           key={user.email}
@@ -834,7 +841,10 @@ const Friend = () => {
                         >
                           <div className="mobile-small">
                             <img
-                              src={getFullImageUrl(user.photoURL)}
+                              src={
+                                getFullImageUrl(user.photoURL) ||
+                                "https://cdn.pixabay.com/photo/2023/02/18/11/00/icon-7797704_640.png"
+                              }
                               alt={user.displayName}
                               className="friend-photo"
                             />
