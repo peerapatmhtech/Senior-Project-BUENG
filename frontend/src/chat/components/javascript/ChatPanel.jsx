@@ -29,8 +29,14 @@ const ChatPanel = ({
   const [isCom, setIscom] = useState(false);
 
   // Fetch data using React Query
-  const { data: users = [] } = useQuery({ queryKey: ["users"], queryFn: fetchUsers });
-  const { data: getnickName = [] } = useQuery({ queryKey: ["infos"], queryFn: fetchInfos });
+  const { data: users = [] } = useQuery({
+    queryKey: ["users"],
+    queryFn: fetchUsers,
+  });
+  const { data: getnickName = [] } = useQuery({
+    queryKey: ["infos"],
+    queryFn: fetchInfos,
+  });
 
   const { data: followInfo } = useQuery({
     queryKey: ["followInfo", userImage?.email],
@@ -55,12 +61,15 @@ const ChatPanel = ({
       setIscom(false);
     }
   }, [userImage]);
-
+  console.log("userimage", userImage);
+  console.log("user", users);
   return (
     <div className={`chat-container ${openchat ? "mobile-layout-mode" : ""}`}>
       <div className={`show-info ${openchat ? "mobile-layout-mode" : ""}`}>
         <button
-          className={`back-button-mobile ${openchat ? "mobile-layout-mode" : ""}`}
+          className={`back-button-mobile ${
+            openchat ? "mobile-layout-mode" : ""
+          }`}
           onClick={() => setOpenchat(false)}
           style={{
             WebkitTapHighlightColor: "transparent",
@@ -72,12 +81,15 @@ const ChatPanel = ({
         <div className="center-mobile">
           <img
             src={
-              userImage &&
-              users &&
-              (users.find((u) => u.email === userImage?.usermatch)?.photoURL ||
-                users.find((u) => u.email === userImage?.email)?.photoURL ||
-                userImage?.image ||
-                defaultProfileImage)
+              (() => {
+                if (!userImage || !users) return defaultProfileImage;
+                // For group chats/communities
+                if (userImage.image) return userImage.image;
+                // For 1-on-1 chats (friends or matches)
+                const partnerEmail = userImage.usermatch ? (userImage.email === userEmail ? userImage.usermatch : userImage.email) : userImage.email;
+                const partnerUser = users.find(u => u.email === partnerEmail);
+                return partnerUser?.photoURL || defaultProfileImage;
+              })()
             }
             alt="Profile"
             className={`chat-profile ${openchat ? "mobile-layout-mode" : ""}`}
@@ -193,9 +205,7 @@ const ChatPanel = ({
             placeholder={"Writing something..."}
             className="chat-input"
           />
-          <div className="emoji">
-            {/* <MdAttachFile /> */}
-          </div>
+          <div className="emoji">{/* <MdAttachFile /> */}</div>
           <div className="emoji-left">
             <IoMdSend onClick={handleSend} />
           </div>

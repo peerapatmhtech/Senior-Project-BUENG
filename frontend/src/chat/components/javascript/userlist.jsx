@@ -42,8 +42,7 @@ const ListUser = ({
 
   const handleToggle = () => {
     setIsOpen((prev) => !prev);
-};
-
+  };
 
   // ฟังก์ชันสร้าง roomId สำหรับ one-to-one chat (เรียง email เพื่อ unique)
   const getRoomIdForFriend = (friendEmail) => {
@@ -58,7 +57,7 @@ const ListUser = ({
       <div className="favorite-toggle" onClick={handleToggle}>
         {isOpen ? <FaChevronDown /> : <FaChevronRight />}
         <span>Favorite</span>
-    </div>
+      </div>
       {isOpen && (
         <div className="favorite-container-open">
           <ul className="friend-list-chat">
@@ -66,7 +65,9 @@ const ListUser = ({
               sortedFriends.map((friend, index) => (
                 <li
                   key={index}
-                  className={`chat-friend-item ${selectedTab === friend.email ? 'selected' : ''}`}
+                  className={`chat-friend-item ${
+                    selectedTab === friend.email ? "selected" : ""
+                  }`}
                   onClick={() => {
                     setUserImage(friend);
                     handleEnterRoom(friend.roomId);
@@ -80,7 +81,10 @@ const ListUser = ({
                 >
                   <div className="mobilelarge">
                     <img
-                      src={friend.photoURL}
+                      src={
+                        friend.photoURL ||
+                        "https://cdn.pixabay.com/photo/2023/02/18/11/00/icon-7797704_640.png"
+                      }
                       alt={friend.displayName}
                       className="friend-photo"
                     />
@@ -102,14 +106,17 @@ const ListUser = ({
                   </div>
                   <div className="con-right">
                     <div
-                      className={`online-status ${friend.isOnline ? "status-online" : "status-offline"
-                        }`}
+                      className={`online-status ${
+                        friend.isOnline ? "status-online" : "status-offline"
+                      }`}
                     >
                       <span className="online-indicator"></span>
-                      {formatOnlineStatus ? formatOnlineStatus(friend) :
-                        (friend.isOnline ? "ออนไลน์" : "ออฟไลน์")}
+                      {formatOnlineStatus
+                        ? formatOnlineStatus(friend)
+                        : friend.isOnline
+                        ? "ออนไลน์"
+                        : "ออฟไลน์"}
                     </div>
-
                   </div>
                 </li>
               ))

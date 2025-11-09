@@ -104,13 +104,15 @@ router.get("/user-photos/:email", async (req, res) => {
         .status(400)
         .json({ success: false, message: "Email is required" });
 
-    const user = await UserPhoto.find({ email: req.params.email });
-    if (!user) {
+    const userPhotos = await UserPhoto.find({ email: req.params.email }).sort({
+      createdAt: -1,
+    });
+    if (!userPhotos || userPhotos.length === 0) {
       return res
         .status(404)
         .json({ success: false, message: "Empty Photo this user" });
     }
-    res.json({ success: true, data: user });
+    res.json({ success: true, data: userPhotos });
   } catch (error) {
     res.status(500).json({ success: false, message: "Server error" });
   }
@@ -124,6 +126,25 @@ router.get("/user-photo", async (req, res) => {
         .json({ success: false, message: "No photos found" });
     }
     res.json({ success: true, data: userPhoto });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+router.get("/user-photo/latest", async (req, res) => {
+  try {
+    // ใช้ Aggregation Framework เพื่อจัดกลุ่มตาม email และดึงเอกสารล่าสุดของแต่ละกลุ่ม
+    const latestPhotos = await UserPhoto.aggregate([
+      { $sort: { createdAt: -1 } }, // เรียงลำดับตามวันที่สร้างล่าสุด
+      {
+        $group: {
+          _id: "$email", // จัดกลุ่มด้วย email
+          latestPhoto: { $first: "$$ROOT" }, // เอาเอกสารแรก (ล่าสุด) ของแต่ละกลุ่ม
+        },
+      },
+      { $replaceRoot: { newRoot: "$latestPhoto" } }, // ทำให้ผลลัพธ์เป็นโครงสร้างเอกสารเดิม
+    ]);
+
+    res.json({ success: true, data: latestPhotos });
   } catch (error) {
     res.status(500).json({ success: false, message: "Server error" });
   }

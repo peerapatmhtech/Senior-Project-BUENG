@@ -147,7 +147,8 @@ const HeaderProfile = ({
                 </div>
                 <div className="notification-summary">
                   <span>
-                    {notifications.length}{" "}
+                    {/* {notifications.length}{" "} */}
+                    
                     {
                       notifications.filter((n) => n.type === "friend-request")
                         .length
@@ -174,13 +175,13 @@ const HeaderProfile = ({
                       >
                         <div className="notification-item-content">
                           <div className="notification-item-avatar">
-                            <img
+                            {/* <img
                               src={
                                 getFullImageUrl(notif.from?.photoURL) ||
                                 "https://via.placeholder.com/40"
                               }
                               alt={notif.from?.displayName || "User"}
-                            />
+                            /> */}
                             {!notif.read && (
                               <div className="notification-unread-dot"></div>
                             )}
@@ -236,7 +237,7 @@ const HeaderProfile = ({
                                   className="btn-accept"
                                 >
                                   <Check size={12} />
-                                         Accept
+                                  Accept
                                 </button>
                                 <button
                                   onClick={(e) => {
@@ -246,7 +247,7 @@ const HeaderProfile = ({
                                   className="btn-decline"
                                 >
                                   <X size={12} />
-                                          Decline
+                                  Decline
                                 </button>
                               </div>
                             )}
@@ -257,7 +258,7 @@ const HeaderProfile = ({
                   ) : (
                     <div className="notification-empty">
                       <Bell className="notification-empty-icon" />
-                       <p>No new notifications</p>
+                      <p>No new notifications</p>
                     </div>
                   )}
                 </div>
@@ -285,7 +286,10 @@ const HeaderProfile = ({
         }}
       >
         <img
-          src={getFullImageUrl(userPhoto) || userPhoto}
+          src={
+            getFullImageUrl(userPhoto) ||
+            "https://cdn.pixabay.com/photo/2023/02/18/11/00/icon-7797704_640.png"
+          }
           alt="Profile"
           className="profile-image-header"
         />
@@ -298,7 +302,10 @@ const HeaderProfile = ({
       >
         <div className="list-profile-header">
           <img
-            src={getFullImageUrl(userPhoto) || userPhoto}
+            src={
+              getFullImageUrl(userPhoto) ||
+              "https://cdn.pixabay.com/photo/2023/02/18/11/00/icon-7797704_640.png"
+            }
             alt="Profile"
             className="list-profile-image"
           />

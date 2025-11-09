@@ -72,7 +72,10 @@ const CommunityList = ({
                         >
                           <div className="commu-mobile">
                             <img
-                              src={room.image}
+                              src={
+                                room.image ||
+                                "https://images.squarespace-cdn.com/content/v1/557adc8ae4b05fe7bf13f9f0/1440602294667-276CNPQ99Q205NXV17BH/image-asset.jpeg"
+                              }
                               alt={room.name}
                               className="friend-photo"
                             />

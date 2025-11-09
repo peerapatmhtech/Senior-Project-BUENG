@@ -9,7 +9,11 @@ const infoMatchSchema = new mongoose.Schema(
     emailjoined: Boolean,
     email: String,
     chance: Number,
-    usermatch: String, // Assuming this is a string field for user match
+    usermatch: {
+      type: String,
+      required: true,
+      unique: true,
+    },
   },
   { timestamps: true }
 );

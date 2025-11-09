@@ -1,8 +1,13 @@
 // import React from "react";
 import "../../css/ProfileModal.css";
 import { toast, ToastContainer } from "react-toastify";
-import { useQueryClient } from "@tanstack/react-query";
-import { useFollowUser, useDeleteFriend } from "../../../lib/queries";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
+import {
+  useFollowUser,
+  useDeleteFriend,
+  fetchUserPhotos,
+} from "../../../lib/queries";
+import api from "../../../server/api";
 
 const ProfileModal = ({
   isOpen,
@@ -18,11 +23,19 @@ const ProfileModal = ({
   const queryClient = useQueryClient();
   const followMutation = useFollowUser();
   const deleteFriendMutation = useDeleteFriend();
-
-  if (!isOpen || !user) return null;
-
   const currentUser = queryClient.getQueryData(["currentUser", userEmail]);
   const isFollowing = currentUser?.following?.includes(userImage.email);
+
+  const profileUserEmail =
+    userImage.email === userEmail ? userImage.usermatch : userImage.email;
+
+  const { data: userPhotosData } = useQuery({
+    queryKey: ["userPhotos", profileUserEmail],
+    queryFn: () => fetchUserPhotos(profileUserEmail),
+    enabled: !!profileUserEmail && isOpen,
+  });
+
+  if (!isOpen || !user) return null;
 
   const getMatchedUser = () => {
     if (!users || !userImage) return null;
@@ -32,6 +45,13 @@ const ProfileModal = ({
   };
 
   const matchedUser = getMatchedUser();
+
+  const profilePhotoUrl =
+    userPhotosData?.[0]?.url ||
+    matchedUser?.photoURL ||
+    user.photoURL ||
+    userImage?.photoURL ||
+    userImage.image;
 
   const getHighResPhoto = (url) => {
     if (!url) return "/default-profile.png";
@@ -77,6 +97,11 @@ const ProfileModal = ({
       },
     });
   };
+  const getFullImageUrl = (url) => {
+    if (!url) return url;
+    if (url.startsWith("http://") || url.startsWith("https://")) return url;
+    return `${api.defaults.baseURL}${url}`;
+  };
 
   return (
     <div className="profile-modal-overlay" onClick={onClose}>
@@ -84,12 +109,7 @@ const ProfileModal = ({
         <div className="profile-modal-body">
           <div className="profile-modal-user">
             <img
-              src={getHighResPhoto(
-                matchedUser?.photoURL ||
-                  user.photoURL ||
-                  userImage?.photoURL ||
-                  userImage.image
-              )}
+              src={getFullImageUrl(getHighResPhoto(profilePhotoUrl))}
               alt={
                 matchedUser?.displayName ||
                 userImage?.displayName ||
@@ -158,6 +178,17 @@ const ProfileModal = ({
             {deleteFriendMutation.isLoading ? "กำลังลบ..." : "ลบเพื่อน"}
           </button>
         </div>
+        {userPhotosData && userPhotosData.length > 0 && (
+          <div className="profile-modal-gallery">
+            <div className="photo-grid">
+              {userPhotosData.map((photo) => (
+                <div key={photo.url} className="photo-grid-item">
+                  <img src={getFullImageUrl(photo.url)} alt="User upload" />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
       <ToastContainer position="top-right" autoClose={3000} hideProgressBar />
     </div>

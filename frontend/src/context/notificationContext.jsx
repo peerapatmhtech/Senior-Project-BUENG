@@ -71,29 +71,29 @@ export const NotificationProvider = ({ children }) => {
       setNewFriendRequest(latestRequest);
 
       // แสดง toast notification เฉพาะเมื่อมี notification ใหม่
-      toast.info(
-        <div className="friend-request-toast">
-          <img
-            src={latestRequest.from?.photoURL}
-            alt={latestRequest.from?.displayName}
-            className="toast-profile-img"
-            style={{
-              width: "40px",
-              height: "40px",
-              borderRadius: "50%",
-              marginRight: "8px",
-            }}
-          />
-          <div className="toast-content">
-            <strong>{latestRequest.from?.displayName}</strong>{" "}
-            ได้ส่งคำขอเป็นเพื่อนถึงคุณ
-          </div>
-        </div>,
-        {
-          autoClose: 8000,
-          position: "bottom-right",
-        }
-      );
+      // toast.info(
+      //   <div className="friend-request-toast">
+      //     <img
+      //       src={latestRequest.from?.photoURL}
+      //       alt={latestRequest.from?.displayName}
+      //       className="toast-profile-img"
+      //       style={{
+      //         width: "40px",
+      //         height: "40px",
+      //         borderRadius: "50%",
+      //         marginRight: "8px",
+      //       }}
+      //     />
+      //     <div className="toast-content">
+      //       <strong>{latestRequest.from?.displayName}</strong>{" "}
+      //       ได้ส่งคำขอเป็นเพื่อนถึงคุณ
+      //     </div>
+      //   </div>,
+      //   {
+      //     autoClose: 8000,
+      //     position: "bottom-right",
+      //   }
+      // );
     } catch (error) {
       console.error("❌ Error fetching notifications:", error);
       // อย่า toast error ทุกครั้ง เพราะอาจเป็น 404 (ไม่มี notifications)

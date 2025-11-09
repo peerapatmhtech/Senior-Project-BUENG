@@ -41,13 +41,23 @@ const MatchList = ({
     queryFn: () => fetchEvents(userEmail),
     enabled: !!userEmail,
   });
-  const { data: users = [] } = useQuery({ queryKey: ["users"], queryFn: fetchUsers });
-  const { data: infos = [] } = useQuery({ queryKey: ["infos"], queryFn: fetchInfos });
+  const { data: users = [] } = useQuery({
+    queryKey: ["users"],
+    queryFn: fetchUsers,
+  });
+  const { data: infos = [] } = useQuery({
+    queryKey: ["infos"],
+    queryFn: fetchInfos,
+  });
 
   const handleEnterRoom = (roomId) => {
     navigate(`/chat/${roomId}`);
   };
-
+  const getFullImageUrl = (url) => {
+    if (!url) return url;
+    if (url.startsWith("http://") || url.startsWith("https://")) return url;
+    return `${api.defaults.baseURL}${url}`;
+  };
   // ตรวจสอบการ match ใหม่
   useEffect(() => {
     if (userMatchData && userMatchData.length > 0) {
@@ -150,19 +160,22 @@ const MatchList = ({
                       );
                       setIsGroupChat(false);
 
-                      const userObject =
-                        users.find((u) => u.email === partnerEmail) || {
-                          email: partnerEmail,
-                        };
+                      const userObject = users.find(
+                        (u) => u.email === partnerEmail
+                      ) || {
+                        email: partnerEmail,
+                      };
                       handleProfileClick(userObject);
                     }}
                   >
                     <img
                       src={(() => {
-                        const user = users.find((u) => u.email === partnerEmail);
+                        const user = users.find(
+                          (u) => u.email === partnerEmail
+                        );
                         return user && user.photoURL
                           ? user.photoURL
-                          : "/default-profile.png";
+                          : 'https://cdn.pixabay.com/photo/2023/02/18/11/00/icon-7797704_640.png';
                       })()}
                       alt={matchData.detail}
                       className="friend-photo"
@@ -170,7 +183,9 @@ const MatchList = ({
                     <div className="match-detail">
                       <span className="friend-name">
                         {(() => {
-                          const user = users.find((u) => u.email === partnerEmail);
+                          const user = users.find(
+                            (u) => u.email === partnerEmail
+                          );
                           return user && user.displayName
                             ? user.displayName
                             : partnerEmail;
@@ -200,17 +215,17 @@ const MatchList = ({
                 <FaHeart className="big-heart-icon" />
                 <h2 className="match-title">It's a Match!</h2>
                 <p className="match-subtitle">
-                  You and{
-                    (() => {
-                      const partnerEmail =
-                        matchedData.email === userEmail
-                          ? matchedData.usermatch
-                          : matchedData.email;
-                      const partnerUser = users.find(
-                        (u) => u.email === partnerEmail
-                      );
-                      return partnerUser?.displayName || partnerEmail;
-                    })()}
+                  You and
+                  {(() => {
+                    const partnerEmail =
+                      matchedData.email === userEmail
+                        ? matchedData.usermatch
+                        : matchedData.email;
+                    const partnerUser = users.find(
+                      (u) => u.email === partnerEmail
+                    );
+                    return partnerUser?.displayName || partnerEmail;
+                  })()}
                   liked each other
                 </p>
               </div>
@@ -241,9 +256,7 @@ const MatchList = ({
                       const partnerUser = users.find(
                         (u) => u.email === partnerEmail
                       );
-                      return (
-                        partnerUser?.photoURL || "/default-profile.png"
-                      );
+                      return partnerUser?.photoURL || "/default-profile.png";
                     })()}
                     alt="Match"
                     className="match-avatar"
@@ -263,7 +276,10 @@ const MatchList = ({
                 >
                   Start Chatting
                 </button>
-                <button className="match-btn keep-btn" onClick={closeMatchModal}>
+                <button
+                  className="match-btn keep-btn"
+                  onClick={closeMatchModal}
+                >
                   Keep Swiping
                 </button>
               </div>
