@@ -169,7 +169,6 @@ const EventList = ({ setWaiting, waiting }) => {
     if (!Array.isArray(pendingArr) || pendingArr.length === 0) return;
 
     try {
-      console.log(pendingArr)
       await api.post(`/api/events/match`,{
         email: email,
         action: { eventsTitle: pendingArr.map((event) => event.eventTitle) },

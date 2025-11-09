@@ -13,9 +13,7 @@ const fetchUserPhotos = async (userEmail, mainPhotoUrl) => {
   let allPhotos = mainPhoto ? [mainPhoto] : [];
 
   try {
-    console.log("Fetching photos for", userEmail)
     const response = await api.get(`/api/user-photos/${userEmail}`);
-    console.log(response.data)
     if (response.data.success && Array.isArray(response.data.data)) {
       const additionalPhotos = response.data.data.filter(
         (p) => p.url !== mainPhotoUrl
@@ -52,7 +50,6 @@ const UserCard = ({ room, userEmail, users }) => {
     enabled: !!userToDisplayEmail && !!userToDisplay, // Only fetch if we have the user's email and profile
     staleTime: 1000 * 60 * 5, // Cache photos for 5 minutes
   });
-  console.log("photos", photos)
 
   const getHighResPhoto = (url) => {
     if (!url) return url;

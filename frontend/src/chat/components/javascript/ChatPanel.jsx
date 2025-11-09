@@ -61,8 +61,6 @@ const ChatPanel = ({
       setIscom(false);
     }
   }, [userImage]);
-  console.log("userimage", userImage);
-  console.log("user", users);
   return (
     <div className={`chat-container ${openchat ? "mobile-layout-mode" : ""}`}>
       <div className={`show-info ${openchat ? "mobile-layout-mode" : ""}`}>
