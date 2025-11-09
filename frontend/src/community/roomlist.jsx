@@ -86,6 +86,12 @@ const RoomList = ({
     handleAddCommunity(roomId, roomName);
   };
 
+  const getFullImageUrl = (url) => {
+    if (!url) return url;
+    if (url.startsWith("http://") || url.startsWith("https://")) return url;
+    return `${api.defaults.baseURL}${url}`;
+  };
+
   return (
     <section className={`roomlist-section ${isDarkMode ? "dark-mode" : ""}`}>
       <header className="roomlist-header"></header>
@@ -115,7 +121,11 @@ const RoomList = ({
             >
               <div className="room-image-wrap">
                 {room.image ? (
-                  <img src={room.image} alt="room" className="room-image" />
+                  <img
+                    src={getFullImageUrl(room.image)}
+                    alt="room"
+                    className="room-image"
+                  />
                 ) : (
                   <div className="room-image-placeholder">
                     <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
@@ -142,7 +152,7 @@ const RoomList = ({
                   </div>
                 )}
               </div>
-              <div className="room-info">
+              <>
                 <h4 className="room-name">{room.name}</h4>
                 <p className="room-desc">{room.description}</p>
                 <div className="room-meta">
@@ -150,7 +160,7 @@ const RoomList = ({
                     สร้างโดย: {room.createdBy}
                   </span>
                 </div>
-              </div>
+              </>
             </div>
           ))
         )}

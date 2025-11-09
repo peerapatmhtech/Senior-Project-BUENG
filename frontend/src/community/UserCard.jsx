@@ -52,10 +52,17 @@ const UserCard = ({ room, userEmail, users }) => {
     enabled: !!userToDisplayEmail && !!userToDisplay, // Only fetch if we have the user's email and profile
     staleTime: 1000 * 60 * 5, // Cache photos for 5 minutes
   });
+  console.log("photos", photos)
 
   const getHighResPhoto = (url) => {
     if (!url) return url;
     return url.replace(/=s\d+-c(?=[&?]|$)/, "=s400-c");
+  };
+
+  const getFullImageUrl = (url) => {
+    if (!url) return url;
+    if (url.startsWith("http://") || url.startsWith("https://")) return url;
+    return `${api.defaults.baseURL}${url}`;
   };
 
   const handlePhotoNav = (e, direction) => {
@@ -83,7 +90,7 @@ const UserCard = ({ room, userEmail, users }) => {
       ) : photos.length > 0 ? (
         <>
           <img
-            src={getHighResPhoto(photos[activePhotoIndex]?.url)}
+            src={getFullImageUrl(getHighResPhoto(photos[activePhotoIndex]?.url))}
             alt="room"
             className="room-image-match"
           />
