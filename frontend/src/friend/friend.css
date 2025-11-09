@@ -195,7 +195,7 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  width:  100%;
+  width: 100%;
   transform: translateY(0);
   pointer-events: auto; /* อนุญาตการคลิกเมื่อแสดง */
 }
@@ -345,9 +345,7 @@
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
   border-left: 4px solid #818cf8;
 }
-s
-
-.search-friend-con::after {
+s .search-friend-con::after {
   content: "";
   position: absolute;
   bottom: 0;
@@ -587,6 +585,7 @@ s
 }
 
 .friend-recommend {
+  height: calc(100vh - 650px);
   list-style-type: none;
   padding: 0;
   width: max-content;
@@ -937,10 +936,16 @@ s
 }
 
 /* ป้องกัน dropdown เกินขอบจอ */
-@media (max-width: 480px) {
+@media screen and (max-width: 414px) {
   .dropdown-menu {
     min-width: 160px;
     right: -10px; /* ปรับเพื่อไม่ให้เกินขอบจอ */
+  }
+  .friend-recommend {
+    height: calc(100vh - 650px);
+  }
+  .con-friend-recommand{
+    height: 10000px;
   }
 }
 

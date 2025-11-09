@@ -319,7 +319,7 @@
 }
 
 .event-container {
-  height: calc(100vh - 230px);
+  height: calc(100vh - 500px);
   /* background: linear-gradient(135deg, #f3f4f6 60%, #e0e7ff 100%); */
   padding: 0 24px;
   overflow-y: auto;
@@ -771,7 +771,7 @@
 
 @media screen and (max-width: 1760px) {
   .event-container {
-    height: calc(100vh - 100px);
+    height: calc(100vh - 250px);
     padding: 0px 40px 40px 40px;
   }
 

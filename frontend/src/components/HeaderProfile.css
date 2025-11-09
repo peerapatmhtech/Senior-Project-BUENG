@@ -55,6 +55,11 @@
   border-color: #1f2937;
 }
 
+.row-profile-header{
+  display: flex;
+  flex-direction: row;
+}
+
 /* Notification Dropdown */
 .notification-dropdown {
   position: absolute;
@@ -447,6 +452,9 @@
   cursor: pointer;
   font-size: 0.875rem;
   transition: background-color 0.3s ease;
+}
+.list-profile-menu-item.dark-mode {
+  color: #ffffff;
 }
 
 .list-profile.dark-mode .list-profile-menu-item {

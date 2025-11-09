@@ -4,6 +4,7 @@ import { useNotifications } from "../context/notificationContext";
 import "./HeaderProfile.css";
 import { useAuth } from "../context/Authcontext";
 import { Bell, LogOut, Sun, Moon, X, Check, UserPlus } from "lucide-react";
+import { Info } from "lucide-react";
 
 const HeaderProfile = ({
   showNotification = true,
@@ -11,6 +12,7 @@ const HeaderProfile = ({
   bellButtonRef: externalBellButtonRef,
   notificationDropdownRef: externalDropdownRef,
   isFriend,
+  onStartTour,
 }) => {
   const {
     notifications,
@@ -109,23 +111,38 @@ const HeaderProfile = ({
       {showNotification && (
         <>
           <div className="notification-container">
-            <button
-              ref={bellButtonRef}
-              className="bell-btn-home"
-              aria-label="Notifications"
-              onClick={() => {
-                toggleNotificationDropdown();
-                setProfileModalOpen(false);
-              }}
-            >
-              <Bell className={`bell-icon ${isDarkMode ? "dark" : ""}`} />
-              {notifications.filter((n) => !n.read).length > 0 && (
-                <span className="notifications-badge">
-                  {notifications.filter((n) => !n.read).length}
-                </span>
+            <div className="row-profile-header">
+              {/* ปุ่มสำหรับเริ่มคู่มือแนะนำอีกครั้ง */}
+              {onStartTour && ( // แสดงปุ่มนี้ก็ต่อเมื่อมีการส่ง prop onStartTour มาเท่านั้น
+                <button
+                  onClick={() => {
+                    onStartTour();
+                    setProfileModalOpen(false);
+                  }} // เมื่อกดปุ่ม ให้เริ่มทัวร์และปิดเมนูโปรไฟล์
+                  className={`list-profile-menu-item ${
+                    isDarkMode ? "dark-mode" : ""
+                  }`}
+                >
+                  <Info size={20} className="info-icon" /> {/* ใช้ไอคอน Info */}
+                </button>
               )}
-            </button>
-
+              <button
+                ref={bellButtonRef}
+                className="bell-btn-home"
+                aria-label="Notifications"
+                onClick={() => {
+                  toggleNotificationDropdown();
+                  setProfileModalOpen(false);
+                }}
+              >
+                <Bell className={`bell-icon ${isDarkMode ? "dark" : ""}`} />
+                {notifications.filter((n) => !n.read).length > 0 && (
+                  <span className="notifications-badge">
+                    {notifications.filter((n) => !n.read).length}
+                  </span>
+                )}
+              </button>
+            </div>
             {showNotificationDropdown && (
               <div
                 className={`notification-dropdown ${
@@ -148,7 +165,7 @@ const HeaderProfile = ({
                 <div className="notification-summary">
                   <span>
                     {/* {notifications.length}{" "} */}
-                    
+
                     {
                       notifications.filter((n) => n.type === "friend-request")
                         .length
@@ -332,6 +349,20 @@ const HeaderProfile = ({
             <span>{"logout"}</span>
           </button>
         </div>
+
+        {/* ปุ่มสำหรับเริ่มคู่มือแนะนำอีกครั้ง */}
+        {onStartTour && ( // แสดงปุ่มนี้ก็ต่อเมื่อมีการส่ง prop onStartTour มาเท่านั้น
+          <button
+            onClick={() => {
+              onStartTour();
+              setProfileModalOpen(false);
+            }} // เมื่อกดปุ่ม ให้เริ่มทัวร์และปิดเมนูโปรไฟล์
+            className="list-profile-menu-item"
+          >
+            <Info size={20} /> {/* ใช้ไอคอน Info */}
+            <span>{"เริ่มคู่มือแนะนำ"}</span>
+          </button>
+        )}
       </div>
     </div>
   );

@@ -786,16 +786,10 @@ const Friend = () => {
               className="list-header"
               onClick={() => setShowOnlineUsersList(!showOnlineUsersList)}
             >
-              <h2>
-                Online Users (
-                {
-                  filteredUsers.filter(
-                    (user) =>
-                      !isFriend(user.email) && onlineUsers[user.email]?.online
-                  ).length
-                }
-                )
-              </h2>
+              <h2>Recommend ({
+                  filteredUsers.filter(user => !isFriend(user.email)).length
+                })</h2>
+              
               <span
                 className={`toggle-icon ${showOnlineUsersList ? "open" : ""}`}
               >
@@ -809,21 +803,14 @@ const Friend = () => {
             >
               <div
                 className={
-                  filteredUsers.filter(
-                    (user) =>
-                      !isFriend(user.email) && onlineUsers[user.email]?.online
-                  ).length > 0 && filteredFriends.length === 0
+                  filteredUsers.filter(user => !isFriend(user.email)).length > 0 && filteredFriends.length === 0
                     ? "special-friend-recommand"
-                    : filteredUsers.filter(
-                        (user) =>
-                          !isFriend(user.email) &&
-                          onlineUsers[user.email]?.online
-                      ).length === 0
+                    : filteredUsers.filter(user => !isFriend(user.email)).length === 0
                     ? "empty-friend-recommand"
                     : "con-friend-recommand"
                 }
               >
-                {filteredUsers.filter(
+                {/* {filteredUsers.filter(
                   (user) =>
                     !isFriend(user.email) && onlineUsers[user.email]?.online
                 ).length === 0 && (
@@ -834,15 +821,10 @@ const Friend = () => {
                       </div>
                     </div>
                   </div>
-                )}
+                )} */}
                 <ul className="friend-recommend">
                   {!loadingCurrentUser &&
-                    filteredUsers
-                      .filter(
-                        (user) =>
-                          !isFriend(user.email) &&
-                          onlineUsers[user.email]?.online
-                      )
+                    filteredUsers.filter((user) => !isFriend(user.email))
                       .map((user) => (
                         <li
                           key={user.email}
