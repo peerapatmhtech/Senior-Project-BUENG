@@ -418,7 +418,7 @@ app.get("/api/debug/routes", (req, res) => {
 });
 
 // ใช้งาน routes ที่แยกไว้
-
+app.use("/api", MakeRoutes(io));
 // ใช้ authMiddleware กับทุก request ที่เข้ามาที่ /api
 app.use("/api", authMiddleware);
 
@@ -428,7 +428,7 @@ app.use("/api", userPhotoRoutes);
 // All routes after this will have their body parsed as JSON
 app.use(express.json({ limit: "5mb" }));
 
-app.use("/api", MakeRoutes(io));
+
 // Register friendRequestRoutes with high priority to prevent 404 issues.
 app.use("/api", infoMatchRoutes);
 app.use("/api", aiRoute); // ใช้ aiRoute ก่อน routes อื่นๆ เพื่อป้องกัน 404
