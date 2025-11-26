@@ -12,7 +12,6 @@ const infoMatchSchema = new mongoose.Schema(
     usermatch: {
       type: String,
       required: true,
-      unique: true,
     },
   },
   { timestamps: true }

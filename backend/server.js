@@ -230,163 +230,167 @@ io.on("connection", (socket) => {
   });
 });
 // 📌 API บันทึกหมวดหมู่เพลงที่ผู้ใช้เลือก
-app.post("/api/update-genres", limiter, async (req, res) => {
-  const { email, genres, subGenres, updatedAt } = req.body;
-  if (!email || !genres || !subGenres) {
-    return res
-      .status(400)
-      .json({ message: "Missing email, genres, or subGenres" });
-  }
-
-  try {
-    //////validate email//////////
-    if (!email) {
-      return res.status(400).json({ message: "Missing email" });
+app.post(
+  "/api/update-genres",
+  // limiter
+  async (req, res) => {
+    const { email, genres, subGenres, updatedAt } = req.body;
+    if (!email || !genres || !subGenres) {
+      return res
+        .status(400)
+        .json({ message: "Missing email, genres, or subGenres" });
     }
 
-    /////////////Find user and update genres and subgenres////////////
-    const user = await Filter.findOneAndUpdate(
-      { email },
-      { genres, subGenres: subGenres || {} },
-      { new: true, upsert: true } // เพิ่ม upsert เผื่อ user ยังไม่มีใน Filter
-    );
-
-    const filter = {};
-
-    ////////////Filter out events from the provided userEmail////////
-    // Exclude events from the provided userEmail
-    if (user.email) {
-      filter.email = { $ne: user.email };
-    }
-
-    // Validate subgenres structure - it should be an object
-    if (
-      !user.subGenres ||
-      typeof user.subGenres !== "object" ||
-      Array.isArray(user.subGenres) ||
-      user.subGenres === null
-    ) {
-      return res.status(400).json({
-        message:
-          "A 'subgenres' object with category filters is required in the request body.",
-      });
-    }
-
-    const subgenresObject = user.subGenres;
-    const genreFilters = Array.from(subgenresObject.entries())
-      .map(([category, subgenreList]) => {
-        const trimmedCategory = category.trim();
-        if (!trimmedCategory) return null;
-
-        // If subgenres are provided, filter by them
-        if (Array.isArray(subgenreList) && subgenreList.length > 0) {
-          const cleanSubgenres = subgenreList
-            .map((s) => String(s).trim())
-            .filter((s) => s.length > 0);
-          if (cleanSubgenres.length > 0) {
-            return { [`genre.${trimmedCategory}`]: { $in: cleanSubgenres } };
-          }
-        }
-
-        // Otherwise, match any event with the category
-        return { [`genre.${trimmedCategory}`]: { $exists: true } };
-      })
-      .filter((f) => f !== null);
-    if (genreFilters.length > 0) {
-      if (genreFilters.length === 1) {
-        Object.assign(filter, genreFilters[0]);
-      } else {
-        filter.$or = genreFilters;
+    try {
+      //////validate email//////////
+      if (!email) {
+        return res.status(400).json({ message: "Missing email" });
       }
-    } else {
-      // If subgenresObject is empty (e.g., subgenres: {}), return no events
-      return res.json([]);
-    }
 
-    const events = await Event.find(filter).sort({ date: 1 });
+      /////////////Find user and update genres and subgenres////////////
+      const user = await Filter.findOneAndUpdate(
+        { email },
+        { genres, subGenres: subGenres || {} },
+        { new: true, upsert: true } // เพิ่ม upsert เผื่อ user ยังไม่มีใน Filter
+      );
 
-    // หา events ที่มี title หรือ link ซ้ำกับที่มีอยู่แล้ว
-    const duplicateCheck = await Event.find({
-      $and: [
-        { _id: { $nin: events.map((e) => e._id) } }, // ไม่ใช่ตัวมันเอง
-        {
-          $or: [
-            { title: { $in: events.map((e) => e.title) } },
-            { link: { $in: events.map((e) => e.link) } },
-          ],
-        },
-      ],
-    });
+      const filter = {};
 
-    // กรองเอาเฉพาะที่ไม่ซ้ำ
-    const duplicateTitles = new Set(duplicateCheck.map((e) => e.title));
-    const duplicateLinks = new Set(duplicateCheck.map((e) => e.link));
+      ////////////Filter out events from the provided userEmail////////
+      // Exclude events from the provided userEmail
+      if (user.email) {
+        filter.email = { $ne: user.email };
+      }
 
-    const uniqueEvents = events.filter(
-      (e) => !duplicateTitles.has(e.title) && !duplicateLinks.has(e.link)
-    );
-
-    //////////////Send unique events to make.com////////
-    if (uniqueEvents.length === 0 || uniqueEvents.length === events.length) {
-      // ✅ ส่งข้อมูลไปยัง Make.com เฉพาะกรณีที่ genres/subGenres มีข้อมูล
-      const hasGenres = Array.isArray(genres) ? genres.length > 0 : false;
-      const hasSubGenres =
-        subGenres &&
-        typeof subGenres === "object" &&
-        Object.values(subGenres).some((arr) =>
-          Array.isArray(arr) ? arr.length > 0 : false
-        );
-      if (hasGenres && hasSubGenres) {
-        await axios.post(MAKE_WEBHOOK_URL, {
-          type: "update-genres",
-          filter_info: {
-            email: user.email,
-            genres: user.genres,
-            subGenres: user.subGenres,
-            updatedAt: updatedAt || new Date().toISOString(),
-          },
+      // Validate subgenres structure - it should be an object
+      if (
+        !user.subGenres ||
+        typeof user.subGenres !== "object" ||
+        Array.isArray(user.subGenres) ||
+        user.subGenres === null
+      ) {
+        return res.status(400).json({
+          message:
+            "A 'subgenres' object with category filters is required in the request body.",
         });
       }
-    }
 
-    ///////////Prepare response data//////////
-    if (uniqueEvents.length === 0) {
-      return res.status(200).json([]);
-    }
+      const subgenresObject = user.subGenres;
+      const genreFilters = Array.from(subgenresObject.entries())
+        .map(([category, subgenreList]) => {
+          const trimmedCategory = category.trim();
+          if (!trimmedCategory) return null;
 
-    //////////Prepare data to save//////////
-    const data = uniqueEvents.map((e) => ({
-      title: e.title,
-      snippet: e.description,
-      link: e.link,
-      image: e.image,
-    }));
+          // If subgenres are provided, filter by them
+          if (Array.isArray(subgenreList) && subgenreList.length > 0) {
+            const cleanSubgenres = subgenreList
+              .map((s) => String(s).trim())
+              .filter((s) => s.length > 0);
+            if (cleanSubgenres.length > 0) {
+              return { [`genre.${trimmedCategory}`]: { $in: cleanSubgenres } };
+            }
+          }
 
-    //////////Send data to save-event API//////////
-    if (data.length > 0) {
-      await axios.post(
-        `http://localhost:${port}/api/save-event`,
-        {
-          data: data,
-          email: user.email,
-          indicesToExclude: [],
-          updatedAt: new Date().toISOString(),
-          subGenres: user.subGenres,
-        },
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
+          // Otherwise, match any event with the category
+          return { [`genre.${trimmedCategory}`]: { $exists: true } };
+        })
+        .filter((f) => f !== null);
+      if (genreFilters.length > 0) {
+        if (genreFilters.length === 1) {
+          Object.assign(filter, genreFilters[0]);
+        } else {
+          filter.$or = genreFilters;
         }
-      );
-    }
+      } else {
+        // If subgenresObject is empty (e.g., subgenres: {}), return no events
+        return res.json([]);
+      }
 
-    res.json(uniqueEvents);
-  } catch (error) {
-    console.error("❌ Update failed:", error);
-    res.status(500).json({ message: "Server error" });
+      const events = await Event.find(filter).sort({ date: 1 });
+
+      // หา events ที่มี title หรือ link ซ้ำกับที่มีอยู่แล้ว
+      const duplicateCheck = await Event.find({
+        $and: [
+          { _id: { $nin: events.map((e) => e._id) } }, // ไม่ใช่ตัวมันเอง
+          {
+            $or: [
+              { title: { $in: events.map((e) => e.title) } },
+              { link: { $in: events.map((e) => e.link) } },
+            ],
+          },
+        ],
+      });
+
+      // กรองเอาเฉพาะที่ไม่ซ้ำ
+      const duplicateTitles = new Set(duplicateCheck.map((e) => e.title));
+      const duplicateLinks = new Set(duplicateCheck.map((e) => e.link));
+
+      const uniqueEvents = events.filter(
+        (e) => !duplicateTitles.has(e.title) && !duplicateLinks.has(e.link)
+      );
+
+      //////////////Send unique events to make.com////////
+      if (uniqueEvents.length === 0 || uniqueEvents.length === events.length) {
+        // ✅ ส่งข้อมูลไปยัง Make.com เฉพาะกรณีที่ genres/subGenres มีข้อมูล
+        const hasGenres = Array.isArray(genres) ? genres.length > 0 : false;
+        const hasSubGenres =
+          subGenres &&
+          typeof subGenres === "object" &&
+          Object.values(subGenres).some((arr) =>
+            Array.isArray(arr) ? arr.length > 0 : false
+          );
+        if (hasGenres && hasSubGenres) {
+          await axios.post(MAKE_WEBHOOK_URL, {
+            type: "update-genres",
+            filter_info: {
+              email: user.email,
+              genres: user.genres,
+              subGenres: user.subGenres,
+              updatedAt: updatedAt || new Date().toISOString(),
+            },
+          });
+        }
+      }
+
+      ///////////Prepare response data//////////
+      if (uniqueEvents.length === 0) {
+        return res.status(200).json([]);
+      }
+
+      //////////Prepare data to save//////////
+      const data = uniqueEvents.map((e) => ({
+        title: e.title,
+        snippet: e.description,
+        link: e.link,
+        image: e.image,
+      }));
+
+      //////////Send data to save-event API//////////
+      if (data.length > 0) {
+        await axios.post(
+          `http://localhost:${port}/api/save-event`,
+          {
+            data: data,
+            email: user.email,
+            indicesToExclude: [],
+            updatedAt: new Date().toISOString(),
+            subGenres: user.subGenres,
+          },
+          {
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        );
+      }
+
+      res.json(uniqueEvents);
+    } catch (error) {
+      console.error("❌ Update failed:", error);
+      res.status(500).json({ message: "Server error" });
+    }
   }
-});
+);
 
 // เก็บ socket instance ไว้ใช้ใน middleware
 app.set("io", io);
@@ -427,7 +431,6 @@ app.use("/api", userPhotoRoutes);
 
 // All routes after this will have their body parsed as JSON
 app.use(express.json({ limit: "5mb" }));
-
 
 // Register friendRequestRoutes with high priority to prevent 404 issues.
 app.use("/api", infoMatchRoutes);
