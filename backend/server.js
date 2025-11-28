@@ -241,9 +241,13 @@ app.post(
         .json({ message: "Missing email, genres, or subGenres" });
     }
 
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
     try {
       //////validate email//////////
       if (!email) {
+        // No need to abort transaction if it fails before any DB operation
         return res.status(400).json({ message: "Missing email" });
       }
 
@@ -251,7 +255,7 @@ app.post(
       const user = await Filter.findOneAndUpdate(
         { email },
         { genres, subGenres: subGenres || {} },
-        { new: true, upsert: true } // เพิ่ม upsert เผื่อ user ยังไม่มีใน Filter
+        { new: true, upsert: true, session } // เพิ่ม upsert เผื่อ user ยังไม่มีใน Filter
       );
 
       const filter = {};
@@ -269,6 +273,8 @@ app.post(
         Array.isArray(user.subGenres) ||
         user.subGenres === null
       ) {
+        // Commit the transaction as only the Filter was updated.
+        await session.commitTransaction();
         return res.status(400).json({
           message:
             "A 'subgenres' object with category filters is required in the request body.",
@@ -303,10 +309,11 @@ app.post(
         }
       } else {
         // If subgenresObject is empty (e.g., subgenres: {}), return no events
+        await session.commitTransaction();
         return res.json([]);
       }
 
-      const events = await Event.find(filter).sort({ date: 1 });
+      const events = await Event.find(filter).session(session).sort({ date: 1 });
 
       // หา events ที่มี title หรือ link ซ้ำกับที่มีอยู่แล้ว
       const duplicateCheck = await Event.find({
@@ -319,7 +326,7 @@ app.post(
             ],
           },
         ],
-      });
+      }).session(session);
 
       // กรองเอาเฉพาะที่ไม่ซ้ำ
       const duplicateTitles = new Set(duplicateCheck.map((e) => e.title));
@@ -329,8 +336,38 @@ app.post(
         (e) => !duplicateTitles.has(e.title) && !duplicateLinks.has(e.link)
       );
 
+      ///////////Prepare response data//////////
+      if (uniqueEvents.length === 0) {
+        await session.commitTransaction();
+        return res.status(200).json([]);
+      }
+
+      //////////Prepare data to save//////////
+      const dataToSave = uniqueEvents.map((e) => ({
+        title: e.title,
+        description: e.snippet, // Assuming snippet is description
+        link: e.link,
+        image: e.image,
+        genre: user.subGenres,
+        updatedAt: new Date().toISOString(),
+        createdByAI: true,
+        email: user.email,
+      }));
+
+      //////////Save new events within the transaction//////////
+      if (dataToSave.length > 0) {
+        await Event.insertMany(dataToSave, { session });
+      }
+
+      // Commit the transaction after all database operations are successful
+      await session.commitTransaction();
+
+      // External API calls should be outside the transaction.
+      // We move the Make.com call here.
+      // If it fails, the database changes are already saved.
+      try {
+
       //////////////Send unique events to make.com////////
-      if (uniqueEvents.length === 0 || uniqueEvents.length === events.length) {
         // ✅ ส่งข้อมูลไปยัง Make.com เฉพาะกรณีที่ genres/subGenres มีข้อมูล
         const hasGenres = Array.isArray(genres) ? genres.length > 0 : false;
         const hasSubGenres =
@@ -350,44 +387,24 @@ app.post(
             },
           });
         }
+      } catch (makeError) {
+        // Log the error for the external call, but don't fail the entire request
+        // because the main database operations were successful.
+        console.error("❌ Error calling Make.com webhook:", makeError.message);
       }
 
-      ///////////Prepare response data//////////
-      if (uniqueEvents.length === 0) {
-        return res.status(200).json([]);
-      }
-
-      //////////Prepare data to save//////////
-      const data = uniqueEvents.map((e) => ({
-        title: e.title,
-        snippet: e.description,
-        link: e.link,
-        image: e.image,
-      }));
-
-      //////////Send data to save-event API//////////
-      if (data.length > 0) {
-        await axios.post(
-          `http://localhost:${port}/api/save-event`,
-          {
-            data: data,
-            email: user.email,
-            indicesToExclude: [],
-            updatedAt: new Date().toISOString(),
-            subGenres: user.subGenres,
-          },
-          {
-            headers: {
-              "Content-Type": "application/json",
-            },
-          }
-        );
+      // Emit an event to all clients to notify them that the events list has been updated.
+      if (uniqueEvents.length > 0) {
+        io.emit("events_updated");มส
       }
 
       res.json(uniqueEvents);
     } catch (error) {
       console.error("❌ Update failed:", error);
+      await session.abortTransaction();
       res.status(500).json({ message: "Server error" });
+    } finally {
+      session.endSession();
     }
   }
 );

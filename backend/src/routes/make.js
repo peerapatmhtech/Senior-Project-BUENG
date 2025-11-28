@@ -151,24 +151,24 @@ export default function (io) {
       if (!subGenres || Object.keys(subGenres).length === 0) {
         return res.status(400).json({ message: "subGenres is required" });
       }
-
+      const dataTranfer = data.organic_results;
       // ตรวจสอบว่า data เป็น array ที่มีข้อมูลหรือไม่
-      if (!Array.isArray(data) || data.length === 0) {
+      if (!Array.isArray(dataTranfer) || dataTranfer.length === 0) {
         return res
           .status(400)
           .json({ message: "Data must be a non-empty array" });
       }
 
       const newEvents = [];
-      for (let i = 0; i < data.length; i++) {
-        const item = data[i];
+      for (let i = 0; i < dataTranfer.length; i++) {
+        const item = dataTranfer[i];
 
         // ตรวจสอบว่า index นี้ควรถูกยกเว้นหรือไม่
         if (indicesToExclude.includes(i)) {
           continue; // ข้ามรายการนี้ไป
         }
 
-        const { title, link, snippet, pagemap, image } = item;
+        const { title, link, snippet, favicon } = item;
 
         // ข้ามถ้าไม่มีข้อมูลสำคัญ
         if (!title || !link) {
@@ -182,11 +182,7 @@ export default function (io) {
         }
 
         // ดึง URL รูปภาพออกมาอย่างปลอดภัย
-        const eventImage =
-          pagemap?.cse_thumbnail?.[0]?.src ||
-          pagemap?.cse_image?.[0]?.src ||
-          image ||
-          null;
+        const eventImage = favicon;
 
         // สร้าง event ใหม่
         const newEvent = new Event({
