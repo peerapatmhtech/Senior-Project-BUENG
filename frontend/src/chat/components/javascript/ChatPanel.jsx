@@ -103,18 +103,32 @@ const ChatPanel = ({
           />
         </div>
         <h2 className={`chat-title ${openchat ? "mobile-layout-mode" : ""}`}>
-          {(userImage &&
-            Array.isArray(getnickName) &&
-            users &&
-            (getnickName.find((u) => u.email === userImage?.usermatch)
-              ?.nickname ||
-              getnickName.find((u) => u.email === userImage?.email)?.nickname ||
-              users.find((u) => u.email === userImage?.usermatch)
-                ?.displayName ||
-              users.find((u) => u.email === userImage?.email)?.displayName ||
+          {(() => {
+            const partnerEmail = userImage?.usermatch
+              ? userImage.email === userEmail
+                ? userImage.usermatch
+                : userImage.email
+              : userImage?.email;
+
+            const nickname =
+              partnerEmail &&
+              Array.isArray(getnickName) &&
+              getnickName.find((u) => u.email === partnerEmail)?.nickname;
+
+            const displayName =
+              partnerEmail &&
+              Array.isArray(users) &&
+              users.find((u) => u.email === partnerEmail)?.displayName;
+
+            return (
+              nickname ||
+              displayName ||
               (RoomsBar && RoomsBar.roomName) ||
-              userName)) ||
-            "Chat"}
+              userImage?.name ||
+              userImage?.displayName ||
+              "Chat"
+            );
+          })()}
         </h2>
       </div>
       <div className="chat-box">
