@@ -13,11 +13,21 @@ const router = express.Router();
 
 // Define the POST route for the AI chat
 router.post('/ai/chat', async (req, res) => {
-  const { message, history = [] } = req.body;
+  const { message, history = [], eventContext } = req.body;
 
   // Validate that a message was provided
   if (!message) {
     return res.status(400).json({ error: 'Message is required' });
+  }
+
+  // Base system prompt
+  let systemContent = 'คุณเป็นผู้ช่วยอัจฉริยะสำหรับแอพจับคู่กิจกรรมและห้อง ชื่อ AI Assistant ที่ให้คำแนะนำเกี่ยวกับการใช้งานแอพ การหาเพื่อนที่มีความสนใจคล้ายกัน และแนะนำกิจกรรมที่น่าสนใจ ตอบเป็นภาษาไทย';
+
+  // Add event context to the system prompt if it exists
+  if (eventContext) {
+    // Assuming eventContext is an object with details about the event.
+    // You can format this string to include whatever details are most relevant.
+    systemContent += `\n\nข้อมูลเพิ่มเติมเกี่ยวกับกิจกรรมปัจจุบัน: ${JSON.stringify(eventContext)}. ให้ใช้ข้อมูลนี้ในการตอบคำถามเพื่อให้สอดคล้องกับกิจกรรมที่ผู้ใช้กำลังสนใจ`;
   }
 
   try {
@@ -25,7 +35,7 @@ router.post('/ai/chat', async (req, res) => {
     const messages = [
       {
         role: 'system',
-        content: 'คุณเป็นผู้ช่วยอัจฉริยะสำหรับแอพจับคู่กิจกรรมและห้อง ชื่อ AI Assistant ที่ให้คำแนะนำเกี่ยวกับการใช้งานแอพ การหาเพื่อนที่มีความสนใจคล้ายกัน และแนะนำกิจกรรมที่น่าสนใจ ตอบเป็นภาษาไทย',
+        content: systemContent,
       },
       // Spread the existing conversation history
       ...history,

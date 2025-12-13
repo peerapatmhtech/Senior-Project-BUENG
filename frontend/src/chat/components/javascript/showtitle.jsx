@@ -1,12 +1,10 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchAllEvents } from "../../../lib/queries";
+import PropTypes from "prop-types"; // Import PropTypes
 import "../css/showtitle.css";
-import { useNavigate } from "react-router-dom";
 
 const ShowTitle = ({ userimage, openchat }) => {
-  const navigate = useNavigate();
-
   const { data: allEvents = [], isLoading } = useQuery({
     queryKey: ["allEvents"],
     queryFn: fetchAllEvents,
@@ -14,12 +12,8 @@ const ShowTitle = ({ userimage, openchat }) => {
 
   const matchedEvent = useMemo(() => {
     if (!userimage || !allEvents) return null;
-    return allEvents.find((event) => event.title === userimage.title);
+    return allEvents.find((event) => event._id === userimage._id);
   }, [allEvents, userimage]);
-
-  const handleBackToMatching = () => {
-    navigate("/home");
-  };
 
   if (isLoading) {
     return (
@@ -60,9 +54,7 @@ const ShowTitle = ({ userimage, openchat }) => {
           </div>
         ) : (
           <div className="bg-no-title">
-            <button className="back-button" onClick={handleBackToMatching}>
-              Back to Matching
-            </button>
+            {/* No event context for this chat */}
           </div>
         )}
       </div>
@@ -71,3 +63,8 @@ const ShowTitle = ({ userimage, openchat }) => {
 };
 
 export default ShowTitle;
+
+ShowTitle.propTypes = {
+  userimage: PropTypes.object,
+  openchat: PropTypes.bool,
+};

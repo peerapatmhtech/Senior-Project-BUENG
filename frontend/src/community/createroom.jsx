@@ -1,56 +1,75 @@
 import { useState } from "react";
 import { IoMdAddCircle, IoMdCloseCircle } from "react-icons/io";
 import api from "../server/api";
-import { useParams } from "react-router-dom";
+import PropTypes from 'prop-types';
 import "./css/createroom.css";
+
 const CreateRoom = ({ onRoomCreated }) => {
-  const { roomId } = useParams();
   const [showForm, setShowForm] = useState(false);
+  const [error, setError] = useState("");
   const [roomData, setRoomData] = useState({
     name: "",
     image: "",
     description: "",
+    memberLimit: 50, // ค่าเริ่มต้น
+    type: "public", // ค่าเริ่มต้น
+    tags: "", // เก็บเป็น string คั่นด้วย comma
   });
-  const [isReloading, setIsReloading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleChange = (e) => {
-    setRoomData({ ...roomData, [e.target.name]: e.target.value });
+    const { name, value, type, checked } = e.target;
+    setRoomData({
+      ...roomData,
+      [name]: type === "checkbox" ? checked : value,
+    });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const createdBy = localStorage.getItem("userName") || "ไม่ระบุ";
-
-    // เช็คชื่อห้องซ้ำ
-    const res = await api.get(`/api/allrooms`);
-    const allRooms = res.data;
-    const isDuplicate = allRooms.some(
-      (room) =>
-        room.name.trim().toLowerCase() === roomData.name.trim().toLowerCase()
-    );
-
-    if (isDuplicate) {
-      alert("มีห้องชื่อนี้อยู่แล้ว กรุณาตั้งชื่อใหม่");
-      return;
-    }
+    setIsSubmitting(true);
+    setError(""); // Clear previous errors
 
     try {
+      // แปลง tags string เป็น array
+      const tagsArray = roomData.tags.split(",").map((tag) => tag.trim()).filter(Boolean);
+
       const res = await api.post(`/api/createroom`, {
         ...roomData,
-        createdBy,
-        roomId,
+        tags: tagsArray,
+        memberLimit: Number(roomData.memberLimit), // แปลงเป็นตัวเลข
       });
-      onRoomCreated(res.data);
-      setRoomData({ name: "", image: "", description: "" });
-      setShowForm(false);
-      setIsReloading(true); // 🔥 แสดง animation
 
-      setTimeout(() => {
-        window.location.reload();
-      }, 1500); // ให้เวลา animation โชว์ก่อนรีโหลด
+      // UX Improvement: ไม่ต้อง reload หน้าเว็บ
+      // เรียกใช้ function จาก parent เพื่ออัปเดต UI
+      onRoomCreated(res.data);
+
+      // Reset form และปิด popup
+      setRoomData({
+        name: "",
+        image: "",
+        description: "",
+        memberLimit: 50,
+        type: "public",
+        tags: "",
+      });
+      setShowForm(false);
     } catch (err) {
       console.error("เกิดข้อผิดพลาดในการสร้างห้อง:", err);
+      if (err.response && err.response.data && err.response.data.error) {
+        // แสดง error ที่ได้จาก API
+        setError(err.response.data.error);
+      } else {
+        setError("เกิดข้อผิดพลาดที่ไม่คาดคิด กรุณาลองใหม่อีกครั้ง");
+      }
+    } finally {
+      setIsSubmitting(false);
     }
+  };
+
+  const handleCloseForm = () => {
+    setShowForm(false);
+    setError(""); // Clear error message when closing
   };
 
   return (
@@ -61,10 +80,13 @@ const CreateRoom = ({ onRoomCreated }) => {
       </button>
 
       {showForm && (
-        <div className="popup-overlay" onClick={() => setShowForm(false)}>
+        <div className="popup-overlay" onClick={handleCloseForm}>
           <div className="popup-form" onClick={(e) => e.stopPropagation()}>
             <h3>Create Room</h3>
             <form onSubmit={handleSubmit}>
+              {error && <p className="error-message">{error}</p>}
+
+              {/* --- ชื่อห้อง --- */}
               <input
                 type="text"
                 className="commu-input"
@@ -74,6 +96,8 @@ const CreateRoom = ({ onRoomCreated }) => {
                 onChange={handleChange}
                 required
               />
+
+              {/* --- ลิงก์รูปภาพ --- */}
               <input
                 type="text"
                 name="image"
@@ -81,6 +105,7 @@ const CreateRoom = ({ onRoomCreated }) => {
                 placeholder="ลิงก์รูปภาพห้อง"
                 value={roomData.image}
                 onChange={handleChange}
+                required
               />
 
               {/* แสดง preview ถ้ามีลิงก์รูป */}
@@ -90,6 +115,7 @@ const CreateRoom = ({ onRoomCreated }) => {
                 </div>
               )}
 
+              {/* --- รายละเอียด --- */}
               <textarea
                 name="description"
                 className="commu-input"
@@ -97,19 +123,58 @@ const CreateRoom = ({ onRoomCreated }) => {
                 value={roomData.description}
                 onChange={handleChange}
               />
-              <button type="submit">ยืนยันสร้างห้อง</button>
+
+              {/* --- จำนวนสมาชิกสูงสุด --- */}
+              <label htmlFor="memberLimit">จำนวนสมาชิกสูงสุด:</label>
+              <input
+                type="number"
+                id="memberLimit"
+                name="memberLimit"
+                className="commu-input"
+                value={roomData.memberLimit}
+                onChange={handleChange}
+                min="1"
+                required
+              />
+
+              {/* --- ประเภทห้อง --- */}
+              <label htmlFor="type">ประเภทห้อง:</label>
+              <select
+                id="type"
+                name="type"
+                className="commu-input"
+                value={roomData.type}
+                onChange={handleChange}
+              >
+                <option value="public">สาธารณะ (Public)</option>
+                <option value="private">ส่วนตัว (Private)</option>
+              </select>
+
+              {/* --- แท็ก --- */}
+              <label htmlFor="tags">แท็ก (คั่นด้วยเครื่องหมาย ,):</label>
+              <input
+                type="text"
+                id="tags"
+                name="tags"
+                className="commu-input"
+                placeholder="เช่น เกม, เรียน, พูดคุย"
+                value={roomData.tags}
+                onChange={handleChange}
+              />
+
+              <button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? "กำลังสร้าง..." : "ยืนยันสร้างห้อง"}
+              </button>
             </form>
           </div>
         </div>
       )}
-      {isReloading && (
-        <div className="reload-overlay">
-          <div className="loader"></div>
-          <p>Loading...</p>
-        </div>
-      )}
     </div>
   );
+};
+
+CreateRoom.propTypes = {
+  onRoomCreated: PropTypes.func.isRequired,
 };
 
 export default CreateRoom;

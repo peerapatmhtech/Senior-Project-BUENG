@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { MdAttachFile } from "react-icons/md";
 import { IoIosArrowBack, IoMdSend } from "react-icons/io";
+import PropTypes from "prop-types";
 import ProfileModal from "./ProfileModal";
 import { useQuery } from "@tanstack/react-query";
 import { fetchFollowInfo, fetchInfos, fetchUsers } from "../../../lib/queries";
@@ -8,7 +8,6 @@ import { fetchFollowInfo, fetchInfos, fetchUsers } from "../../../lib/queries";
 const ChatPanel = ({
   messages,
   userEmail,
-  userPhoto,
   userName,
   sortedFriends,
   RoomsBar,
@@ -78,17 +77,19 @@ const ChatPanel = ({
         </button>
         <div className="center-mobile">
           <img
-            src={
-              (() => {
-                if (!userImage || !users) return defaultProfileImage;
-                // For group chats/communities
-                if (userImage.image) return userImage.image;
-                // For 1-on-1 chats (friends or matches)
-                const partnerEmail = userImage.usermatch ? (userImage.email === userEmail ? userImage.usermatch : userImage.email) : userImage.email;
-                const partnerUser = users.find(u => u.email === partnerEmail);
-                return partnerUser?.photoURL || defaultProfileImage;
-              })()
-            }
+            src={(() => {
+              if (!userImage || !users) return defaultProfileImage;
+              // For group chats/communities
+              if (userImage.image) return userImage.image;
+              // For 1-on-1 chats (friends or matches)
+              const partnerEmail = userImage.usermatch
+                ? userImage.email === userEmail
+                  ? userImage.usermatch
+                  : userImage.email
+                : userImage.email;
+              const partnerUser = users.find((u) => u.email === partnerEmail);
+              return partnerUser?.photoURL || defaultProfileImage;
+            })()}
             alt="Profile"
             className={`chat-profile ${openchat ? "mobile-layout-mode" : ""}`}
             onClick={() => {
@@ -229,3 +230,23 @@ const ChatPanel = ({
 };
 
 export default ChatPanel;
+
+ChatPanel.propTypes = {
+  messages: PropTypes.array.isRequired,
+  userEmail: PropTypes.string.isRequired,
+  userPhoto: PropTypes.string,
+  userName: PropTypes.string,
+  sortedFriends: PropTypes.array.isRequired,
+  RoomsBar: PropTypes.object,
+  openchat: PropTypes.bool.isRequired,
+  input: PropTypes.string.isRequired,
+  setInput: PropTypes.func.isRequired,
+  handleSend: PropTypes.func.isRequired,
+  userImage: PropTypes.object,
+  setOpenchat: PropTypes.func.isRequired,
+  endOfMessagesRef: PropTypes.object.isRequired,
+  defaultProfileImage: PropTypes.string.isRequired,
+  formatChatDate: PropTypes.func.isRequired,
+  setFriends: PropTypes.func.isRequired,
+  setJoinedRooms: PropTypes.func.isRequired,
+};

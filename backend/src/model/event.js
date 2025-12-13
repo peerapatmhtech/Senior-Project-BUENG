@@ -12,11 +12,11 @@ const eventSchema = new mongoose.Schema(
     description: String,
     link: String,
     image: String,
-    createdByAI: Boolean,
-    updatedAt: String,
-    email: String,
+    createdByAI: { type: Boolean, default: false },
   },
   { timestamps: true }
 );
+
+eventSchema.index({ title: 1, link: 1 }, { unique: true });
 
 export const Event = mongoose.model("Event", eventSchema);

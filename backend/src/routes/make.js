@@ -7,6 +7,7 @@ import { limiter } from "../middleware/ratelimit.js";
 import { Like } from "../model/like.js"; // Import the Like model
 import { InfoMatch } from "../model/infomatch.js"; // Import the InfoMatch model
 import { Event } from "../model/event.js"; // Import the Event model
+import { saveEventsFromSource } from "../services/eventService.js";
 import { Info } from "../model/info.js";
 
 export default function (io) {
@@ -105,108 +106,25 @@ export default function (io) {
       });
     }
   });
+
   app.post("/save-event", async (req, res) => {
-    const {
-      data,
-      email,
-      indicesToExclude: rawIndicesToExclude,
-      subGenres,
-      updatedAt,
-    } = req.body;
-    let indicesToExclude = [];
-    if (
-      Array.isArray(rawIndicesToExclude) &&
-      rawIndicesToExclude.length === 0
-    ) {
-      indicesToExclude = [];
-    }
-    if (typeof rawIndicesToExclude === "string") {
-      indicesToExclude = rawIndicesToExclude
-        .split(",")
-        .map((s) => s.trim())
-        .filter((s) => s !== "")
-        .map(Number); // Convert to number
-    } else if (Array.isArray(rawIndicesToExclude)) {
-      indicesToExclude = rawIndicesToExclude
-        .map((s) => String(s).trim()) // Ensure it's a string before trimming
-        .filter((s) => s !== "")
-        .map(Number); // Convert to number
-    }
-
-    // Filter out NaN values and get unique numbers
-    indicesToExclude = [...new Set(indicesToExclude.filter((n) => !isNaN(n)))];
-
     try {
-      // ตรวจสอบ email
-      if (!email) {
-        return res.status(400).json({ message: "Email is required" });
-      }
+      const { data, email, indicesToExclude: rawIndicesToExclude, subGenres, updatedAt } = req.body;
+      
+      const newUserEvents = await saveEventsFromSource({
+        data,
+        email,
+        rawIndicesToExclude,
+        subGenres,
+        updatedAt, // This is no longer used in the service but kept for compatibility
+      });
 
-      // ตรวจสอบ updatedAt
-      if (!updatedAt || String(updatedAt).trim() === "") {
-        return res.status(400).json({ message: "updatedAt is required" });
-      }
-
-      // ตรวจสอบ subGenres ว่ามีข้อมูลหรือไม่
-      if (!subGenres || Object.keys(subGenres).length === 0) {
-        return res.status(400).json({ message: "subGenres is required" });
-      }
-      const dataTranfer = data.organic_results;
-      // ตรวจสอบว่า data เป็น array ที่มีข้อมูลหรือไม่
-      if (!Array.isArray(dataTranfer) || dataTranfer.length === 0) {
-        return res
-          .status(400)
-          .json({ message: "Data must be a non-empty array" });
-      }
-
-      const newEvents = [];
-      for (let i = 0; i < dataTranfer.length; i++) {
-        const item = dataTranfer[i];
-
-        // ตรวจสอบว่า index นี้ควรถูกยกเว้นหรือไม่
-        if (indicesToExclude.includes(i)) {
-          continue; // ข้ามรายการนี้ไป
-        }
-
-        const { title, link, snippet, favicon } = item;
-
-        // ข้ามถ้าไม่มีข้อมูลสำคัญ
-        if (!title || !link) {
-          continue;
-        }
-
-        // ตรวจสอบว่ามีข้อมูลซ้ำหรือไม่
-        const existingEvent = await Event.findOne({ title, link, email });
-        if (existingEvent) {
-          continue; // ข้ามไปรายการถัดไปถ้ามี event นี้อยู่แล้ว
-        }
-
-        // ดึง URL รูปภาพออกมาอย่างปลอดภัย
-        const eventImage = favicon;
-
-        // สร้าง event ใหม่
-        const newEvent = new Event({
-          title,
-          description: snippet, // แมพ snippet ไปที่ description
-          link,
-          genre: subGenres,
-          updatedAt,
-          image: eventImage,
-          createdByAI: true,
-          email,
-        });
-
-        await newEvent.save();
-        newEvents.push(newEvent);
-      }
       res.status(201).json({
-        message: `Successfully saved ${newEvents.length} new events.`,
-        events: newEvents,
+        message: `Successfully saved ${newUserEvents.length} new events for the user.`,
+        userEvents: newUserEvents,
       });
     } catch (error) {
       console.error("Error saving event:", error);
-
-      // จัดการ validation errors ของ Mongoose
       if (error.name === "ValidationError") {
         return res.status(400).json({
           message: "Validation error",
@@ -214,10 +132,17 @@ export default function (io) {
         });
       }
 
+      // Handle specific validation/business logic errors from the service
+      if (
+        error.message.includes("required") ||
+        error.message.includes("non-empty array")
+      ) {
+        return res.status(400).json({ message: error.message });
+      }
+
       res.status(500).json({
         message: "Failed to save event",
-        error:
-          process.env.NODE_ENV === "development" ? error.message : undefined,
+        error: process.env.NODE_ENV === "development" ? error.message : "An internal error occurred",
       });
     } finally {
       // Always emit events_updated to refresh client data

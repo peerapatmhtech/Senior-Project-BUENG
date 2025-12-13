@@ -37,10 +37,19 @@ export const fetchAllRooms = async () => {
   return data;
 };
 
-export const fetchEvents = async (userEmail) => {
-  if (!userEmail) return [];
+/**
+ * Fetches a paginated list of events for a specific user.
+ * @param {string} userEmail - The user's email.
+ * @param {number} page - The page number to fetch.
+ * @param {number} limit - The number of items per page.
+ * @returns {Promise<object>} An object containing events and pagination info.
+ */
+export const fetchEvents = async (userEmail, page = 1, limit = 10) => {
+  if (!userEmail) return { events: [], totalPages: 0, currentPage: 1, totalEvents: 0 };
   const encodedEmail = encodeURIComponent(userEmail);
-  const { data } = await api.get(`/api/events/${encodedEmail}`);
+  const { data } = await api.get(`/api/events/${encodedEmail}`, {
+    params: { page, limit },
+  });
   return data;
 };
 
@@ -101,7 +110,6 @@ export const useDeleteFriend = () => {
 
   return useMutation({
     mutationFn: async ({ type, userToDelete, roomName, infoMatchId }) => {
-      // console.log(type, userToDelete, roomName, infoMatchId);
       switch (type) {
         case "friend":
           try {

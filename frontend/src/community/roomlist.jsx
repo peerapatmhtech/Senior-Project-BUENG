@@ -1,9 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import api from "../server/api";
 import { useNavigate } from "react-router-dom";
 import "./css/roomlist.css";
 import { toast } from "react-toastify";
 import { useTheme } from "../context/themecontext";
+import PropTypes from "prop-types";
+import { FaUsers } from "react-icons/fa";
 
 const RoomList = ({
   showOnlyMyRooms,
@@ -12,7 +14,6 @@ const RoomList = ({
   setSelectedRooms,
 }) => {
   const userEmail = localStorage.getItem("userEmail");
-  const displayName = localStorage.getItem("userName");
   const { isDarkMode } = useTheme();
   const [rooms, setRooms] = useState([]);
   const [joinedRoomIds, setJoinedRoomIds] = useState([]);
@@ -49,18 +50,16 @@ const RoomList = ({
   }, [userEmail]);
 
   // filter ห้องที่ user ยังไม่ได้ join
-  let filteredRooms;
+  const filteredRooms = useMemo(() => {
+    if (showOnlyMyRooms) {
+      return rooms.filter((room) => joinedRoomIds.includes(room._id));
+    }
+    return rooms;
+  }, [rooms, showOnlyMyRooms, joinedRoomIds]);
 
-  if (showOnlyMyRooms) {
-    filteredRooms = rooms.filter((room) => room.createdBy === displayName);
-  } else if (!joinedRoomIds || joinedRoomIds.length === 0) {
-    filteredRooms = rooms; // แสดงทุกห้อง
-  } else {
-    filteredRooms = rooms.filter((room) => !joinedRoomIds.includes(room._id));
-  }
+  const isJoined = (roomId) => joinedRoomIds.includes(roomId);
 
   const handleAddCommunity = async (roomId, roomName) => {
-    // console.log(roomId, roomName);
     try {
       const res = await api.post(`/api/join-community`, {
         userEmail,
@@ -82,8 +81,14 @@ const RoomList = ({
     }
   };
 
-  const handleEnterRoom = (roomId, roomName) => {
-    handleAddCommunity(roomId, roomName);
+  const handleRoomClick = (room) => {
+    if (isDeleteMode) {
+      handleRoomSelect(room._id);
+    } else if (showOnlyMyRooms || isJoined(room._id)) {
+      navigate(`/chat/${room._id}`);
+    } else {
+      handleAddCommunity(room._id, room.name);
+    }
   };
 
   const getFullImageUrl = (url) => {
@@ -91,7 +96,7 @@ const RoomList = ({
     if (url.startsWith("http://") || url.startsWith("https://")) return url;
     return `${api.defaults.baseURL}${url}`;
   };
-
+console.log(filteredRooms)
   return (
     <section className={`roomlist-section ${isDarkMode ? "dark-mode" : ""}`}>
       <header className="roomlist-header"></header>
@@ -113,11 +118,7 @@ const RoomList = ({
               className={`room-container card-room ${
                 selectedRooms.includes(room._id) ? "selected" : ""
               }`}
-              onClick={() =>
-                isDeleteMode
-                  ? handleRoomSelect(room._id)
-                  : handleEnterRoom(room._id, room.name)
-              }
+              onClick={() => handleRoomClick(room)}
             >
               <div className="room-image-wrap">
                 {room.image ? (
@@ -155,10 +156,24 @@ const RoomList = ({
               <>
                 <h4 className="room-name">{room.name}</h4>
                 <p className="room-desc">{room.description}</p>
-                <div className="room-meta">
-                  <span className="room-creator">
-                    สร้างโดย: {room.createdBy}
-                  </span>
+                <div className="room-actions">
+                  <div className="room-member-count">
+                    <FaUsers />
+                    <span>{room.memberCount || 0}</span>
+                  </div>
+                  {!showOnlyMyRooms && (
+                    <button
+                      className={`join-button ${
+                        isJoined(room._id) ? "joined" : ""
+                      }`}
+                      onClick={(e) => {
+                        e.stopPropagation(); // Prevent card click
+                        handleRoomClick(room);
+                      }}
+                    >
+                      {isJoined(room._id) ? "Joined" : "Join"}
+                    </button>
+                  )}
                 </div>
               </>
             </div>
@@ -170,3 +185,10 @@ const RoomList = ({
 };
 
 export default RoomList;
+
+RoomList.propTypes = {
+  showOnlyMyRooms: PropTypes.bool.isRequired,
+  isDeleteMode: PropTypes.bool.isRequired,
+  selectedRooms: PropTypes.array.isRequired,
+  setSelectedRooms: PropTypes.func.isRequired,
+};

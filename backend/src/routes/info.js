@@ -3,32 +3,6 @@ import { Info } from "../model/info.js";
 import { requireOwner } from "../middleware/required.js";
 const app = express.Router();
 
-// routes/api.js หรือไฟล์หลักของ backend
-app.post("/join-community", requireOwner, async (req, res) => {
-  const { userEmail, roomId, roomName } = req.body;
-  if (!userEmail || !roomId || !roomName) {
-    return res
-      .status(400)
-      .json({ error: "userEmail and roomId are required." });
-  }
-  try {
-    const updatedUser = await Info.findOneAndUpdate(
-      { email: userEmail },
-      {
-        $push: {
-          joinedRooms: { roomId, roomName },
-        },
-      },
-      { new: true, runValidators: true }
-    );
-
-    res.json(updatedUser);
-  } catch (err) {
-    console.error("Error while joining room:", err);
-    res.status(500).json({ message: "Internal server error" });
-  }
-});
-
 //////////ดึงห้องที่ผู้ใช้เชื่อมต่อ/////////////////
 app.get("/user-rooms/:email", requireOwner, async (req, res) => {
   try {

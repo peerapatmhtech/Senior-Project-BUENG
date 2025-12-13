@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from "react";
+/* eslint-disable react/prop-types */
+import { useState, useEffect, useRef } from "react";
 import { db } from "../firebase/firebase";
 import RequireLogin from "../components/RequireLogin";
 import { FaSearch } from "react-icons/fa";
@@ -43,7 +44,6 @@ const formatRelativeTime = (timestamp) => {
   const diffSec = Math.floor(diffMs / 1000);
   const diffMin = Math.floor(diffSec / 60);
   const diffHour = Math.floor(diffMin / 60);
-  const diffDay = Math.floor(diffHour / 24);
 
   if (diffMin < 1) return "เมื่อสักครู่";
   if (diffMin < 60) return `${diffMin} นาทีที่แล้ว`;
@@ -226,46 +226,50 @@ const ChatWindow = ({
   endOfMessagesRef,
   defaultProfileImage,
   loadingMessages,
-}) => (
-  <div className={`bg-chat-con ${openchat ? "mobile-layout-mode" : ""}`}>
-    <ChatPanel
-      messages={messages}
-      userEmail={userEmail}
-      userPhoto={userPhoto}
-      setJoinedRooms={setJoinedRooms}
-      userName={userName}
-      RoomsBar={RoomsBar}
-      input={input}
-      isOpencom={isOpencom}
-      isOpenMatch={isOpenMatch}
-      setFriends={setFriends}
-      userImage={userImage}
-      sortedFriends={sortedFriends}
-      openchat={openchat}
-      setInput={setInput}
-      handleSend={handleSend}
-      setOpenchat={setOpenchat}
-      endOfMessagesRef={endOfMessagesRef}
-      defaultProfileImage={defaultProfileImage}
-      formatChatDate={formatChatDate}
-    />
-    <div className="tabright">
-      <ShowTitle userimage={userImage} openchat={openchat} />
-      <ChatContainerAI
-        loadingMessages={loadingMessages}
+}) => {
+  return (
+    <div className={`bg-chat-con ${openchat ? "mobile-layout-mode" : ""}`}>
+      <ChatPanel
         messages={messages}
-        openchat={openchat}
         userEmail={userEmail}
-        defaultProfileImage={defaultProfileImage}
-        formatChatDate={formatChatDate}
-        endOfMessagesRef={endOfMessagesRef}
+        userPhoto={userPhoto}
+        setJoinedRooms={setJoinedRooms}
+        userName={userName}
+        RoomsBar={RoomsBar}
         input={input}
+        isOpencom={isOpencom}
+        isOpenMatch={isOpenMatch}
+        setFriends={setFriends}
+        userImage={userImage}
+        sortedFriends={sortedFriends}
+        openchat={openchat}
         setInput={setInput}
         handleSend={handleSend}
+        setOpenchat={setOpenchat}
+        endOfMessagesRef={endOfMessagesRef}
+        defaultProfileImage={defaultProfileImage}
+        formatChatDate={formatChatDate}
       />
+      <div className="tabright">
+        <ShowTitle userimage={userImage} openchat={openchat} />
+        <ChatContainerAI
+          loadingMessages={loadingMessages}
+          messages={messages}
+          openchat={openchat}
+          isAiChatOpen={false} // This ChatContainerAI is embedded, not the modal
+          userEmail={userEmail}
+          roomId={RoomsBar.roomId} // Pass the current roomId
+          defaultProfileImage={defaultProfileImage}
+          formatChatDate={formatChatDate}
+          endOfMessagesRef={endOfMessagesRef}
+          input={input}
+          setInput={setInput}
+          handleSend={handleSend}
+        />
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 const AIChatButtonAndModal = ({
   hasNewAiMessage,
@@ -369,7 +373,8 @@ const Chat = () => {
   const [hasNewAiMessage, setHasNewAiMessage] = useState(false);
   const displayName = localStorage.getItem("userName");
   const photoURL = localStorage.getItem("userPhoto");
-  const defaultProfileImage = 'https://cdn.pixabay.com/photo/2023/02/18/11/00/icon-7797704_640.png';
+  const defaultProfileImage =
+    "https://cdn.pixabay.com/photo/2023/02/18/11/00/icon-7797704_640.png";
 
   // React Query Data Fetching
   const { data: users = [], isLoading: isLoadingUsers } = useQuery({
@@ -524,6 +529,7 @@ const Chat = () => {
 
     const messageData = {
       sender: userEmail,
+      receiver: null, // Default to null
       content: input,
       timestamp: serverTimestamp(),
       roomId: roomId || "direct",
@@ -532,7 +538,6 @@ const Chat = () => {
 
     if (isGroupChat === true) {
       messageData.type = "group";
-      messageData.receiver = null;
     } else if (selectedUser && selectedUser.email) {
       messageData.receiver = selectedUser.email;
     } else if (activeUser) {
@@ -553,7 +558,7 @@ const Chat = () => {
   };
 
   const setRoombar = (roomImage, roomName) => {
-    setRoomBar({ roomImage, roomName });
+    setRoomBar({ roomImage, roomName, roomId }); // Store roomId as well
   };
 
   useEffect(() => {

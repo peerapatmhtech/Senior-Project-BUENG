@@ -59,7 +59,7 @@ const Friend = () => {
   const [openMenuFor, setOpenMenuFor] = useState(null);
   const [followers, setFollowers] = useState([]);
   const [following, setFollowing] = useState([]);
-  const [getnickName, getNickName] = useState("");
+  const [getnickName, getNickName] = useState([]);
   const dropdownRefs = useRef({});
   const { isDarkMode } = useTheme();
   const [error, setError] = useState("");
@@ -175,7 +175,11 @@ const Friend = () => {
       } else {
         setFriends([]);
       }
-    } catch (error) {}
+    } catch (error) {
+      console.error("เกิดข้อผิดพลาดในการดึงข้อมูลผู้ใช้:", error);
+      setError("เกิดข้อผิดพลาดในการดึงข้อมูลผู้ใช้");
+      toast.error("เกิดข้อผิดพลาดในการดึงข้อมูลผู้ใช้");
+    }
     setLoading(false);
   };
 

@@ -1,139 +1,143 @@
-
-import React, { useState, useRef, useEffect } from "react";
-import { TiMicrophoneOutline } from "react-icons/ti";
-import { MdAttachFile, MdSend } from "react-icons/md";
-import { BsEmojiSmile } from "react-icons/bs";
+import { useState, useRef, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { MdSend, MdLightbulbOutline } from "react-icons/md";
 import { RiRobot2Fill } from "react-icons/ri";
-import { sendMessageToAI } from "../../../server/aiService";
+import api from "../../../server/api";
+import { sendMessageToAI } from "../../../server/aiService"; // Import the AI service
 import "../css/ChatAI.css";
+import PropTypes from "prop-types";
+
+// Helper function to fetch AI chat history
+const fetchAiChatHistory = async (roomId) => {
+  if (!roomId) return [];
+  try {
+    const { data } = await api.get(`/api/aichat/${roomId}`);
+    return data.data || [];
+  } catch (error) {
+    console.error("Error fetching AI chat history:", error);
+    return [];
+  }
+};
+
+// Helper function to send a message to the AI
+const saveAiConversation = async ({
+  roomId,
+  userMessageContent,
+  aiMessageContent,
+}) => {
+  const { data } = await api.post(`/api/aichat/${roomId}/save`, {
+    userMessageContent,
+    aiMessageContent,
+  });
+  return data;
+};
 
 const ChatContainerAI = ({
-  openchat,
   isAiChatOpen,
-  userEmail = "user@example.com", // ใส่ email ผู้ใช้จริงถ้ามี
-  defaultProfileImage = "https://ui-avatars.com/api/?name=User&background=4f46e5&color=fff", // รูปโปรไฟล์ผู้ใช้
-  aiProfileImage = "https://ui-avatars.com/api/?name=AI&background=6366f1&color=fff", // รูปโปรไฟล์ AI
+  defaultProfileImage,
+  roomId,
 }) => {
-  const [messages, setMessages] = useState([]); // {text, isAI, timestamp}
   const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [isTyping, setIsTyping] = useState(false);
   const endOfMessagesRef = useRef(null);
   const inputRef = useRef(null);
+  const queryClient = useQueryClient();
+  const aiProfileImage =
+    "https://cdn-icons-png.flaticon.com/512/10829/10829273.png";
 
-  // เพิ่มข้อความต้อนรับเมื่อเริ่มต้น
-  useEffect(() => {
-    setMessages([
-      {
-        text: "สวัสดี! ฉันคือ AI Assistant พร้อมช่วยเหลือคุณเกี่ยวกับการใช้งานแอพ การหาเพื่อนที่มีความสนใจคล้ายกัน และแนะนำกิจกรรมที่น่าสนใจ มีอะไรให้ช่วยไหมคะ?",
-        isAI: true,
-        timestamp: new Date()
-      }
-    ]);
-  }, []);
+  // Fetch chat history using React Query
+  const { data: messages = [], isLoading: isLoadingHistory } = useQuery({
+    queryKey: ["aiChat", roomId],
+    queryFn: () => fetchAiChatHistory(roomId),
+    enabled: !!roomId, // Only run query if roomId exists
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
 
   // Focus input field when component mounts
   useEffect(() => {
-    if (inputRef.current) {
-      inputRef.current.focus();
-    }
+    inputRef.current?.focus();
   }, []);
 
   // Scroll to bottom when messages change
   useEffect(() => {
-    if (endOfMessagesRef.current) {
-      endOfMessagesRef.current.scrollIntoView({ behavior: "smooth" });
-    }
+    endOfMessagesRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
-
-  // ประวัติแชทสำหรับ AI
-  const chatHistory = messages.map(msg => ({
-    role: msg.isAI ? "assistant" : "user",
-    content: msg.text,
-  }));
 
   // Format date to display in chat
   const formatMessageDate = (date) => {
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-
-    const messageDate = new Date(date);
-    const messageDay = new Date(messageDate.getFullYear(), messageDate.getMonth(), messageDate.getDate());
-
-    if (messageDay.getTime() === today.getTime()) {
-      return `วันนี้ ${messageDate.getHours().toString().padStart(2, '0')}:${messageDate.getMinutes().toString().padStart(2, '0')}`;
-    } else if (messageDay.getTime() === yesterday.getTime()) {
-      return `เมื่อวาน ${messageDate.getHours().toString().padStart(2, '0')}:${messageDate.getMinutes().toString().padStart(2, '0')}`;
-    } else {
-      return `${messageDate.getDate()}/${messageDate.getMonth() + 1}/${messageDate.getFullYear()} ${messageDate.getHours().toString().padStart(2, '0')}:${messageDate.getMinutes().toString().padStart(2, '0')}`;
-    }
-  };
-
-  // Group messages by date
-  const groupMessagesByDate = () => {
-    const groups = {};
-    messages.forEach(message => {
-      const date = message.timestamp ? new Date(message.timestamp) : new Date();
-      const dateString = new Date(date.getFullYear(), date.getMonth(), date.getDate()).toISOString();
-      if (!groups[dateString]) {
-        groups[dateString] = [];
-      }
-      groups[dateString].push(message);
+    if (!date) return "";
+    return new Date(date).toLocaleString("th-TH", {
+      hour: "2-digit",
+      minute: "2-digit",
+      day: "2-digit",
+      month: "short",
     });
-    return groups;
   };
+
+  const mutation = useMutation({
+    mutationFn: saveAiConversation,
+    onSuccess: () => {
+      // Invalidate and refetch the chat history to get the latest messages
+      queryClient.invalidateQueries({ queryKey: ["aiChat", roomId] });
+    },
+    onError: (error) => {
+      console.error("Error sending message to AI:", error);
+      // Optionally show a toast notification
+    },
+  });
 
   const handleSend = async () => {
     if (!input.trim()) return;
-    const userMsg = {
-      text: input,
-      isAI: false,
-      timestamp: new Date()
+
+    const userInput = input;
+    setInput(""); // Clear input immediately
+
+    // Optimistically add user's message
+    const userMessage = {
+      _id: `temp-${Date.now()}`,
+      roomId,
+      sender: "user",
+      content: userInput,
+      timestamp: new Date().toISOString(),
     };
-    setMessages(prev => [...prev, userMsg]);
-    setInput("");
-    setLoading(true);
-    setIsTyping(true);
+
+    queryClient.setQueryData(["aiChat", roomId], (oldData = []) => [
+      ...oldData,
+      userMessage,
+    ]);
 
     try {
-      // สร้าง delay เล็กน้อยเพื่อให้ดูเป็นธรรมชาติ
-      const minDelay = 700; // มิลลิวินาที
-      const sendTime = Date.now();
-
-      // ส่งข้อความและประวัติการแชทไปยัง AI
-      const aiReply = await sendMessageToAI(input, chatHistory);
-
-      // คำนวณเวลาที่ผ่านไปตั้งแต่ส่งคำขอ
-      const elapsedTime = Date.now() - sendTime;
-
-      // ถ้าใช้เวลาน้อยกว่า minDelay ให้รอเพิ่ม
-      if (elapsedTime < minDelay) {
-        await new Promise(resolve => setTimeout(resolve, minDelay - elapsedTime));
-      }
-
-      setIsTyping(false);
-      setMessages(prev => [...prev, {
-        text: aiReply,
-        isAI: true,
-        timestamp: new Date()
-      }]);
-    } catch (err) {
-      console.error("AI Error:", err);
-      setIsTyping(false);
-      setMessages(prev => [...prev, {
-        text: "เกิดข้อผิดพลาดในการเชื่อมต่อ AI กรุณาลองใหม่อีกครั้ง",
-        isAI: true,
-        timestamp: new Date()
-      }]);
-    } finally {
-      setLoading(false);
+      // Generate chat history for the AI context
+      const history = messages.map((msg) => ({
+        role: msg.sender === "ai" ? "assistant" : "user",
+        content: msg.content,
+      }));
+      const aiResponseContent = await sendMessageToAI(userInput, history);
+      mutation.mutate({
+        roomId,
+        userMessageContent: userInput,
+        aiMessageContent: aiResponseContent,
+      });
+    } catch (error) {
+      console.error("Failed to get AI response:", error);
+      // Optionally, remove the optimistic update or show an error message in the chat
     }
   };
 
+  const handlePromptClick = (promptText) => {
+    setInput(promptText);
+    // Focus the input field after setting the text
+    inputRef.current?.focus();
+  };
+
+  // Prompt ตัวอย่าง
+  const examplePrompts = [
+    "แนะนำกิจกรรมน่าสนใจหน่อย",
+    "วิธีหาเพื่อนใหม่ทำยังไง?",
+    "แอพนี้ใช้งานยังไง?",
+  ];
+
   return (
-    <div className="chat-container-ai">
+    <div className={`chat-container-ai ${isAiChatOpen ? "mobile-active" : ""}`}>
       {!isAiChatOpen && (
         <div className="header-chat-ai">
           <div className="chat-header">
@@ -145,24 +149,27 @@ const ChatContainerAI = ({
         </div>
       )}
       <div className="chat-box-ai">
-          {messages.length === 0 && !loading && (
-            <div className="empty-list">
-              <RiRobot2Fill size={36} />
-              <span>เริ่มต้นสนทนากับ AI Assistant</span>
-              <p>ถามเกี่ยวกับแอพ กิจกรรม หรือการค้นหาเพื่อนที่มีความสนใจเดียวกันได้เลย</p>
-            </div>
-          )}
-          {messages.map((msg, idx) => (
+        {isLoadingHistory && messages.length === 0 && (
+          <div className="empty-list">
+            <RiRobot2Fill size={36} />
+            <span>เริ่มต้นสนทนากับ AI Assistant</span>
+            <p>
+              ถามเกี่ยวกับแอพ กิจกรรม
+              หรือการค้นหาเพื่อนที่มีความสนใจเดียวกันได้เลย
+            </p>
+          </div>
+        )}
+        {messages.map((msg) => {
+          const isAI = msg.sender === "ai";
+          return (
             <div
-              key={idx}
-              className={`chat-message ${msg.isAI ? "other-message" : "my-message"}`}
+              key={msg._id}
+              className={`chat-message ${
+                isAI ? "other-message" : "my-message"
+              }`}
             >
-              {msg.isAI ? (
-                <img
-                  src={aiProfileImage}
-                  alt="AI"
-                  className="message-avatar"
-                />
+              {isAI ? (
+                <img src={aiProfileImage} alt="AI" className="message-avatar" />
               ) : (
                 <img
                   src={defaultProfileImage}
@@ -170,11 +177,13 @@ const ChatContainerAI = ({
                   className="message-avatar"
                 />
               )}
-              <div className={`message-content ${msg.isAI ? "other" : "current"}`}>
+              <div className={`message-content ${isAI ? "other" : "current"}`}>
                 <div className="colum-message">
-                  {msg.isAI && <div className="message-sender">AI Assistant</div>}
-                  <div className={`message-bubble ${msg.isAI ? "other" : "current"}`}>
-                    {msg.text}
+                  {isAI && <div className="message-sender">AI Assistant</div>}
+                  <div
+                    className={`message-bubble ${isAI ? "other" : "current"}`}
+                  >
+                    {msg.content}
                   </div>
                   {msg.timestamp && (
                     <div className="message-time">
@@ -184,59 +193,76 @@ const ChatContainerAI = ({
                 </div>
               </div>
             </div>
-          ))}
-          {isTyping && (
-            <div className="chat-message other-message">
-              <img
-                src={aiProfileImage}
-                alt="AI"
-                className="message-avatar"
-              />
-              <div className="message-content other">
-                <div className="colum-message">
-                  <div className="message-bubble other">
-                    <div className="thinking">
-                      <span></span>
-                      <span></span>
-                      <span></span>
-                    </div>
+          );
+        })}
+
+        {mutation.isPending && (
+          <div className="chat-message other-message">
+            <img src={aiProfileImage} alt="AI" className="message-avatar" />
+            <div className="message-content other">
+              <div className="colum-message">
+                <div className="message-bubble other">
+                  <div className="thinking">
+                    <span></span>
+                    <span></span>
+                    <span></span>
                   </div>
                 </div>
               </div>
             </div>
-          )}
-          <div ref={endOfMessagesRef} />
-        </div>
-        <div className="chat-input-container">
-          <div className="chat-border">
-            <div className="emoji-right">
-              {/* <TiMicrophoneOutline /> */}
-            </div>
-            <input
-              ref={inputRef}
-              type="text"
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && !e.shiftKey && handleSend()}
-              placeholder={loading ? "กำลังรอคำตอบ..." : "พิมพ์คำถามของคุณ..."}
-              className="chat-input"
-              disabled={loading}
-            />
-            <div className="emoji">
-              {/* <MdAttachFile />
-              <BsEmojiSmile /> */}
-            </div>
-            <button
-              onClick={handleSend}
-              className="chat-send-button"
-              disabled={loading || !input.trim()}
-            >
-              <MdSend /> ส่ง
-            </button>
           </div>
+        )}
+        <div ref={endOfMessagesRef} />
+      </div>
+      {messages.length === 0 && !isLoadingHistory && (
+        <div className="prompt-suggestions">
+          {examplePrompts.map((prompt, i) => (
+            <button
+              key={i}
+              className="prompt-chip"
+              onClick={() => handlePromptClick(prompt)}
+            >
+              <MdLightbulbOutline size={16} />
+              {prompt}
+            </button>
+          ))}
         </div>
+      )}
+      <div
+        className="chat-input-container-ai"
+      >
+        <div className="chat-border">
+          <input
+            ref={inputRef}
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
+            placeholder={
+              mutation.isPending ? "กำลังรอคำตอบ..." : "พิมพ์คำถามของคุณ..."
+            }
+            className="chat-input-ai"
+            // disabled={mutation.isPending || !roomId}
+          />
+          <button
+            onClick={handleSend}
+            className="chat-send-button"
+            disabled={mutation.isPending || !input.trim() || !roomId}
+          >
+            <MdSend /> ส่ง
+          </button>
+        </div>
+      </div>
     </div>
   );
 };
 
 export default ChatContainerAI;
+
+ChatContainerAI.propTypes = {
+  openchat: PropTypes.bool,
+  isAiChatOpen: PropTypes.bool,
+  userEmail: PropTypes.string,
+  defaultProfileImage: PropTypes.string,
+  roomId: PropTypes.string,
+};

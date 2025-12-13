@@ -9,6 +9,7 @@ import {
   fetchUsers,
   fetchInfos,
 } from "../../../lib/queries";
+import api from "../../../server/api";
 
 const MatchList = ({
   setActiveUser,
@@ -175,7 +176,7 @@ const MatchList = ({
                         );
                         return user && user.photoURL
                           ? user.photoURL
-                          : 'https://cdn.pixabay.com/photo/2023/02/18/11/00/icon-7797704_640.png';
+                          : "https://cdn.pixabay.com/photo/2023/02/18/11/00/icon-7797704_640.png";
                       })()}
                       alt={matchData.detail}
                       className="friend-photo"
@@ -208,14 +209,40 @@ const MatchList = ({
       )}
 
       {showMatchModal && matchedData && (
-        <div className="match-modal-overlay" onClick={closeMatchModal}>
-          <div className="match-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="match-modal-content">
-              <div className="match-celebration">
-                <FaHeart className="big-heart-icon" />
-                <h2 className="match-title">It's a Match!</h2>
-                <p className="match-subtitle">
-                  You and
+        <div className="match-modal-overlay">
+          <div className="activity-match-modal">
+            <div className="activity-match-header">
+              <h2>Found a Buddy!</h2>
+              <p>You both are interested in the same activity.</p>
+            </div>
+
+            <div className="activity-match-users">
+              <div className="activity-match-user">
+                <img
+                  src={
+                    users.find((u) => u.email === userEmail)?.photoURL ||
+                    "/default-profile.png"
+                  }
+                  alt="You"
+                />
+                <span>You</span>
+              </div>
+              <div className="activity-match-icon">+</div>
+              <div className="activity-match-user">
+                <img
+                  src={(() => {
+                    const partnerEmail =
+                      matchedData.email === userEmail
+                        ? matchedData.usermatch
+                        : matchedData.email;
+                    const partnerUser = users.find(
+                      (u) => u.email === partnerEmail
+                    );
+                    return partnerUser?.photoURL || "/default-profile.png";
+                  })()}
+                  alt="Matched User"
+                />
+                <span>
                   {(() => {
                     const partnerEmail =
                       matchedData.email === userEmail
@@ -224,65 +251,35 @@ const MatchList = ({
                     const partnerUser = users.find(
                       (u) => u.email === partnerEmail
                     );
-                    return partnerUser?.displayName || partnerEmail;
+                    return partnerUser?.displayName || "Buddy";
                   })()}
-                  liked each other
-                </p>
+                </span>
               </div>
+            </div>
 
-              <div className="match-users">
-                <div className="match-user">
-                  <img
-                    src={
-                      users.find((u) => u.email === userEmail)?.photoURL ||
-                      "/default-profile.png"
-                    }
-                    alt="You"
-                    className="match-avatar"
-                  />
-                </div>
-                <div className="match-hearts">
-                  <FaHeart className="floating-heart heart-1" />
-                  <FaHeart className="floating-heart heart-2" />
-                  <FaHeart className="floating-heart heart-3" />
-                </div>
-                <div className="match-user">
-                  <img
-                    src={(() => {
-                      const partnerEmail =
-                        matchedData.email === userEmail
-                          ? matchedData.usermatch
-                          : matchedData.email;
-                      const partnerUser = users.find(
-                        (u) => u.email === partnerEmail
-                      );
-                      return partnerUser?.photoURL || "/default-profile.png";
-                    })()}
-                    alt="Match"
-                    className="match-avatar"
-                  />
-                </div>
-              </div>
+            <div className="activity-match-details">
+              <h3>{matchedData.title || "Activity"}</h3>
+              <p>
+                Now you can plan this activity together. Let's start a
+                conversation!
+              </p>
+            </div>
 
-              <div className="match-actions">
-                <button
-                  className="match-btn chat-btn"
-                  onClick={() => {
-                    navigate(`/chat/${matchedData._id}`);
-                    setOpenchat(true);
-                    setUserImage(matchedData);
-                    closeMatchModal();
-                  }}
-                >
-                  Start Chatting
-                </button>
-                <button
-                  className="match-btn keep-btn"
-                  onClick={closeMatchModal}
-                >
-                  Keep Swiping
-                </button>
-              </div>
+            <div className="activity-match-actions">
+              <button className="secondary-btn" onClick={closeMatchModal}>
+                Find More
+              </button>
+              <button
+                className="primary-btn"
+                onClick={() => {
+                  navigate(`/chat/${matchedData._id}`);
+                  setOpenchat(true);
+                  setUserImage(matchedData);
+                  closeMatchModal();
+                }}
+              >
+                Plan in Chat
+              </button>
             </div>
           </div>
         </div>

@@ -53,4 +53,4 @@ const UserSchema = new Schema({
 // ไม่จำเป็นต้องสร้าง index ซ้ำเพราะได้กำหนด unique: true ไว้แล้วที่ฟิลด์ email
 // UserSchema.index({ email: 1 });
 
-export default mongoose.model('User', UserSchema);
+export default mongoose.model('userevents', UserSchema);

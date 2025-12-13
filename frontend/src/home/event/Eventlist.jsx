@@ -8,14 +8,13 @@ import { MdFavorite, MdFavoriteBorder } from "react-icons/md";
 import { FiCalendar, FiX } from "react-icons/fi";
 import { TbFileDescription } from "react-icons/tb";
 import { toast } from "react-toastify";
-import axios from "axios";
 import PropTypes from "prop-types";
 
 // Helper function to fetch events
 const fetchEvents = async (email) => {
   try {
     const res = await api.get(`/api/events/${email}`);
-    return Array.isArray(res.data) ? res.data : [];
+    return res.data.events || []; // Assuming res.data is { events: [], ... }
   } catch (error) {
     if (error.response && error.response.status === 404) {
       toast.success("ไม่มีกิจกรรมในขณะนี้");
@@ -66,13 +65,11 @@ const EventListContent = ({
                   if (isFav) {
                     handleUnlike(event._id);
                   } else {
-                    handleLike(event._id, event.title);
+                    handleLike(event._id);
                   }
                 }}
                 aria-label={
-                  favoriteEvents.includes(event._id)
-                    ? "Unfavorite"
-                    : "Favorite"
+                  favoriteEvents.includes(event._id) ? "Unfavorite" : "Favorite"
                 }
               >
                 {favoriteEvents.includes(event._id) ? (
@@ -91,8 +88,7 @@ const EventListContent = ({
                     <span key={index} className="genre-border">
                       {subcategory}
                     </span>
-                  ))}
-                {" "}
+                  ))}{" "}
               </p>
             </div>
             <p className="event-description">
@@ -167,16 +163,15 @@ const EventList = ({ setWaiting, waiting }) => {
   const sendPendingFavoritesToWebhook = async () => {
     const pendingArr = pendingFavoritesRef.current;
     if (!Array.isArray(pendingArr) || pendingArr.length === 0) return;
-
     try {
-      await api.post(`/api/events/match`,{
+      await api.post(`/api/events/match`, {
         email: email,
-        action: { eventsTitle: pendingArr.map((event) => event.eventTitle) },
+        action: { eventsId: pendingArr }, // ส่ง eventId ไปตรงๆ
       });
-      await axios.post(import.meta.env.VITE_APP_MAKE_WEBHOOK_MATCH_URL, {
-        email: email,
-        actions: pendingArr.map((event) => ({ event: event.eventTitle })),
-      });
+      // await axios.post(import.meta.env.VITE_APP_MAKE_WEBHOOK_MATCH_URL, {
+      //   email: email,
+      //   actions: pendingArr.map((event) => ({ event: event.eventId })),
+      // });
       pendingFavoritesRef.current = [];
     } catch (error) {
       console.error("Error sending to webhook", error);
@@ -187,7 +182,10 @@ const EventList = ({ setWaiting, waiting }) => {
     if (debounceTimeoutRef.current) {
       clearTimeout(debounceTimeoutRef.current);
     }
-    debounceTimeoutRef.current = setTimeout(sendPendingFavoritesToWebhook, 5000);
+    debounceTimeoutRef.current = setTimeout(
+      sendPendingFavoritesToWebhook,
+      5000
+    );
   };
 
   // The original socket logic is correct for handling external updates,
@@ -259,7 +257,8 @@ const EventList = ({ setWaiting, waiting }) => {
     successMessage,
     errorMessage
   ) => {
-    return useMutation({ // This is the line that needs to be moved
+    return useMutation({
+      // This is the line that needs to be moved
       mutationFn,
       onSuccess: () => {
         toast.success(successMessage);
@@ -274,7 +273,8 @@ const EventList = ({ setWaiting, waiting }) => {
   };
 
   const deleteMutation = createListRefetchingMutation(
-    (eventId) => api.delete(`/api/events/${eventId}`),
+    (eventId) =>
+      api.delete(`/api/events/${eventId}`, { data: { email: email } }), // Pass email in request body
     "ลบกิจกรรมสำเร็จ",
     "เกิดข้อผิดพลาดในการลบกิจกรรม"
   );
@@ -285,9 +285,9 @@ const EventList = ({ setWaiting, waiting }) => {
     "เกิดข้อผิดพลาดในการลบกิจกรรมทั้งหมด"
   );
 
-  const handleLike = (eventId, title) => {
-    likeMutation.mutate({ userEmail: email, eventId, eventTitle: title });
-    pendingFavoritesRef.current.push({ eventId, eventTitle: title });
+  const handleLike = (eventId) => { // Ensure events is an array before using it
+    likeMutation.mutate({ userEmail: email, eventId });
+    pendingFavoritesRef.current.push(eventId); // เก็บ eventId เป็น string ตรงๆ
     debouncedSendWebhook();
   };
 
@@ -313,16 +313,17 @@ const EventList = ({ setWaiting, waiting }) => {
   return (
     <>
       <button
-        className="eventlist-modal-toggle-btn"
+        className={`eventlist-modal-toggle-btn ${isDarkMode ? "dark-mode" : ""}`}
         onClick={() => setIsModalOpen(true)}
         aria-label="Open Events"
       >
         <FiCalendar />
       </button>
       <div className="eventlist-desktop-view">
+        {/* Ensure events is an array before passing to content */}
         <EventListContent
           isDarkMode={isDarkMode}
-          events={events}
+          events={Array.isArray(events) ? events : []}
           favoriteEvents={favoriteEvents}
           handleUnlike={handleUnlike}
           handleLike={handleLike}
@@ -350,8 +351,9 @@ const EventList = ({ setWaiting, waiting }) => {
           </div>
           <div className="eventlist-modal-content">
             <EventListContent
+              // Ensure events is an array before passing to content
               isDarkMode={isDarkMode}
-              events={events}
+              events={Array.isArray(events) ? events : []}
               favoriteEvents={favoriteEvents}
               handleUnlike={handleUnlike}
               handleLike={handleLike}

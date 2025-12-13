@@ -29,6 +29,7 @@ import infoMatchRoutes from "./src/routes/infomatch.js"; // Import info match ro
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import { authMiddleware } from "./src/middleware/authMiddleware.js";
+import { saveEventsFromSource } from "./src/services/eventService.js";
 
 /////////Midleware for owner and admin/////////
 import { limiter } from "./src/middleware/ratelimit.js";
@@ -242,11 +243,6 @@ app.post(
     }
 
     try {
-      //////validate email//////////
-      if (!email) {
-        return res.status(400).json({ message: "Missing email" });
-      }
-
       /////////////Find user and update genres and subgenres////////////
       const user = await Filter.findOneAndUpdate(
         { email },
@@ -257,7 +253,7 @@ app.post(
       const filter = {};
 
       ////////////Filter out events from the provided userEmail////////
-      // Exclude events from the provided userEmail
+      // Exclude events created by the current user
       if (user.email) {
         filter.email = { $ne: user.email };
       }
@@ -276,6 +272,7 @@ app.post(
       }
 
       const subgenresObject = user.subGenres;
+      // Build a dynamic query based on the user's selected genres and subgenres
       const genreFilters = Array.from(subgenresObject.entries())
         .map(([category, subgenreList]) => {
           const trimmedCategory = category.trim();
@@ -306,6 +303,7 @@ app.post(
         return res.json([]);
       }
 
+      // Find events that match the user's filter preferences
       const events = await Event.find(filter).sort({ date: 1 });
 
       // หา events ที่มี title หรือ link ซ้ำกับที่มีอยู่แล้ว
@@ -321,7 +319,7 @@ app.post(
         ],
       });
 
-      // กรองเอาเฉพาะที่ไม่ซ้ำ
+      // Filter out events that are potential duplicates based on title or link
       const duplicateTitles = new Set(duplicateCheck.map((e) => e.title));
       const duplicateLinks = new Set(duplicateCheck.map((e) => e.link));
 
@@ -329,7 +327,7 @@ app.post(
         (e) => !duplicateTitles.has(e.title) && !duplicateLinks.has(e.link)
       );
 
-      //////////////Send unique events to make.com////////
+      // Trigger a webhook to an external service like Make.com
       if (uniqueEvents.length === 0 || uniqueEvents.length === events.length) {
         // ✅ ส่งข้อมูลไปยัง Make.com เฉพาะกรณีที่ genres/subGenres มีข้อมูล
         const hasGenres = Array.isArray(genres) ? genres.length > 0 : false;
@@ -352,12 +350,12 @@ app.post(
         }
       }
 
-      ///////////Prepare response data//////////
+      // If no unique events are found after filtering, return an empty array.
       if (uniqueEvents.length === 0) {
         return res.status(200).json([]);
       }
 
-      //////////Prepare data to save//////////
+      // Prepare the found unique events to be saved for the user
       const data = uniqueEvents.map((e) => ({
         title: e.title,
         snippet: e.description,
@@ -365,25 +363,17 @@ app.post(
         image: e.image,
       }));
 
-      //////////Send data to save-event API//////////
+      // Automatically save the recommended events for the user by calling the service
       if (data.length > 0) {
-        await axios.post(
-          `${process.env.VITE_APP_API_BASE_URL}/api/save-event`,
-          {
-            data: data,
-            email: user.email,
-            indicesToExclude: [],
-            updatedAt: new Date().toISOString(),
-            subGenres: user.subGenres,
-          },
-          {
-            headers: {
-              "Content-Type": "application/json",
-            },
-          }
-        );
+        await saveEventsFromSource({
+          data,
+          email,
+          subGenres,
+          updatedAt, // This is no longer used in the service but kept for compatibility
+        });
       }
 
+      // Return the unique events to the frontend
       res.json(uniqueEvents);
     } catch (error) {
       console.error("❌ Update failed:", error);
@@ -441,8 +431,8 @@ app.use("/api", userRoutes);
 app.use("/api", friendRoutes);
 app.use("/api", roomRoutes);
 app.use("/api", infoRoutes);
-app.use("/api", roommatchRoutes);
 app.use("/api", likeRoutes);
+app.use("/api", roommatchRoutes(io)); // Correctly call roommatchRoutes as a function with `io`
 app.use("/api", friendApiRoutes);
 
 // Log API requests for debugging

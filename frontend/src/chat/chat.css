@@ -97,7 +97,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(135deg, rgba(255, 107, 157, 0.9), rgba(255, 142, 142, 0.9));
+  background: linear-gradient(135deg, rgba(44, 2, 55, 0.9), rgba(184, 86, 179, 0.9));
   display: flex;
   justify-content: center;
   align-items: center;
@@ -1923,6 +1923,9 @@
     /* ซ่อน chat-container-ai แบบเดิมใน responsive mode */
     .chat-container-ai {
       display: none;
+    }
+    .chat-container-ai.mobile-active {
+      display: flex;
     }
   }
 
