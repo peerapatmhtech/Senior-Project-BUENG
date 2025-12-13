@@ -121,8 +121,7 @@ const MatchList = ({
                   matchData.email === userEmail ||
                   matchData.usermatch === userEmail;
                 const bothJoined =
-                  matchData.emailjoined === true &&
-                  matchData.usermatchjoined === true;
+                  (matchData.emailjoined && matchData.usermatchjoined) || matchData.status === "matched";
                 const hasValidId = !!matchData._id;
 
                 return isUserInMatch && bothJoined && hasValidId;
@@ -194,7 +193,7 @@ const MatchList = ({
                       </span>
                       <span className="friend-title">{matchData.detail}</span>
 
-                      {matchData.emailjoined && matchData.usermatchjoined && (
+                      {((matchData.emailjoined && matchData.usermatchjoined) || matchData.status === "matched") && (
                         <div className="match-badge">
                           <FaHeart className="match-icon" />
                           <span className="match-text">It's a Match!</span>
