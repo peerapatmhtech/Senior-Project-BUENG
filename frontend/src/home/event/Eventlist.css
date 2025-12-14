@@ -149,6 +149,10 @@
   height: calc(85vh - 80px);
   overflow-y: auto;
   padding: 0;
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center
 }
 
 .eventlist-modal-content .event-container {
@@ -183,6 +187,10 @@
   /* Show modal overlay on mobile */
   .eventlist-modal-overlay {
     display: flex;
+  }
+
+  .event-container{
+    width: 1000px;
   }
 }
 
@@ -319,7 +327,7 @@
 }
 
 .event-container {
-  height: calc(100vh - 500px);
+  height: calc(100vh - 200px);
   /* background: linear-gradient(135deg, #f3f4f6 60%, #e0e7ff 100%); */
   padding: 0 24px;
   overflow-y: auto;
@@ -792,19 +800,25 @@
     max-height: 200px;
   }
 
-  .show-commu {
+  /* .show-commu {
     width: 100%;
     max-width: 600px;
-  }
+  } */
 }
 
-@media screen and (max-width: 1500px) {
+@media screen and (max-width: 1550px) {
   .event-list {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
     gap: 40px 32px;
     width: 500px;
     /* margin: 0 auto; */
+  }
+  .event-container {
+    width: 750px;
+  }
+  .show-commu{
+    max-width: 600px;
   }
 }
 
@@ -843,20 +857,21 @@
   .event-container {
     height: calc(100vh - 100px);
     padding: 0px 32px 40px 32px;
+    width: 450px;
   }
 
   .event-list {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
     gap: 32px 24px;
-    max-width: 800px;
+    max-width: 400px;
     /* margin: 0 auto; */
   }
 
   .event-card {
-    min-height: 320px;
+    min-height: 500px;
     padding: 28px 22px;
-    width: 100%;
+    width: 400px;
   }
 
   .event-card p {
@@ -874,59 +889,6 @@
   }
 }
 
-@media screen and (max-width: 1250px) {
-  .event-container {
-    height: calc(100vh - 80px);
-    /* ปรับให้เหมาะกับ bottom navbar */
-    padding: 0px 20px 100px 20px;
-    /* เพิ่ม padding bottom สำหรับ navbar */
-    background-color: #f3f4f6;
-  }
-
-  .dark-mode .event-container {
-    background-color: #1e1e1e;
-  }
-
-  .event-list {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 24px 20px;
-    max-width: 100%;
-    /* margin: 0 auto; */
-    padding: 0;
-  }
-
-  .dark-mode .event-list {
-    background-color: transparent;
-  }
-
-  .event-card {
-    min-height: 380px;
-    padding: 20px 18px;
-    margin: 0;
-  }
-
-  .event-name {
-    font-size: 1.1rem;
-    font-weight: 600;
-  }
-
-  .event-description {
-    font-size: 0.9rem;
-    line-height: 1.4;
-  }
-
-  .show-commu {
-    width: 100%;
-    max-width: 400px;
-  }
-
-  .eventlist-scroll-btns {
-    bottom: 120px;
-    /* ห่างจาก bottom navbar */
-    right: 20px;
-  }
-}
 
 /* Tablet Medium (600px - 860px) */
 
