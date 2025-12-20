@@ -4,6 +4,7 @@ import { MdSend, MdLightbulbOutline } from "react-icons/md";
 import { RiRobot2Fill } from "react-icons/ri";
 import api from "../../../server/api";
 import { sendMessageToAI } from "../../../server/aiService"; // Import the AI service
+import { fetchAllEvents, fetchInfoMatch } from "../../../lib/queries";
 import "../css/ChatAI.css";
 import PropTypes from "prop-types";
 
@@ -32,12 +33,9 @@ const saveAiConversation = async ({
   return data;
 };
 
-const ChatContainerAI = ({
-  isAiChatOpen,
-  defaultProfileImage,
-  roomId,
-}) => {
+const ChatContainerAI = ({ isAiChatOpen, defaultProfileImage, roomId }) => {
   const [input, setInput] = useState("");
+  const [isAiThinking, setIsAiThinking] = useState(false);
   const endOfMessagesRef = useRef(null);
   const inputRef = useRef(null);
   const queryClient = useQueryClient();
@@ -50,6 +48,18 @@ const ChatContainerAI = ({
     queryFn: () => fetchAiChatHistory(roomId),
     enabled: !!roomId, // Only run query if roomId exists
     staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+
+  // Fetch all events to provide context for the AI
+  const { data: allEvents = [] } = useQuery({
+    queryKey: ["allEvents"],
+    queryFn: fetchAllEvents,
+  });
+
+  // Fetch infoMatch to find the eventId associated with the current roomId
+  const { data: infoMatches = [] } = useQuery({
+    queryKey: ["infoMatch"],
+    queryFn: fetchInfoMatch,
   });
 
   // Focus input field when component mounts
@@ -105,19 +115,44 @@ const ChatContainerAI = ({
       userMessage,
     ]);
 
+    setIsAiThinking(true);
+
     try {
       // Generate chat history for the AI context
       const history = messages.map((msg) => ({
         role: msg.sender === "ai" ? "assistant" : "user",
         content: msg.content,
       }));
-      const aiResponseContent = await sendMessageToAI(userInput, history);
+
+      const currentMatch = infoMatches.find((match) => match._id === roomId);
+      const targetEventId = currentMatch?.eventId;
+
+      const eventsContext = allEvents
+        .filter((event) => event._id === targetEventId)
+        .map((event) => ({
+          title: event.title,
+          description: event.description,
+          date: event.date,
+          location: event.location,
+          genre: event.genre,
+          link: event.link,
+        }));
+
+      // Send message to AI service
+
+      const aiResponseContent = await sendMessageToAI(
+        userInput,
+        history,
+        eventsContext
+      );
+      setIsAiThinking(false);
       mutation.mutate({
         roomId,
         userMessageContent: userInput,
         aiMessageContent: aiResponseContent,
       });
     } catch (error) {
+      setIsAiThinking(false);
       console.error("Failed to get AI response:", error);
       // Optionally, remove the optimistic update or show an error message in the chat
     }
@@ -196,7 +231,7 @@ const ChatContainerAI = ({
           );
         })}
 
-        {mutation.isPending && (
+        {(isAiThinking || mutation.isPending) && (
           <div className="chat-message other-message">
             <img src={aiProfileImage} alt="AI" className="message-avatar" />
             <div className="message-content other">
@@ -228,9 +263,7 @@ const ChatContainerAI = ({
           ))}
         </div>
       )}
-      <div
-        className="chat-input-container-ai"
-      >
+      <div className="chat-input-container-ai">
         <div className="chat-border">
           <input
             ref={inputRef}
@@ -239,7 +272,14 @@ const ChatContainerAI = ({
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
             placeholder={
-              mutation.isPending ? "กำลังรอคำตอบ..." : "พิมพ์คำถามของคุณ..."
+              isAiThinking || mutation.isPending
+                ? "กำลังรอคำตอบ..."
+                : "พิมพ์คำถามของคุณ..."
+            }
+            disabled={
+              isAiThinking ||
+              mutation.isPending ||
+              !roomId
             }
             className="chat-input-ai"
             // disabled={mutation.isPending || !roomId}
@@ -247,7 +287,9 @@ const ChatContainerAI = ({
           <button
             onClick={handleSend}
             className="chat-send-button"
-            disabled={mutation.isPending || !input.trim() || !roomId}
+            disabled={
+              isAiThinking || mutation.isPending || !input.trim() || !roomId
+            }
           >
             <MdSend /> ส่ง
           </button>
