@@ -129,7 +129,6 @@ const ChatSidebar = ({
   isOpenMatch,
   setIsOpenMatch,
   handleProfileClick,
-  setJoinedRooms,
 }) => (
   <div className={`user-container ${openchat ? "mobile-layout-mode" : ""}`}>
     <div className="chat">
@@ -197,7 +196,6 @@ const ChatSidebar = ({
         openMenuFor={openMenuFor}
         setOpenMenuFor={setOpenMenuFor}
         dropdownRefs={dropdownRefs}
-        setJoinedRooms={setJoinedRooms}
         getnickName={getnickName}
         setFriends={setFriends}
         setUserImage={setUserImage}
@@ -211,7 +209,6 @@ const ChatWindow = ({
   messages,
   userEmail,
   userPhoto,
-  setJoinedRooms,
   userName,
   RoomsBar,
   input,
@@ -233,7 +230,6 @@ const ChatWindow = ({
         messages={messages}
         userEmail={userEmail}
         userPhoto={userPhoto}
-        setJoinedRooms={setJoinedRooms}
         userName={userName}
         RoomsBar={RoomsBar}
         input={input}
@@ -349,12 +345,11 @@ const Chat = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [input, setInput] = useState("");
   const [selectedUser, setSelectedUser] = useState(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [messages, setMessages] = useState([]);
-  const [loadingFriendRooms, setLoadingRoomId] = useState(null);
+  const [loadingFriendRooms] = useState(null);
   const [activeUser, setActiveUser] = useState(null);
   const userEmail = localStorage.getItem("userEmail");
-  const messagesRef = collection(db, "messages");
+  const messagesRef = useMemo(() => collection(db, "messages"), []);
   const [isOpen, setIsOpen] = useState(false);
   const endOfMessagesRef = useRef(null);
   const dropdownRefs = useRef({});
@@ -363,7 +358,7 @@ const Chat = () => {
   const [isGroupChat, setIsGroupChat] = useState(false);
   const [getnickName, getNickName] = useState("");
   const [lastMessages, setLastMessages] = useState({});
-  const [loadingMessages, setLoadingMessages] = useState(false);
+  const [loadingMessages] = useState(false);
   const [isOpenMatch, setIsOpenMatch] = useState(false);
   const [userImage, setUserImage] = useState({});
   const [selectedTab, setSelectedTab] = useState(null);
@@ -401,7 +396,7 @@ const Chat = () => {
       queryFn: fetchInfoMatch,
     });
 
-  const { data: allRooms = [], isLoading: isLoadingAllRooms } = useQuery({
+  const { isLoading: isLoadingAllRooms } = useQuery({
     queryKey: ["allRooms"],
     queryFn: fetchAllRooms,
   });
@@ -417,14 +412,7 @@ const Chat = () => {
     queryFn: fetchInfos,
   });
 
-  const [joinedRooms, setJoinedRooms] = useState([]);
   const [friends, setFriends] = useState([]);
-
-  useEffect(() => {
-    if (communityData && communityData.length > 0) {
-      setJoinedRooms(communityData);
-    }
-  }, [communityData]);
 
   useEffect(() => {
     if (infos && infos.length > 0) {
@@ -572,17 +560,17 @@ const Chat = () => {
       }
     }, 30000);
 
-    socket.on("update-users", (data) => {
+    socket.on("update-users", (_data) => {
       // Note: This is a side-effect that is hard to manage with React Query
       // For now, we will leave this as is, but a better solution would be
       // to use the queryClient to update the user data in the cache.
     });
 
-    socket.on("user-offline", (userData) => {
+    socket.on("user-offline", (_userData) => {
       // Similar to above, this should ideally update the cache
     });
 
-    socket.on("user-online", (userData) => {
+    socket.on("user-online", (_userData) => {
       // Similar to above, this should ideally update the cache
     });
 
@@ -626,7 +614,7 @@ const Chat = () => {
     });
 
     return () => unsubscribe();
-  }, [roomId, userEmail, isGroupChat, activeUser]);
+  }, [roomId, userEmail, isGroupChat, activeUser, messagesRef]);
 
   useEffect(() => {
     const markMessagesAsSeen = async () => {
@@ -747,7 +735,6 @@ const Chat = () => {
           setIsOpenMatch={setIsOpenMatch}
           infos={infos}
           handleProfileClick={handleProfileClick}
-          setJoinedRooms={setJoinedRooms}
         />
         <ChatWindow
           openchat={openchat}
@@ -755,7 +742,6 @@ const Chat = () => {
           users={users}
           userEmail={userEmail}
           userPhoto={userPhoto}
-          setJoinedRooms={setJoinedRooms}
           userName={userName}
           RoomsBar={RoomsBar}
           getnickName={getnickName}

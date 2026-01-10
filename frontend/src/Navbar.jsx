@@ -4,11 +4,10 @@ import { useAuth } from "./context/Authcontext";
 import { useTheme } from "./context/themecontext";
 import { FaUsers, FaUserFriends, FaUserCircle } from "react-icons/fa";
 import { BsFillChatLeftDotsFill } from "react-icons/bs";
-import { IoHomeSharp, IoLogOutOutline } from "react-icons/io5";
+import { IoHomeSharp } from "react-icons/io5";
 
 const Navbar = () => {
   const location = useLocation();
-  const { user, logout } = useAuth();
   const { isDarkMode } = useTheme();
 
   // Updated isActive function to handle nested routes

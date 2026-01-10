@@ -17,5 +17,9 @@ module.exports = {
       'warn',
       { allowConstantExport: true },
     ],
+    // ปิดกฎ prop-types หากไม่ได้ใช้งาน หรือใช้ TypeScript ในอนาคต
+    'react/prop-types': 'off',
+    // แจ้งเตือนตัวแปรที่ไม่ได้ใช้งาน แต่ยกเว้นตัวแปรที่ขึ้นต้นด้วย _
+    'no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
   },
-}
+};

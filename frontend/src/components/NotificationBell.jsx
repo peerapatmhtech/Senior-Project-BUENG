@@ -1,6 +1,5 @@
-import React, { useRef, useEffect } from "react";
+import { useRef, useEffect } from "react";
 import { useNotifications } from "../context/notificationContext";
-import { useNavigate } from "react-router-dom";
 import "./NotificationBell.css";
 
 const NotificationBell = () => {

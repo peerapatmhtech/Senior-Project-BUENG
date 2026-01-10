@@ -1,14 +1,16 @@
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
 
-const GmailSchema = new mongoose.Schema({
-  email: String,
-  genres: [String],
-  subGenres: {
-    type: Map,
-    of: [String],
-    default: {},
+const GmailSchema = new mongoose.Schema(
+  {
+    email: String,
+    genres: [String],
+    subGenres: {
+      type: Map,
+      of: [String],
+      default: {},
+    },
   },
-},
-  { timestamps: true });
+  { timestamps: true }
+);
 
-export const Filter = mongoose.model("filters", GmailSchema);
+export const Filter = mongoose.model('filters', GmailSchema);

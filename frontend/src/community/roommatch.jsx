@@ -83,7 +83,7 @@ const RoomMatch = ({ accordionComponent }) => {
 
   const skipMutation = useMutation({
     mutationFn: (roomId) => api.patch(`/api/infomatch/${roomId}/skip`),
-    onSuccess: (data) => {
+    onSuccess: (_data) => {
       queryClient.invalidateQueries({ queryKey: ["rooms", userEmail] });
     },
     onError: () => toast.error("เกิดข้อผิดพลาดในการข้าม"),
@@ -278,7 +278,7 @@ const RoomMatch = ({ accordionComponent }) => {
             <div className="activity-match-details">
               <h3>{matchedRoom.title || "Activity"}</h3>
               <p>
-                Now you can plan this activity together. Let's start a
+                Now you can plan this activity together. Let&apos;s start a
                 conversation!
               </p>
             </div>

@@ -28,7 +28,6 @@ const MatchList = ({
   const navigate = useNavigate();
   const userEmail = localStorage.getItem("userEmail");
   const dropdownRefs = useRef({});
-  const [loadingRoomId, setLoadingRoomId] = useState(null);
   const [showMatchModal, setShowMatchModal] = useState(false);
   const [matchedData, setMatchedData] = useState(null);
 
@@ -37,24 +36,12 @@ const MatchList = ({
     queryKey: ["infoMatch"],
     queryFn: fetchInfoMatch,
   });
-  const { data: allEvents = [] } = useQuery({
-    queryKey: ["events", userEmail],
-    queryFn: () => fetchEvents(userEmail),
-    enabled: !!userEmail,
-  });
   const { data: users = [] } = useQuery({
     queryKey: ["users"],
     queryFn: fetchUsers,
   });
-  const { data: infos = [] } = useQuery({
-    queryKey: ["infos"],
-    queryFn: fetchInfos,
-  });
 
-  const handleEnterRoom = (roomId) => {
-    navigate(`/chat/${roomId}`);
-  };
-  const getFullImageUrl = (url) => {
+  const _getFullImageUrl = (url) => {
     if (!url) return url;
     if (url.startsWith("http://") || url.startsWith("https://")) return url;
     return `${api.defaults.baseURL}${url}`;
@@ -99,7 +86,7 @@ const MatchList = ({
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [openMenuFor, userMatchData]);
+  }, [openMenuFor, userMatchData, setOpenMenuFor]);
 
   return (
     <div className="favorite-container">
@@ -131,7 +118,6 @@ const MatchList = ({
                   matchData.email === userEmail
                     ? matchData.usermatch
                     : matchData.email;
-                const user = users.find((u) => u.email === partnerEmail);
                 return (
                   <li
                     key={`${matchData._id}-${index}`}
@@ -196,7 +182,7 @@ const MatchList = ({
                       {((matchData.emailjoined && matchData.usermatchjoined) || matchData.status === "matched") && (
                         <div className="match-badge">
                           <FaHeart className="match-icon" />
-                          <span className="match-text">It's a Match!</span>
+                          <span className="match-text">It&apos;s a Match!</span>
                         </div>
                       )}
                     </div>
@@ -259,7 +245,7 @@ const MatchList = ({
             <div className="activity-match-details">
               <h3>{matchedData.title || "Activity"}</h3>
               <p>
-                Now you can plan this activity together. Let's start a
+                Now you can plan this activity together. Let&apos;s start a
                 conversation!
               </p>
             </div>

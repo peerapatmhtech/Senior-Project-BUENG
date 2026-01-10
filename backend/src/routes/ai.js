@@ -10,7 +10,6 @@ const openai = new OpenAI({
 });
 const router = express.Router();
 
-
 // Define the POST route for the AI chat
 router.post('/ai/chat', async (req, res) => {
   const { message, history = [], eventContext } = req.body;
@@ -21,7 +20,8 @@ router.post('/ai/chat', async (req, res) => {
   }
 
   // Base system prompt
-  let systemContent = 'คุณเป็นผู้ช่วยอัจฉริยะสำหรับแอพจับคู่กิจกรรมและห้อง ชื่อ AI Assistant ที่ให้คำแนะนำเกี่ยวกับการใช้งานแอพ การหาเพื่อนที่มีความสนใจคล้ายกัน และแนะนำกิจกรรมที่น่าสนใจ ตอบเป็นภาษาไทย';
+  let systemContent =
+    'คุณเป็นผู้ช่วยอัจฉริยะสำหรับแอพจับคู่กิจกรรมและห้อง ชื่อ AI Assistant ที่ให้คำแนะนำเกี่ยวกับการใช้งานแอพ การหาเพื่อนที่มีความสนใจคล้ายกัน และแนะนำกิจกรรมที่น่าสนใจ ตอบเป็นภาษาไทย';
 
   // Add event context to the system prompt if it exists
   if (eventContext) {
@@ -57,7 +57,6 @@ router.post('/ai/chat', async (req, res) => {
     // Extract the AI's response content
     const aiResponse = completion.choices[0].message.content;
     res.json({ response: aiResponse });
-
   } catch (error) {
     console.error('Error calling OpenAI API:', error);
     res.status(500).json({ error: 'Failed to get response from AI' });

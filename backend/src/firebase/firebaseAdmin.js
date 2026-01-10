@@ -1,5 +1,5 @@
 import admin from 'firebase-admin';
-import dotenv from "dotenv";
+import dotenv from 'dotenv';
 dotenv.config();
 const serviceAccount = {
   type: process.env.FIREBASE_TYPE,
@@ -12,11 +12,11 @@ const serviceAccount = {
   token_uri: process.env.FIREBASE_TOKEN_URI,
   auth_provider_x509_cert_url: process.env.FIREBASE_AUTH_PROVIDER_X509_CERT_URL,
   client_x509_cert_url: process.env.FIREBASE_CLIENT_X509_CERT_URL,
-  universe_domain: process.env.FIREBASE_UNIVERSE_DOMAIN 
-}
+  universe_domain: process.env.FIREBASE_UNIVERSE_DOMAIN,
+};
 
 admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount)
+  credential: admin.credential.cert(serviceAccount),
 });
 
 export default admin;

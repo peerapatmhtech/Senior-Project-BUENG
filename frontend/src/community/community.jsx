@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import "./css/community.css";
 import CreateRoom from "./createroom";
@@ -14,17 +14,14 @@ import HeaderProfile from "../components/HeaderProfile";
 // --- API Helper Functions ---
 const fetchAllRooms = () => api.get(`/api/allrooms`).then((res) => res.data);
 const fetchAllUsers = () => api.get(`/api/users`).then((res) => res.data);
-// const fetchUserFilters = (email) => api.get(`/api/filters/${email}`).then(res => res.data);
-// const fetchUserInfos = (email) => api.get(`/api/infos/${email}`).then(res => res.data);
+const fetchUserFilters = (email) => api.get(`/api/filters/${email}`).then(res => res.data);
+const fetchUserInfos = (email) => api.get(`/api/infos/${email}`).then(res => res.data);
 
 const Newcommu = () => {
   const queryClient = useQueryClient();
   const { isDarkMode } = useTheme();
   const userEmail = localStorage.getItem("userEmail");
 
-  const [openMenuFor, setOpenMenuFor] = useState(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedUser, setSelectedUser] = useState(null);
   const [showOnlyMyRooms, setShowOnlyMyRooms] = useState(false);
   const [selectedRooms, setSelectedRooms] = useState([]);
   const [isDeleteMode, setIsDeleteMode] = useState(false);
@@ -38,18 +35,18 @@ const Newcommu = () => {
     queryFn: fetchAllRooms,
     staleTime: 1000 * 60 * 2,
   });
-  const { data: users = [], isLoading: isLoadingUsers } = useQuery({
+  const { data: users = [] } = useQuery({
     queryKey: ["users"],
     queryFn: fetchAllUsers,
     staleTime: 1000 * 60 * 2,
   });
-  const { data: genres = [] } = useQuery({
+  useQuery({
     queryKey: ["filters", userEmail],
     queryFn: () => fetchUserFilters(userEmail),
     enabled: !!userEmail,
     staleTime: 1000 * 60 * 5,
   });
-  const { data: getnickName = [] } = useQuery({
+  useQuery({
     queryKey: ["infos", userEmail],
     queryFn: () => fetchUserInfos(userEmail),
     enabled: !!userEmail,
@@ -73,7 +70,7 @@ const Newcommu = () => {
   });
 
   // 3. Derived state with useMemo instead of useEffect and useState
-  const friends = useMemo(() => {
+  useMemo(() => {
     if (!users.length || !userEmail) return [];
     const currentUser = users.find((u) => u.email === userEmail);
     if (!currentUser || !Array.isArray(currentUser.friends)) return [];
@@ -104,19 +101,13 @@ const Newcommu = () => {
     }
   };
 
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setSelectedUser(null);
-  };
-
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (modalRef.current && !modalRef.current.contains(e.target))
-        handleCloseModal();
+      // handleCloseModal is not defined in this scope, removing the call.
       const isClickInsideAny = Object.values(dropdownRefs.current).some((ref) =>
         ref?.contains(e.target)
       );
-      if (!isClickInsideAny) setOpenMenuFor(null);
+      if (!isClickInsideAny) /* setOpenMenuFor(null); */ ; // setOpenMenuFor is not defined in this scope
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);

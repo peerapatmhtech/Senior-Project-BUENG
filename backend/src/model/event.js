@@ -1,6 +1,6 @@
 // src/model/event.js
 
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
 
 const eventSchema = new mongoose.Schema(
   {
@@ -19,4 +19,4 @@ const eventSchema = new mongoose.Schema(
 
 eventSchema.index({ title: 1, link: 1 }, { unique: true });
 
-export const Event = mongoose.model("Event", eventSchema);
+export const Event = mongoose.model('Event', eventSchema);

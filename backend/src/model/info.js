@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
 const infoSchema = new mongoose.Schema(
   {
     email: { type: String, required: true, unique: true, trim: true, lowercase: true },
@@ -8,10 +8,12 @@ const infoSchema = new mongoose.Schema(
       extra: String,
     },
     nickname: String,
-    joinedRooms: [{
-      roomId: { type: String, required: true },
-      roomName: { type: String, required: true }
-    }]
+    joinedRooms: [
+      {
+        roomId: { type: String, required: true },
+        roomName: { type: String, required: true },
+      },
+    ],
 
     // เปลี่ยนจาก rooms เป็น joinedRooms และเก็บ roomId เป็น array
   },
@@ -22,7 +24,7 @@ const infoSchema = new mongoose.Schema(
 infoSchema.statics.joinRoom = async function (userEmail, roomId, roomName) {
   const user = await this.findOne({ email: userEmail });
   if (!user) {
-    const error = new Error("User not found");
+    const error = new Error('User not found');
     error.statusCode = 404; // Not Found
     throw error;
   }
@@ -33,7 +35,7 @@ infoSchema.statics.joinRoom = async function (userEmail, roomId, roomName) {
     user.joinedRooms = [];
   }
 
-  const alreadyJoined = user.joinedRooms.some(room => room.roomId === roomId);
+  const alreadyJoined = user.joinedRooms.some((room) => room.roomId === roomId);
   if (alreadyJoined) {
     return user;
   }
@@ -43,4 +45,4 @@ infoSchema.statics.joinRoom = async function (userEmail, roomId, roomName) {
   return user;
 };
 
-export const Info = mongoose.model("Info", infoSchema);
+export const Info = mongoose.model('Info', infoSchema);

@@ -101,6 +101,8 @@ const Profile = () => {
     refetchCurrentUser,
     refetchPhotos,
     refetchUserInfo,
+    infoUser,
+    setError
   ]);
 
   const handleSaveNickName = async () => {

@@ -252,7 +252,7 @@ const EventList = ({ setWaiting, waiting }) => {
     },
   });
 
-  const createListRefetchingMutation = (
+  const useListRefetchingMutation = (
     mutationFn,
     successMessage,
     errorMessage
@@ -272,14 +272,14 @@ const EventList = ({ setWaiting, waiting }) => {
     });
   };
 
-  const deleteMutation = createListRefetchingMutation(
+  const deleteMutation = useListRefetchingMutation(
     (eventId) =>
       api.delete(`/api/events/${eventId}`, { data: { email: email } }), // Pass email in request body
     "ลบกิจกรรมสำเร็จ",
     "เกิดข้อผิดพลาดในการลบกิจกรรม"
   );
 
-  const deleteAllMutation = createListRefetchingMutation(
+  const deleteAllMutation = useListRefetchingMutation(
     () => api.delete(`/api/events/user/${email}`),
     "ลบกิจกรรมทั้งหมดสำเร็จ",
     "เกิดข้อผิดพลาดในการลบกิจกรรมทั้งหมด"

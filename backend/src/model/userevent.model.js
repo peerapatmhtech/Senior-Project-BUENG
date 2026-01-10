@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
 const Schema = mongoose.Schema;
 
 const userEventSchema = new Schema(
@@ -10,13 +10,13 @@ const userEventSchema = new Schema(
     },
     eventId: {
       type: Schema.Types.ObjectId,
-      ref: "Event",
+      ref: 'Event',
       required: true,
     },
     status: {
       type: String,
-      enum: ["active", "deleted", "archived"],
-      default: "active",
+      enum: ['active', 'deleted', 'archived'],
+      default: 'active',
       index: true,
     },
   },
@@ -25,4 +25,4 @@ const userEventSchema = new Schema(
 
 userEventSchema.index({ email: 1, eventId: 1 }, { unique: true });
 
-export const UserEvent = mongoose.model("UserEvent", userEventSchema);
+export const UserEvent = mongoose.model('UserEvent', userEventSchema);

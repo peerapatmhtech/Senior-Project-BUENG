@@ -1,6 +1,6 @@
-import { Event } from "../model/event.js";
-import { UserEvent } from "../model/userevent.model.js";
-import mongoose from "mongoose";
+import { Event } from '../model/event.js';
+import { UserEvent } from '../model/userevent.model.js';
+import mongoose from 'mongoose';
 
 /**
  * Processes the raw indices to exclude into a clean array of unique numbers.
@@ -9,16 +9,16 @@ import mongoose from "mongoose";
  */
 function processIndicesToExclude(rawIndicesToExclude) {
   let indices = [];
-  if (typeof rawIndicesToExclude === "string") {
+  if (typeof rawIndicesToExclude === 'string') {
     indices = rawIndicesToExclude
-      .split(",")
+      .split(',')
       .map((s) => s.trim())
-      .filter((s) => s !== "")
+      .filter((s) => s !== '')
       .map(Number);
   } else if (Array.isArray(rawIndicesToExclude)) {
     indices = rawIndicesToExclude
       .map((s) => String(s).trim())
-      .filter((s) => s !== "")
+      .filter((s) => s !== '')
       .map(Number);
   }
 
@@ -36,17 +36,23 @@ function processIndicesToExclude(rawIndicesToExclude) {
  * @param {string} params.updatedAt - The update timestamp.
  * @returns {Promise<Array<object>>} A promise that resolves to an array of newly created events.
  */
-export const saveEventsFromSource = async ({ data, email, rawIndicesToExclude, subGenres, updatedAt }) => {
+export const saveEventsFromSource = async ({
+  data,
+  email,
+  rawIndicesToExclude,
+  subGenres,
+  updatedAt,
+}) => {
   const session = await mongoose.startSession();
   session.startTransaction();
   try {
     // Validate required parameters
-    if (!email) throw new Error("Email is required");
-    if (!subGenres || Object.keys(subGenres).length === 0) throw new Error("subGenres is required");
+    if (!email) throw new Error('Email is required');
+    if (!subGenres || Object.keys(subGenres).length === 0) throw new Error('subGenres is required');
 
     const dataTranfer = data?.organic_results ?? data;
     if (!Array.isArray(dataTranfer) || dataTranfer.length === 0) {
-      throw new Error("Data must be a non-empty array");
+      throw new Error('Data must be a non-empty array');
     }
 
     const indicesToExclude = processIndicesToExclude(rawIndicesToExclude);
@@ -75,14 +81,16 @@ export const saveEventsFromSource = async ({ data, email, rawIndicesToExclude, s
       }
 
       // 2. Check if the user already has this event
-      const existingUserEvent = await UserEvent.findOne({ email, eventId: event._id }).session(session);
+      const existingUserEvent = await UserEvent.findOne({ email, eventId: event._id }).session(
+        session
+      );
       if (existingUserEvent) continue;
 
       // 3. Create the UserEvent linking to the template Event
       const userEvent = new UserEvent({
         email,
         eventId: event._id,
-        status: "active",
+        status: 'active',
       });
       await userEvent.save({ session });
       newUserEvents.push(userEvent);
@@ -92,7 +100,7 @@ export const saveEventsFromSource = async ({ data, email, rawIndicesToExclude, s
     return newUserEvents;
   } catch (error) {
     await session.abortTransaction();
-    console.error("Transaction aborted. Error in saveEventsFromSource:", error);
+    console.error('Transaction aborted. Error in saveEventsFromSource:', error);
     throw error; // Re-throw the error to be handled by the route
   } finally {
     session.endSession();

@@ -8,7 +8,6 @@ import { fetchFollowInfo, fetchInfos, fetchUsers } from "../../../lib/queries";
 const ChatPanel = ({
   messages,
   userEmail,
-  userName,
   sortedFriends,
   RoomsBar,
   openchat,
@@ -20,7 +19,6 @@ const ChatPanel = ({
   endOfMessagesRef,
   defaultProfileImage,
   setFriends,
-  setJoinedRooms,
   formatChatDate,
 }) => {
   const [modalVisible, setModalVisible] = useState(false);
@@ -235,7 +233,6 @@ const ChatPanel = ({
         setFriends={setFriends}
         sortedFriends={sortedFriends}
         followers={followers}
-        setJoinedRooms={setJoinedRooms}
         following={following}
         users={users}
       />
@@ -249,9 +246,8 @@ ChatPanel.propTypes = {
   messages: PropTypes.array.isRequired,
   userEmail: PropTypes.string.isRequired,
   userPhoto: PropTypes.string,
-  userName: PropTypes.string,
   sortedFriends: PropTypes.array.isRequired,
-  RoomsBar: PropTypes.object,
+  RoomsBar: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
   openchat: PropTypes.bool.isRequired,
   input: PropTypes.string.isRequired,
   setInput: PropTypes.func.isRequired,
@@ -262,5 +258,4 @@ ChatPanel.propTypes = {
   defaultProfileImage: PropTypes.string.isRequired,
   formatChatDate: PropTypes.func.isRequired,
   setFriends: PropTypes.func.isRequired,
-  setJoinedRooms: PropTypes.func.isRequired,
 };

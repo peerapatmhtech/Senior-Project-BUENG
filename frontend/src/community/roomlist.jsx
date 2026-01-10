@@ -96,7 +96,7 @@ const RoomList = ({
     if (url.startsWith("http://") || url.startsWith("https://")) return url;
     return `${api.defaults.baseURL}${url}`;
   };
-console.log(filteredRooms)
+  
   return (
     <section className={`roomlist-section ${isDarkMode ? "dark-mode" : ""}`}>
       <header className="roomlist-header"></header>

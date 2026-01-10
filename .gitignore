@@ -11,6 +11,7 @@ node_modules
 dist
 dist-ssr
 *.local
+.eslintcache
 
 # Editor directories and files
 .vscode/*
@@ -22,6 +23,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
 # Secret files
 backend/src/firebase/serviceAccountKey.json
 
@@ -29,3 +31,8 @@ backend/src/firebase/serviceAccountKey.json
 .env*
 .env.*
 
+# Uploads
+uploads/
+
+# Testing
+coverage/

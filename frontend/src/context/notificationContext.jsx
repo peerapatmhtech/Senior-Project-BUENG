@@ -1,4 +1,4 @@
-import React, {
+import {
   createContext,
   useState,
   useContext,
@@ -207,7 +207,7 @@ export const NotificationProvider = ({ children }) => {
         });
       }
     }
-  }, [notifications, userEmail]);
+  }, [notifications, userEmail, newFriendRequest]);
 
   // เพิ่ม useEffect นี้ใน NotificationProvider หลังจาก useEffect อื่น ๆ
 
@@ -264,7 +264,7 @@ export const NotificationProvider = ({ children }) => {
         socket.off("notify-friend-request", handleFriendRequestEvent);
         socket.off("notify-friend-accept", handleFriendAcceptEvent);
       };
-    }
+    } // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     socket,
     displayName,

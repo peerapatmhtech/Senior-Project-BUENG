@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
 
 const aiChatMessageSchema = new mongoose.Schema({
   roomId: {
@@ -17,4 +17,4 @@ const aiChatMessageSchema = new mongoose.Schema({
   timestamp: { type: Date, default: Date.now },
 });
 
-export const AiChatMessage = mongoose.model("AiChatMessage", aiChatMessageSchema);
+export const AiChatMessage = mongoose.model('AiChatMessage', aiChatMessageSchema);

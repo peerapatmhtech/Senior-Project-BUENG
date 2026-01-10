@@ -47,14 +47,12 @@ const Friend = () => {
   const photoURL = localStorage.getItem("userPhoto");
 
   const [users, setUsers] = useState([]);
-  const [currentUser, setCurrentUser] = useState([]);
   const [currentUserfollow, setCurrentUserfollow] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedUser, setSelectedUser] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loadingFriendEmail, setLoadingFriendEmail] = useState(null);
   const [loadingCurrentUser, setLoadingCurrentUser] = useState(true);
-  const [loading, setLoading] = useState(false); // loading รวม
   const modalRef = useRef(null);
   const [openMenuFor, setOpenMenuFor] = useState(null);
   const [followers, setFollowers] = useState([]);
@@ -87,7 +85,7 @@ const Friend = () => {
     } else {
       refetchPhoto();
     }
-  }, [userPhotos]);
+  }, [userPhotos, refetchPhoto]);
   // โหลดการแจ้งเตือนจาก localStorage เมื่อเริ่มต้น
   useEffect(() => {
     if (userEmail) {
@@ -139,10 +137,10 @@ const Friend = () => {
   ///////Mounting///////
   useEffect(() => {
     fetchGmailUser();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); 
 
   const fetchCurrentUserAndFriends = async () => {
-    setLoading(true);
     setError("");
     try {
       const encodedEmail = encodeURIComponent(userEmail);
@@ -180,7 +178,6 @@ const Friend = () => {
       setError("เกิดข้อผิดพลาดในการดึงข้อมูลผู้ใช้");
       toast.error("เกิดข้อผิดพลาดในการดึงข้อมูลผู้ใช้");
     }
-    setLoading(false);
   };
 
   useEffect(() => {
@@ -199,10 +196,8 @@ const Friend = () => {
       if (!socket.connected) {
         console.warn("⚠️ Socket ไม่ได้เชื่อมต่อ! กำลังลองเชื่อมต่อใหม่...");
         socket.connect();
-      } else {
       }
     }, 10000);
-    return () => clearInterval(socketCheckInterval);
 
     // ฟังการแจ้งเตือนเมื่อมีคนยอมรับคำขอเป็นเพื่อน
     socket.on("notify-friend-accept", async () => {
@@ -269,8 +264,9 @@ const Friend = () => {
       socket.off("notify-friend-request");
       socket.off("notify-friend-accept");
       socket.off("notify-friend-removed");
+      clearInterval(socketCheckInterval);
     };
-  }, [socket, userEmail]);
+  }, [socket, userEmail, fetchCurrentUserAndFriends]);
 
   // ฟังก์ชันสำหรับการทำเครื่องหมายว่าแจ้งเตือนได้อ่านแล้ว
   const markNotificationAsRead = (notificationId) => {
@@ -336,7 +332,7 @@ const Friend = () => {
     try {
       setLoadingFriendEmail(friendEmail);
       // ใช้ roomId จาก useParams ถ้ามี ถ้าไม่มีให้ gen ใหม่
-      const finalRoomId = roomId || generateRoomId();
+      // const finalRoomId = roomId || generateRoomId();
 
       // สร้าง ID สำหรับคำขอเพื่อน
       const requestId = Date.now();
@@ -436,7 +432,7 @@ const Friend = () => {
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, []);
+  }, [handleClickOutside]);
 
   const filteredUsers = users.filter(
     (u) =>
@@ -452,11 +448,9 @@ const Friend = () => {
         ...res.data,
         following: Array.isArray(res.data.following) ? res.data.following : [],
       };
-      setCurrentUser(userData);
       setLoadingCurrentUser(false);
     } catch (err) {
       setError("คุณสามารถเพิ่มเพื่อนได้ทันที");
-      setCurrentUser(null);
       setLoadingCurrentUser(false);
     }
   };
@@ -494,12 +488,11 @@ const Friend = () => {
 
   useEffect(() => {
     if (!userEmail) {
-      setCurrentUser(null);
-      setLoadingCurrentUser(false);
+      // setCurrentUser(null); // This line was causing the error, as setCurrentUser is not defined in this scope.
       return;
     }
     fetchCurrentUser();
-  }, [userEmail]);
+  }, [userEmail, fetchCurrentUser]);
 
   // Refs for the notification dropdown
   const notificationDropdownRef = useRef(null);
