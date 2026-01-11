@@ -1,4 +1,5 @@
-import { useEffect, useState, useMemo } from "react";
+import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import api from "../server/api";
 import { useNavigate } from "react-router-dom";
 import "./css/roomlist.css";
@@ -8,6 +9,8 @@ import PropTypes from "prop-types";
 import { FaUsers } from "react-icons/fa";
 
 const RoomList = ({
+  rooms = [],
+  isLoading: isLoadingRooms,
   showOnlyMyRooms,
   isDeleteMode,
   selectedRooms,
@@ -15,8 +18,6 @@ const RoomList = ({
 }) => {
   const userEmail = localStorage.getItem("userEmail");
   const { isDarkMode } = useTheme();
-  const [rooms, setRooms] = useState([]);
-  const [joinedRoomIds, setJoinedRoomIds] = useState([]);
   const navigate = useNavigate();
 
   const handleRoomSelect = (roomId) => {
@@ -27,27 +28,16 @@ const RoomList = ({
     );
   };
 
-  useEffect(() => {
-    const fetchRooms = async () => {
-      try {
-        const res = await api.get(`/api/allrooms`);
-
-        // ดึงห้องที่ user join แล้ว
+  const { data: joinedRoomIds = [], isLoading: isLoadingJoined } = useQuery({
+    queryKey: ["userJoinedRooms", userEmail],
+    queryFn: async () => {
         const filterjoinedRooms = await api.get(`/api/user-rooms/${userEmail}`);
-        // สมมติ API ส่งกลับเป็น { roomNames: [{ _id, name, ... }] }
-        const joinedIds = Array.isArray(filterjoinedRooms.data.roomIds)
+        return Array.isArray(filterjoinedRooms.data.roomIds)
           ? filterjoinedRooms.data.roomIds.filter((id) => !!id)
           : [];
-        setJoinedRoomIds(joinedIds);
-        setRooms(res.data);
-
-        // ดึงห้องทั้งหมด
-      } catch (error) {
-        console.error("ไม่สามารถโหลดห้อง:", error);
-      }
-    };
-    fetchRooms();
-  }, [userEmail]);
+    },
+    enabled: !!userEmail,
+  });
 
   // filter ห้องที่ user ยังไม่ได้ join
   const filteredRooms = useMemo(() => {
@@ -96,12 +86,14 @@ const RoomList = ({
     if (url.startsWith("http://") || url.startsWith("https://")) return url;
     return `${api.defaults.baseURL}${url}`;
   };
+
+  const isLoading = isLoadingRooms || isLoadingJoined;
   
   return (
     <section className={`roomlist-section ${isDarkMode ? "dark-mode" : ""}`}>
       <header className="roomlist-header"></header>
       <div className="room-list">
-        {filteredRooms.length === 0 ? (
+        {isLoading ? (
           <div className="roomlist-empty-loading">
             <div className="roomlist-empty-spinner">
               <div className="roomlist-empty-bar"></div>
@@ -109,6 +101,10 @@ const RoomList = ({
               <div className="roomlist-empty-bar"></div>
               <div className="roomlist-empty-bar"></div>
             </div>
+            <div className="roomlist-empty-text">กำลังโหลดห้อง...</div>
+          </div>
+        ) : filteredRooms.length === 0 ? (
+          <div className="roomlist-empty-loading">
             <div className="roomlist-empty-text">ยังไม่มีห้องในขณะนี้</div>
           </div>
         ) : (
@@ -187,6 +183,8 @@ const RoomList = ({
 export default RoomList;
 
 RoomList.propTypes = {
+  rooms: PropTypes.array,
+  isLoading: PropTypes.bool,
   showOnlyMyRooms: PropTypes.bool.isRequired,
   isDeleteMode: PropTypes.bool.isRequired,
   selectedRooms: PropTypes.array.isRequired,

@@ -26,7 +26,6 @@ const Newcommu = () => {
   const [selectedRooms, setSelectedRooms] = useState([]);
   const [isDeleteMode, setIsDeleteMode] = useState(false);
   // const [handlematchfriend, setHandleMatchFriend] = useState(false);
-  const modalRef = useRef(null);
   const dropdownRefs = useRef({});
 
   // 1. Replaced all fetch functions with useQuery

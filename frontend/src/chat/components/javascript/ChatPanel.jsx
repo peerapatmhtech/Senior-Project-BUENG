@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from "react";
-import { IoIosArrowBack, IoMdSend } from "react-icons/io";
-import PropTypes from "prop-types";
-import ProfileModal from "./ProfileModal";
-import { useQuery } from "@tanstack/react-query";
-import { fetchFollowInfo, fetchInfos, fetchUsers } from "../../../lib/queries";
+import React, { useEffect, useState } from 'react';
+import { IoIosArrowBack, IoMdSend } from 'react-icons/io';
+import PropTypes from 'prop-types';
+import ProfileModal from './ProfileModal';
+import { useQuery } from '@tanstack/react-query';
+import { fetchFollowInfo, fetchInfos, fetchUsers } from '../../../lib/queries';
 
 const ChatPanel = ({
   messages,
@@ -20,6 +20,7 @@ const ChatPanel = ({
   defaultProfileImage,
   setFriends,
   formatChatDate,
+  disabled,
 }) => {
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
@@ -27,16 +28,16 @@ const ChatPanel = ({
 
   // Fetch data using React Query
   const { data: users = [] } = useQuery({
-    queryKey: ["users"],
+    queryKey: ['users'],
     queryFn: fetchUsers,
   });
   const { data: getnickName = [] } = useQuery({
-    queryKey: ["infos"],
+    queryKey: ['infos'],
     queryFn: fetchInfos,
   });
 
   const { data: followInfo } = useQuery({
-    queryKey: ["followInfo", userImage?.email],
+    queryKey: ['followInfo', userImage?.email],
     queryFn: () => fetchFollowInfo(userImage?.email),
     enabled: !!userImage?.email, // Only run query if userImage.email exists
   });
@@ -59,16 +60,14 @@ const ChatPanel = ({
     }
   }, [userImage]);
   return (
-    <div className={`chat-container ${openchat ? "mobile-layout-mode" : ""}`}>
-      <div className={`show-info ${openchat ? "mobile-layout-mode" : ""}`}>
+    <div className={`chat-container ${openchat ? 'mobile-layout-mode' : ''}`}>
+      <div className={`show-info ${openchat ? 'mobile-layout-mode' : ''}`}>
         <button
-          className={`back-button-mobile ${
-            openchat ? "mobile-layout-mode" : ""
-          }`}
+          className={`back-button-mobile ${openchat ? 'mobile-layout-mode' : ''}`}
           onClick={() => setOpenchat(false)}
           style={{
-            WebkitTapHighlightColor: "transparent",
-            userSelect: "none",
+            WebkitTapHighlightColor: 'transparent',
+            userSelect: 'none',
           }}
         >
           <IoIosArrowBack />
@@ -89,7 +88,7 @@ const ChatPanel = ({
               return partnerUser?.photoURL || defaultProfileImage;
             })()}
             alt="Profile"
-            className={`chat-profile ${openchat ? "mobile-layout-mode" : ""}`}
+            className={`chat-profile ${openchat ? 'mobile-layout-mode' : ''}`}
             onClick={() => {
               if (!userImage || !users) return;
               const userObject =
@@ -100,7 +99,7 @@ const ChatPanel = ({
             }}
           />
         </div>
-        <h2 className={`chat-title ${openchat ? "mobile-layout-mode" : ""}`}>
+        <h2 className={`chat-title ${openchat ? 'mobile-layout-mode' : ''}`}>
           {(() => {
             const partnerEmail = userImage?.usermatch
               ? userImage.email === userEmail
@@ -124,7 +123,7 @@ const ChatPanel = ({
               (RoomsBar && RoomsBar.roomName) ||
               userImage?.name ||
               userImage?.displayName ||
-              "Chat"
+              'Chat'
             );
           })()}
         </h2>
@@ -133,15 +132,13 @@ const ChatPanel = ({
         {messages.length === 0 ? (
           <div
             style={{
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              height: "100%",
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              height: '100%',
             }}
           >
-            <span style={{ color: "#888", fontSize: "1.1rem" }}>
-              ยังไม่มีข้อความ
-            </span>
+            <span style={{ color: '#888', fontSize: '1.1rem' }}>ยังไม่มีข้อความ</span>
           </div>
         ) : (
           messages.map((msg, index) => {
@@ -150,12 +147,10 @@ const ChatPanel = ({
               (user) => user.email?.toLowerCase() === msg.sender?.toLowerCase()
             );
             const messageDate = msg.timestamp?.toDate();
-            const previousMessageDate =
-              index > 0 ? messages[index - 1].timestamp?.toDate() : null;
+            const previousMessageDate = index > 0 ? messages[index - 1].timestamp?.toDate() : null;
             const isNewDay =
               !previousMessageDate ||
-              messageDate?.toDateString() !==
-                previousMessageDate?.toDateString();
+              messageDate?.toDateString() !== previousMessageDate?.toDateString();
 
             return (
               <React.Fragment key={msg.id}>
@@ -164,37 +159,23 @@ const ChatPanel = ({
                     {messageDate && formatChatDate(messageDate)}
                   </div>
                 )}
-                <div
-                  className={`chat-message ${
-                    isCurrentUser ? "my-message" : "other-message"
-                  }`}
-                >
+                <div className={`chat-message ${isCurrentUser ? 'my-message' : 'other-message'}`}>
                   {!isCurrentUser && (
                     <img
                       src={senderInfo?.photoURL || defaultProfileImage}
                       alt="Sender"
                       className="message-avatar"
                       onClick={() => handleProfileClick(senderInfo)}
-                      style={{ cursor: "pointer" }}
+                      style={{ cursor: 'pointer' }}
                     />
                   )}
-                  <div
-                    className={`message-content ${
-                      isCurrentUser ? "current" : "other"
-                    }`}
-                  >
+                  <div className={`message-content ${isCurrentUser ? 'current' : 'other'}`}>
                     <div className="colum-message">
-                      <div
-                        className={`message-bubble ${
-                          isCurrentUser ? "current" : "other"
-                        }`}
-                      >
+                      <div className={`message-bubble ${isCurrentUser ? 'current' : 'other'}`}>
                         {msg.content || msg.text}
                       </div>
                       {isCurrentUser && index === messages.length - 1 && (
-                        <div className="seen-status">
-                          {msg.isSeen ? "Seen" : ""}
-                        </div>
+                        <div className="seen-status">{msg.isSeen ? 'Seen' : ''}</div>
                       )}
                     </div>
                   </div>
@@ -212,13 +193,21 @@ const ChatPanel = ({
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyPress={(e) => e.key === "Enter" && handleSend()}
-            placeholder={"Writing something..."}
+            onKeyPress={(e) => e.key === 'Enter' && !disabled && handleSend()}
+            placeholder={disabled ? 'กรุณาเลือกห้องแชท' : 'Writing something...'}
             className="chat-input"
+            disabled={disabled}
+            style={{
+              opacity: disabled ? 0.6 : 1,
+              cursor: disabled ? 'not-allowed' : 'text',
+            }}
           />
           <div className="emoji">{/* <MdAttachFile /> */}</div>
           <div className="emoji-left">
-            <IoMdSend onClick={handleSend} />
+            <IoMdSend
+              onClick={!disabled ? handleSend : undefined}
+              style={{ opacity: disabled ? 0.5 : 1, cursor: disabled ? 'not-allowed' : 'pointer' }}
+            />
           </div>
         </div>
       </div>
@@ -258,4 +247,5 @@ ChatPanel.propTypes = {
   defaultProfileImage: PropTypes.string.isRequired,
   formatChatDate: PropTypes.func.isRequired,
   setFriends: PropTypes.func.isRequired,
+  disabled: PropTypes.bool,
 };

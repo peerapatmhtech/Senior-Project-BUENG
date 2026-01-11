@@ -5,6 +5,9 @@ import mongoose from 'mongoose';
 const eventSchema = new mongoose.Schema(
   {
     title: String,
+    date: mongoose.Schema.Types.Mixed,
+    email: String,
+    address: mongoose.Schema.Types.Mixed,
     genre: {
       type: mongoose.Schema.Types.Mixed,
       default: {},
@@ -12,6 +15,10 @@ const eventSchema = new mongoose.Schema(
     description: String,
     link: String,
     image: String,
+    thumbnail: String,
+    venue: mongoose.Schema.Types.Mixed,
+    ticket_info: mongoose.Schema.Types.Mixed,
+    event_location_map: mongoose.Schema.Types.Mixed,
     createdByAI: { type: Boolean, default: false },
   },
   { timestamps: true }

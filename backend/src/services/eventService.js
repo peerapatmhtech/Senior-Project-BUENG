@@ -50,7 +50,7 @@ export const saveEventsFromSource = async ({
     if (!email) throw new Error('Email is required');
     if (!subGenres || Object.keys(subGenres).length === 0) throw new Error('subGenres is required');
 
-    const dataTranfer = data?.organic_results ?? data;
+    const dataTranfer = data?.events_results ?? data;
     if (!Array.isArray(dataTranfer) || dataTranfer.length === 0) {
       throw new Error('Data must be a non-empty array');
     }
@@ -62,19 +62,37 @@ export const saveEventsFromSource = async ({
       if (indicesToExclude.includes(i)) continue;
 
       const item = dataTranfer[i];
-      const { title, link, snippet, favicon, image } = item;
+      const {
+        title,
+        date,
+        address,
+        link,
+        description,
+        image,
+        thumbnail,
+        venue,
+        ticket_info,
+        event_location_map,
+      } = item;
 
       if (!title || !link) continue;
 
       // 1. Find or create the template Event
-      let event = await Event.findOne({ link }).session(session);
+      let event = await Event.findOne({ title }).session(session);
       if (!event) {
         event = new Event({
+          email,
           title,
-          description: snippet,
+          date,
+          address,
+          description,
           link,
           genre: subGenres,
-          image: image || favicon,
+          image,
+          thumbnail,
+          venue,
+          ticket_info,
+          event_location_map,
           createdByAI: true,
         });
         await event.save({ session });

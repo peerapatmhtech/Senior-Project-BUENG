@@ -8,6 +8,17 @@ export default function (io) {
   router.post('/events/match', async (req, res) => {
     const { email, action } = req.body;
 
+    if (!email) {
+      return res.status(400).json({ message: 'Email is required' });
+    }
+
+    // Check if there are any likes for the provided email
+    // FIX: Check Like model instead of InfoMatch (InfoMatch doesn't have userEmail and is for results)
+    const emailExists = await Like.findOne({ userEmail: email });
+    if (!emailExists) {
+      return res.status(404).json({ message: 'No likes found for the provided email' });
+    }
+
     try {
       const currentUserEventIds = action.eventsId;
 
@@ -23,11 +34,11 @@ export default function (io) {
 
       for (const like of otherUserLikes) {
         // To ensure uniqueness, sort emails alphabetically
-        const users = [req.body.email, like.userEmail].sort();
+        const users = [email, like.userEmail].sort();
 
         // Avoid creating duplicate pending matches
         const existingMatch = await InfoMatch.findOne({
-          eventId: like.eventId,
+          // eventId: like.eventId, // เอาออกเพื่อเช็คแค่ว่า User คู่นี้เคย Match กันหรือยัง (ไม่สนว่า Event ไหน)
           email: users[0],
           usermatch: users[1],
           status: { $in: ['pending', 'matched'] }, // Don't recreate if it was already unmatched
@@ -41,7 +52,7 @@ export default function (io) {
           usermatch: users[1], // And the second here
           chance: 40,
           status: 'pending', // Initial status
-          initiatorEmail: req.body.email, // The user who triggered this action
+          initiatorEmail: email, // The user who triggered this action
         });
 
         await newInfoMatch.save();
@@ -67,15 +78,9 @@ export default function (io) {
       if (!match) {
         return res.status(404).json({ message: 'Match not found' });
       }
-
-      match.skipCount += 1;
-
-      if (match.skipCount >= 3) {
-        match.status = 'unmatched';
-      }
-
-      await match.save();
-      res.status(200).json({ message: 'Match action recorded', match });
+      console.log('Deleting match with ID:', id);
+      await InfoMatch.findByIdAndDelete(id);
+      res.status(200).json({ message: 'Match deleted successfully', match });
     } catch (error) {
       console.error('❌ Error updating match status:', error);
       res.status(500).json({ message: 'Server error' });

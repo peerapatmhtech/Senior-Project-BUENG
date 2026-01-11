@@ -1,5 +1,5 @@
-/* eslint-disable react/prop-types */
 import { useState, useEffect, useRef } from "react";
+import PropTypes from "prop-types";
 import { db } from "../firebase/firebase";
 import RequireLogin from "../components/RequireLogin";
 import { FaSearch } from "react-icons/fa";
@@ -30,6 +30,7 @@ import CommunityList from "./components/javascript/communitylist";
 import ChatPanel from "./components/javascript/ChatPanel";
 import MatchList from "./components/javascript/matchlist";
 import ShowTitle from "./components/javascript/showtitle";
+import ProfileModal from "./components/javascript/ProfileModal";
 
 import "./components/css/ChatAI.css";
 import "./css/ListItems.css";
@@ -102,6 +103,10 @@ const LoadingIndicator = ({ isDarkMode }) => (
   </div>
 );
 
+LoadingIndicator.propTypes = {
+  isDarkMode: PropTypes.bool.isRequired,
+};
+
 const ChatSidebar = ({
   openchat,
   searchTerm,
@@ -123,7 +128,6 @@ const ChatSidebar = ({
   isOpencom,
   setIsOpencom,
   setRoombar,
-  loadingFriendRooms,
   openMenuFor,
   setOpenMenuFor,
   isOpenMatch,
@@ -178,7 +182,6 @@ const ChatSidebar = ({
         getnickName={getnickName}
         setFriends={setFriends}
         setRoombar={setRoombar}
-        loadingFriendRooms={loadingFriendRooms}
         openMenuFor={openMenuFor}
         setOpenMenuFor={setOpenMenuFor}
       />
@@ -192,7 +195,6 @@ const ChatSidebar = ({
         handleProfileClick={handleProfileClick}
         setRoombar={setRoombar}
         setIsGroupChat={setIsGroupChat}
-        loadingFriendRooms={loadingFriendRooms}
         openMenuFor={openMenuFor}
         setOpenMenuFor={setOpenMenuFor}
         dropdownRefs={dropdownRefs}
@@ -203,6 +205,34 @@ const ChatSidebar = ({
     </div>
   </div>
 );
+
+ChatSidebar.propTypes = {
+  openchat: PropTypes.bool.isRequired,
+  searchTerm: PropTypes.string.isRequired,
+  setSearchTerm: PropTypes.func.isRequired,
+  sortedFriends: PropTypes.array.isRequired,
+  lastMessages: PropTypes.object.isRequired,
+  setOpenchat: PropTypes.func.isRequired,
+  setActiveUser: PropTypes.func.isRequired,
+  isOpen: PropTypes.bool.isRequired,
+  setIsOpen: PropTypes.func.isRequired,
+  setIsGroupChat: PropTypes.func.isRequired,
+  dropdownRefs: PropTypes.object.isRequired,
+  getnickName: PropTypes.oneOfType([PropTypes.func, PropTypes.array]),
+  setSelectedTab: PropTypes.func.isRequired,
+  selectedTab: PropTypes.string,
+  setUserImage: PropTypes.func.isRequired,
+  setFriends: PropTypes.func.isRequired,
+  formatOnlineStatus: PropTypes.func.isRequired,
+  isOpencom: PropTypes.bool.isRequired,
+  setIsOpencom: PropTypes.func.isRequired,
+  setRoombar: PropTypes.func.isRequired,
+  openMenuFor: PropTypes.string,
+  setOpenMenuFor: PropTypes.func.isRequired,
+  isOpenMatch: PropTypes.bool.isRequired,
+  setIsOpenMatch: PropTypes.func.isRequired,
+  handleProfileClick: PropTypes.func.isRequired,
+};
 
 const ChatWindow = ({
   openchat,
@@ -223,6 +253,7 @@ const ChatWindow = ({
   endOfMessagesRef,
   defaultProfileImage,
   loadingMessages,
+  isDefaultRoom,
 }) => {
   return (
     <div className={`bg-chat-con ${openchat ? "mobile-layout-mode" : ""}`}>
@@ -245,6 +276,7 @@ const ChatWindow = ({
         endOfMessagesRef={endOfMessagesRef}
         defaultProfileImage={defaultProfileImage}
         formatChatDate={formatChatDate}
+        disabled={isDefaultRoom}
       />
       <div className="tabright">
         <ShowTitle userimage={userImage} openchat={openchat} />
@@ -261,10 +293,33 @@ const ChatWindow = ({
           input={input}
           setInput={setInput}
           handleSend={handleSend}
+          disabled={isDefaultRoom}
         />
       </div>
     </div>
   );
+};
+
+ChatWindow.propTypes = {
+  openchat: PropTypes.bool.isRequired,
+  messages: PropTypes.array.isRequired,
+  userEmail: PropTypes.string,
+  userPhoto: PropTypes.string,
+  userName: PropTypes.string,
+  RoomsBar: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
+  input: PropTypes.string.isRequired,
+  isOpencom: PropTypes.bool,
+  isOpenMatch: PropTypes.bool,
+  setFriends: PropTypes.func.isRequired,
+  userImage: PropTypes.object,
+  sortedFriends: PropTypes.array.isRequired,
+  setInput: PropTypes.func.isRequired,
+  handleSend: PropTypes.func.isRequired,
+  setOpenchat: PropTypes.func.isRequired,
+  endOfMessagesRef: PropTypes.object.isRequired,
+  defaultProfileImage: PropTypes.string.isRequired,
+  loadingMessages: PropTypes.bool,
+  isDefaultRoom: PropTypes.bool,
 };
 
 const AIChatButtonAndModal = ({
@@ -323,6 +378,17 @@ const AIChatButtonAndModal = ({
   </>
 );
 
+AIChatButtonAndModal.propTypes = {
+  hasNewAiMessage: PropTypes.bool.isRequired,
+  openAiChat: PropTypes.func.isRequired,
+  aiNotificationCount: PropTypes.number.isRequired,
+  isAiChatOpen: PropTypes.bool.isRequired,
+  handleAiModalClick: PropTypes.func.isRequired,
+  closeAiChat: PropTypes.func.isRequired,
+  userEmail: PropTypes.string,
+  defaultProfileImage: PropTypes.string.isRequired,
+};
+
 import { useQuery } from "@tanstack/react-query";
 import {
   fetchUsers,
@@ -340,20 +406,20 @@ const Chat = () => {
   const { isDarkMode } = useTheme();
   const [isOpencom, setIsOpencom] = useState(false);
   const { roomId } = useParams();
+  const isDefaultRoom = roomId === "some-default-room";
   const userPhoto = localStorage.getItem("userPhoto");
   const userName = localStorage.getItem("userName");
   const [searchTerm, setSearchTerm] = useState("");
   const [input, setInput] = useState("");
   const [selectedUser, setSelectedUser] = useState(null);
   const [messages, setMessages] = useState([]);
-  const [loadingFriendRooms] = useState(null);
   const [activeUser, setActiveUser] = useState(null);
   const userEmail = localStorage.getItem("userEmail");
   const messagesRef = useMemo(() => collection(db, "messages"), []);
   const [isOpen, setIsOpen] = useState(false);
   const endOfMessagesRef = useRef(null);
   const dropdownRefs = useRef({});
-  const [RoomsBar, setRoomBar] = useState([]);
+  const [RoomsBar, setRoomBar] = useState({});
   const [openMenuFor, setOpenMenuFor] = useState(null);
   const [isGroupChat, setIsGroupChat] = useState(false);
   const [getnickName, getNickName] = useState("");
@@ -383,7 +449,7 @@ const Chat = () => {
     enabled: !!userEmail,
   });
 
-  const { data: communityData = [], isLoading: isLoadingCommunityData } =
+  const { isLoading: isLoadingCommunityData } =
     useQuery({
       queryKey: ["userRooms", userEmail],
       queryFn: () => fetchUserRooms(userEmail),
@@ -452,6 +518,7 @@ const Chat = () => {
     }
   }, [processedFriends]);
 
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const handleProfileClick = (user) => {
     setSelectedUser(user);
     setIsModalOpen(true);
@@ -725,7 +792,6 @@ const Chat = () => {
           isOpencom={isOpencom}
           setIsOpencom={setIsOpencom}
           setRoombar={setRoombar}
-          loadingFriendRooms={loadingFriendRooms}
           openMenuFor={openMenuFor}
           setOpenMenuFor={setOpenMenuFor}
           userMatchData={userMatchData}
@@ -757,7 +823,18 @@ const Chat = () => {
           endOfMessagesRef={endOfMessagesRef}
           defaultProfileImage={defaultProfileImage}
           loadingMessages={loadingMessages}
+          isDefaultRoom={isDefaultRoom}
         />
+        {isModalOpen && selectedUser && (
+          <ProfileModal
+            isOpen={isModalOpen}
+            onClose={() => setIsModalOpen(false)}
+            user={selectedUser}
+            userImage={selectedUser}
+            users={users}
+            isCom={false}
+          />
+        )}
       </div>
       <AIChatButtonAndModal
         hasNewAiMessage={hasNewAiMessage}

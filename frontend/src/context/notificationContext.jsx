@@ -613,6 +613,7 @@ export const NotificationProvider = ({ children }) => {
 };
 
 // Custom hook สำหรับใช้งาน context
+// eslint-disable-next-line react-refresh/only-export-components
 export const useNotifications = () => {
   const context = useContext(NotificationContext);
   if (context === undefined) {

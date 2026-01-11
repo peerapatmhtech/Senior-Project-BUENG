@@ -1,5 +1,5 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import api from "../server/api";
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '../server/api';
 
 // Fetch functions for React Query
 export const fetchUserPhotos = async (userEmail) => {
@@ -82,22 +82,20 @@ export const fetchPhoto = async () => {
 
 export const useFollowUser = () => {
   const queryClient = useQueryClient();
-  const userEmail = localStorage.getItem("userEmail");
+  const userEmail = localStorage.getItem('userEmail');
 
   return useMutation({
     mutationFn: async (targetEmail) => {
-      const currentUser = queryClient.getQueryData(["currentUser", userEmail]);
+      const currentUser = queryClient.getQueryData(['currentUser', userEmail]);
       const isFollowing = currentUser?.following?.includes(targetEmail);
-      const url = `/api/users/${userEmail}/${
-        isFollowing ? "unfollow" : "follow"
-      }/${targetEmail}`;
-      const method = isFollowing ? "DELETE" : "POST";
+      const url = `/api/users/${userEmail}/${isFollowing ? 'unfollow' : 'follow'}/${targetEmail}`;
+      const method = isFollowing ? 'DELETE' : 'POST';
       return api({ method, url });
     },
     onSuccess: () => {
       // Invalidate and refetch the currentUser query to update the following list
       return queryClient.invalidateQueries({
-        queryKey: ["currentUser", userEmail],
+        queryKey: ['currentUser', userEmail],
       });
     },
     // Optional: Add onError for error handling
@@ -106,23 +104,35 @@ export const useFollowUser = () => {
 
 export const useDeleteFriend = () => {
   const queryClient = useQueryClient();
-  const userEmail = localStorage.getItem("userEmail");
+  const userEmail = localStorage.getItem('userEmail');
 
   return useMutation({
     mutationFn: async ({ type, userToDelete, roomName, infoMatchId }) => {
+      console.log('Deleting:', { type, userToDelete, roomName, infoMatchId });
       switch (type) {
-        case "friend":
+        case 'match':
           try {
             // Delete from infomatch (for matches)
             if (infoMatchId && infoMatchId !== undefined) {
-              const responseMatch = await api.delete(
-                `/api/infomatch/${infoMatchId}`
-              );
-              // Delete from user's friends list
-              if (responseMatch.status === 200) {
-                return responseMatch;
+              const response = await api.delete(`/api/infomatch/${infoMatchId}`);
+              if (response.status === 200) {
+                return response;
               }
             }
+          } catch (err) {
+            throw new Error('');
+          }
+          break;
+        case 'friend':
+          try {
+            // Delete from infomatch (for matches)
+            // if (infoMatchId && infoMatchId !== undefined) {
+            //   const responseMatch = await api.delete(`/api/infomatch/${infoMatchId}`);
+            //   // Delete from user's friends list
+            //   if (responseMatch.status === 200) {
+            //     return responseMatch;
+            //   }
+            // }
             // Delete from user's friends list
             if (userToDelete && userToDelete !== undefined) {
               const responseUser = await api.delete(
@@ -133,16 +143,14 @@ export const useDeleteFriend = () => {
               }
             }
           } catch (err) {
-            throw new Error("");
+            throw new Error('');
           }
           break;
 
-        case "room":
+        case 'room':
           // Delete from user's joined rooms (for communities)
           if (roomName && roomName !== undefined) {
-            return api.delete(
-              `/api/delete-joined-rooms/${roomName}/${userEmail}`
-            );
+            return api.delete(`/api/delete-joined-rooms/${roomName}/${userEmail}`);
           }
           break;
 
@@ -153,9 +161,9 @@ export const useDeleteFriend = () => {
     onSuccess: () => {
       // Invalidate all relevant queries to trigger a global refetch
       return Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["currentUser", userEmail] }),
-        queryClient.invalidateQueries({ queryKey: ["userRooms", userEmail] }),
-        queryClient.invalidateQueries({ queryKey: ["infoMatch"] }),
+        queryClient.invalidateQueries({ queryKey: ['currentUser', userEmail] }),
+        queryClient.invalidateQueries({ queryKey: ['userRooms', userEmail] }),
+        queryClient.invalidateQueries({ queryKey: ['infoMatch'] }),
       ]);
     },
   });

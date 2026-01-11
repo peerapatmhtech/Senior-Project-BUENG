@@ -1,15 +1,11 @@
-import { useEffect, useState, useRef } from "react";
-import { FaChevronDown, FaChevronRight } from "react-icons/fa";
-import { FaHeart } from "react-icons/fa";
-import { useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import {
-  fetchInfoMatch,
-  fetchEvents,
-  fetchUsers,
-  fetchInfos,
-} from "../../../lib/queries";
-import api from "../../../server/api";
+import { useEffect, useState, useRef } from 'react';
+import PropTypes from 'prop-types';
+import { FaChevronDown, FaChevronRight } from 'react-icons/fa';
+import { FaHeart, FaHeartBroken } from 'react-icons/fa';
+import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { fetchInfoMatch, fetchUsers } from '../../../lib/queries';
+import api from '../../../server/api';
 
 const MatchList = ({
   setActiveUser,
@@ -26,26 +22,30 @@ const MatchList = ({
   setOpenMenuFor,
 }) => {
   const navigate = useNavigate();
-  const userEmail = localStorage.getItem("userEmail");
+  const userEmail = localStorage.getItem('userEmail');
   const dropdownRefs = useRef({});
   const [showMatchModal, setShowMatchModal] = useState(false);
   const [matchedData, setMatchedData] = useState(null);
 
   // Fetch data using React Query
-  const { data: userMatchData = [] } = useQuery({
-    queryKey: ["infoMatch"],
+  const { data: userMatchData = [], isLoading: isLoadingMatches } = useQuery({
+    queryKey: ['infoMatch'],
     queryFn: fetchInfoMatch,
   });
-  const { data: users = [] } = useQuery({
-    queryKey: ["users"],
+  const { data: users = [], isLoading: isLoadingUsers } = useQuery({
+    queryKey: ['users'],
     queryFn: fetchUsers,
   });
 
-  const _getFullImageUrl = (url) => {
-    if (!url) return url;
-    if (url.startsWith("http://") || url.startsWith("https://")) return url;
-    return `${api.defaults.baseURL}${url}`;
-  };
+  const validMatches = userMatchData.filter((matchData) => {
+    const isUserInMatch = matchData.email === userEmail || matchData.usermatch === userEmail;
+    const bothJoined =
+      (matchData.emailjoined && matchData.usermatchjoined) || matchData.status === 'matched';
+    const hasValidId = !!matchData._id;
+
+    return isUserInMatch && bothJoined && hasValidId;
+  });
+
   // ตรวจสอบการ match ใหม่
   useEffect(() => {
     if (userMatchData && userMatchData.length > 0) {
@@ -56,13 +56,10 @@ const MatchList = ({
           (match.email === userEmail || match.usermatch === userEmail)
       );
 
-      if (
-        newMatches.length > 0 &&
-        !localStorage.getItem(`match_shown_${newMatches[0]._id}`)
-      ) {
+      if (newMatches.length > 0 && !localStorage.getItem(`match_shown_${newMatches[0]._id}`)) {
         setMatchedData(newMatches[0]);
         setShowMatchModal(true);
-        localStorage.setItem(`match_shown_${newMatches[0]._id}`, "true");
+        localStorage.setItem(`match_shown_${newMatches[0]._id}`, 'true');
       }
     }
   }, [userMatchData, userEmail]);
@@ -82,51 +79,43 @@ const MatchList = ({
         }
       }
     };
-    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener('mousedown', handleClickOutside);
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [openMenuFor, userMatchData, setOpenMenuFor]);
 
   return (
     <div className="favorite-container">
-      <div
-        className="favorite-toggle"
-        onClick={() => setIsOpenMatch((prev) => !prev)}
-      >
+      <div className="favorite-toggle" onClick={() => setIsOpenMatch((prev) => !prev)}>
         {isOpenMatch ? <FaChevronDown /> : <FaChevronRight />}
         <span>Match</span>
       </div>
       {isOpenMatch && (
-        <div
-          className={!isOpenMatch ? "group-container-open" : "group-container"}
-        >
-          <ul className="friend-list-chat">
-            {userMatchData
-              .filter((matchData) => {
-                const isUserInMatch =
-                  matchData.email === userEmail ||
-                  matchData.usermatch === userEmail;
-                const bothJoined =
-                  (matchData.emailjoined && matchData.usermatchjoined) || matchData.status === "matched";
-                const hasValidId = !!matchData._id;
-
-                return isUserInMatch && bothJoined && hasValidId;
-              })
-              .map((matchData, index) => {
+        <div className={!isOpenMatch ? 'group-container-open' : 'group-container'}>
+          {isLoadingMatches || isLoadingUsers ? (
+            <div
+              style={{
+                padding: '30px 20px',
+                textAlign: 'center',
+                color: '#999',
+                fontSize: '14px',
+              }}
+            >
+              กำลังโหลด...
+            </div>
+          ) : validMatches.length > 0 ? (
+            <ul className="friend-list-chat">
+              {validMatches.map((matchData, index) => {
                 const partnerEmail =
-                  matchData.email === userEmail
-                    ? matchData.usermatch
-                    : matchData.email;
+                  matchData.email === userEmail ? matchData.usermatch : matchData.email;
                 return (
                   <li
                     key={`${matchData._id}-${index}`}
-                    className={`chat-match-item ${
-                      selectedTab === matchData._id ? "selected" : ""
-                    }`}
+                    className={`chat-match-item ${selectedTab === matchData._id ? 'selected' : ''}`}
                     onClick={() => {
                       if (!matchData._id) {
-                        console.error("matchData._id is undefined:", matchData);
+                        console.error('matchData._id is undefined:', matchData);
                         return;
                       }
 
@@ -137,18 +126,11 @@ const MatchList = ({
 
                       setActiveUser(partnerEmail);
 
-                      const partnerUser = users.find(
-                        (u) => u.email === partnerEmail
-                      );
-                      setRoombar(
-                        partnerUser?.photoURL || matchData.image,
-                        matchData.title
-                      );
+                      const partnerUser = users.find((u) => u.email === partnerEmail);
+                      setRoombar(partnerUser?.photoURL || matchData.image, matchData.title);
                       setIsGroupChat(false);
 
-                      const userObject = users.find(
-                        (u) => u.email === partnerEmail
-                      ) || {
+                      const userObject = users.find((u) => u.email === partnerEmail) || {
                         email: partnerEmail,
                       };
                       handleProfileClick(userObject);
@@ -156,12 +138,10 @@ const MatchList = ({
                   >
                     <img
                       src={(() => {
-                        const user = users.find(
-                          (u) => u.email === partnerEmail
-                        );
+                        const user = users.find((u) => u.email === partnerEmail);
                         return user && user.photoURL
                           ? user.photoURL
-                          : "https://cdn.pixabay.com/photo/2023/02/18/11/00/icon-7797704_640.png";
+                          : 'https://cdn.pixabay.com/photo/2023/02/18/11/00/icon-7797704_640.png';
                       })()}
                       alt={matchData.detail}
                       className="friend-photo"
@@ -169,17 +149,14 @@ const MatchList = ({
                     <div className="match-detail">
                       <span className="friend-name">
                         {(() => {
-                          const user = users.find(
-                            (u) => u.email === partnerEmail
-                          );
-                          return user && user.displayName
-                            ? user.displayName
-                            : partnerEmail;
+                          const user = users.find((u) => u.email === partnerEmail);
+                          return user && user.displayName ? user.displayName : partnerEmail;
                         })()}
                       </span>
                       <span className="friend-title">{matchData.detail}</span>
 
-                      {((matchData.emailjoined && matchData.usermatchjoined) || matchData.status === "matched") && (
+                      {((matchData.emailjoined && matchData.usermatchjoined) ||
+                        matchData.status === 'matched') && (
                         <div className="match-badge">
                           <FaHeart className="match-icon" />
                           <span className="match-text">It&apos;s a Match!</span>
@@ -189,7 +166,23 @@ const MatchList = ({
                   </li>
                 );
               })}
-          </ul>
+            </ul>
+          ) : (
+            <div
+              style={{
+                padding: '30px 20px',
+                textAlign: 'center',
+                color: '#999',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '10px',
+              }}
+            >
+              <FaHeartBroken size={30} />
+              <span style={{ fontSize: '14px' }}>ไม่มีรายการแมตช์</span>
+            </div>
+          )}
         </div>
       )}
 
@@ -204,10 +197,7 @@ const MatchList = ({
             <div className="activity-match-users">
               <div className="activity-match-user">
                 <img
-                  src={
-                    users.find((u) => u.email === userEmail)?.photoURL ||
-                    "/default-profile.png"
-                  }
+                  src={users.find((u) => u.email === userEmail)?.photoURL || '/default-profile.png'}
                   alt="You"
                 />
                 <span>You</span>
@@ -217,37 +207,26 @@ const MatchList = ({
                 <img
                   src={(() => {
                     const partnerEmail =
-                      matchedData.email === userEmail
-                        ? matchedData.usermatch
-                        : matchedData.email;
-                    const partnerUser = users.find(
-                      (u) => u.email === partnerEmail
-                    );
-                    return partnerUser?.photoURL || "/default-profile.png";
+                      matchedData.email === userEmail ? matchedData.usermatch : matchedData.email;
+                    const partnerUser = users.find((u) => u.email === partnerEmail);
+                    return partnerUser?.photoURL || '/default-profile.png';
                   })()}
                   alt="Matched User"
                 />
                 <span>
                   {(() => {
                     const partnerEmail =
-                      matchedData.email === userEmail
-                        ? matchedData.usermatch
-                        : matchedData.email;
-                    const partnerUser = users.find(
-                      (u) => u.email === partnerEmail
-                    );
-                    return partnerUser?.displayName || "Buddy";
+                      matchedData.email === userEmail ? matchedData.usermatch : matchedData.email;
+                    const partnerUser = users.find((u) => u.email === partnerEmail);
+                    return partnerUser?.displayName || 'Buddy';
                   })()}
                 </span>
               </div>
             </div>
 
             <div className="activity-match-details">
-              <h3>{matchedData.title || "Activity"}</h3>
-              <p>
-                Now you can plan this activity together. Let&apos;s start a
-                conversation!
-              </p>
+              <h3>{matchedData.title || 'Activity'}</h3>
+              <p>Now you can plan this activity together. Let&apos;s start a conversation!</p>
             </div>
 
             <div className="activity-match-actions">
@@ -271,6 +250,36 @@ const MatchList = ({
       )}
     </div>
   );
+};
+
+MatchList.propTypes = {
+  setActiveUser: PropTypes.func.isRequired,
+  setRoombar: PropTypes.func.isRequired,
+  setIsGroupChat: PropTypes.func.isRequired,
+  isOpenMatch: PropTypes.bool.isRequired,
+  setIsOpenMatch: PropTypes.func.isRequired,
+  setSelectedTab: PropTypes.func.isRequired,
+  setOpenchat: PropTypes.func.isRequired,
+  handleProfileClick: PropTypes.func.isRequired,
+  selectedTab: PropTypes.string,
+  openMenuFor: PropTypes.string,
+  setUserImage: PropTypes.func.isRequired,
+  setOpenMenuFor: PropTypes.func.isRequired,
+};
+
+MatchList.propTypes = {
+  setActiveUser: PropTypes.func.isRequired,
+  setRoombar: PropTypes.func.isRequired,
+  setIsGroupChat: PropTypes.func.isRequired,
+  isOpenMatch: PropTypes.bool.isRequired,
+  setIsOpenMatch: PropTypes.func.isRequired,
+  setSelectedTab: PropTypes.func.isRequired,
+  setOpenchat: PropTypes.func.isRequired,
+  handleProfileClick: PropTypes.func.isRequired,
+  selectedTab: PropTypes.string,
+  openMenuFor: PropTypes.string,
+  setUserImage: PropTypes.func.isRequired,
+  setOpenMenuFor: PropTypes.func.isRequired,
 };
 
 export default MatchList;

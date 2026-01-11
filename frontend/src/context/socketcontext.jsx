@@ -3,6 +3,7 @@ import io from 'socket.io-client';
 
 const SocketContext = createContext();
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useSocket = () => {
   const context = useContext(SocketContext);
   if (!context) {

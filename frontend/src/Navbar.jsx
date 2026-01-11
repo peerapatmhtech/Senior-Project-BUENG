@@ -1,6 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
 import "./Navbar.css";
-import { useAuth } from "./context/Authcontext";
 import { useTheme } from "./context/themecontext";
 import { FaUsers, FaUserFriends, FaUserCircle } from "react-icons/fa";
 import { BsFillChatLeftDotsFill } from "react-icons/bs";
