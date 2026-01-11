@@ -6,7 +6,6 @@ import 'react-toastify/dist/ReactToastify.css';
 import { FaSearch } from 'react-icons/fa';
 
 import { IoMdPersonAdd } from 'react-icons/io';
-import { useParams } from 'react-router-dom';
 import { BsThreeDots } from 'react-icons/bs';
 ////////-------- Import Contexts ---------////////
 import { useTheme } from '../context/themecontext';
@@ -38,8 +37,6 @@ const Friend = () => {
   });
   const { socket, onlineUsers } = useSocket();
   const { friends, setFriends } = useNotifications();
-  // รับ roomId จาก URL ถ้ามี เช่น /friend/:roomId
-  const { roomId } = useParams();
 
   // ย้ายตัวแปรเหล่านี้มาอยู่ด้านบนก่อนการใช้งานใน useEffect
   const userEmail = localStorage.getItem('userEmail');
@@ -175,7 +172,7 @@ const Friend = () => {
       setError('เกิดข้อผิดพลาดในการดึงข้อมูลผู้ใช้');
       toast.error('เกิดข้อผิดพลาดในการดึงข้อมูลผู้ใช้');
     }
-  }, [userEmail]);
+  }, [userEmail, setFriends]);
 
   useEffect(() => {
     if (!userEmail) return;
@@ -261,15 +258,6 @@ const Friend = () => {
   const handleSearch = (e) => {
     setSearchTerm(e.target.value.toLowerCase());
   };
-
-  // ฟังก์ชันสุ่ม roomId (UUID v4 แบบง่าย)
-  function generateRoomId() {
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-      const r = (Math.random() * 16) | 0,
-        v = c === 'x' ? r : (r & 0x3) | 0x8;
-      return v.toString(16);
-    });
-  }
 
   const handleAddFriend = async (friendEmail) => {
     try {
@@ -384,11 +372,9 @@ const Friend = () => {
 
   const fetchCurrentUser = useCallback(async () => {
     try {
+      setLoadingCurrentUser(true);
       const res = await api.get(`/api/users/${userEmail}`);
-      const userData = {
-        ...res.data,
-        following: Array.isArray(res.data.following) ? res.data.following : [],
-      };
+      setCurrentUserfollow(res.data);
       setLoadingCurrentUser(false);
     } catch (err) {
       setError('คุณสามารถเพิ่มเพื่อนได้ทันที');

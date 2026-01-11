@@ -30,11 +30,23 @@ const ShowTitle = ({ userimage, openchat }) => {
       <div className={`bg-title ${openchat ? "mobile-layout-mode" : ""}`}>
         {matchedEvent ? (
           <div className="user-image">
+            {(matchedEvent.image || matchedEvent.thumbnail) && (
+              <img
+                src={matchedEvent.image || matchedEvent.thumbnail}
+                alt={matchedEvent.title}
+                className="event-title-image"
+              />
+            )}
             <h2 className="usertitle">{matchedEvent.title}</h2>
             <div className="event-details">
               {matchedEvent.genre && (
                 <div className="event-genre">
-                  หมวดหมู่: {matchedEvent.genre}
+                  หมวดหมู่:{" "}
+                  {Array.isArray(matchedEvent.genre)
+                    ? matchedEvent.genre.join(", ")
+                    : typeof matchedEvent.genre === "object"
+                    ? Object.values(matchedEvent.genre).flat().join(", ")
+                    : matchedEvent.genre}
                 </div>
               )}
               {matchedEvent.location && (
@@ -43,11 +55,29 @@ const ShowTitle = ({ userimage, openchat }) => {
                 </div>
               )}
               {matchedEvent.date && (
-                <div className="event-date">วันที่: {matchedEvent.date}</div>
+                <div className="event-date">
+                  วันที่:{" "}
+                  {typeof matchedEvent.date === "object" &&
+                  matchedEvent.date.when
+                    ? matchedEvent.date.when
+                    : matchedEvent.date}
+                </div>
               )}
               {matchedEvent.description && (
                 <div className="event-description">
                   <p>{matchedEvent.description}</p>
+                </div>
+              )}
+              {matchedEvent.link && (
+                <div className="event-link-wrapper">
+                  <a
+                    href={matchedEvent.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="event-link"
+                  >
+                    Info more
+                  </a>
                 </div>
               )}
             </div>

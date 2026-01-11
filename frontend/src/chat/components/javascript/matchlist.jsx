@@ -5,7 +5,6 @@ import { FaHeart, FaHeartBroken } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { fetchInfoMatch, fetchUsers } from '../../../lib/queries';
-import api from '../../../server/api';
 
 const MatchList = ({
   setActiveUser,

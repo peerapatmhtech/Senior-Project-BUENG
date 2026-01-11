@@ -193,7 +193,12 @@ const ChatPanel = ({
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && !disabled && handleSend()}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !disabled) {
+                e.preventDefault();
+                handleSend();
+              }
+            }}
             placeholder={disabled ? 'กรุณาเลือกห้องแชท' : 'Writing something...'}
             className="chat-input"
             disabled={disabled}
@@ -249,3 +254,4 @@ ChatPanel.propTypes = {
   setFriends: PropTypes.func.isRequired,
   disabled: PropTypes.bool,
 };
+

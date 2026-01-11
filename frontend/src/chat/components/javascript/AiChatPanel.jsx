@@ -35,13 +35,13 @@ const AiChatPanel = ({ userEmail, formatChatDate }) => {
 
   const mutation = useMutation({
     mutationFn: sendAiMessage,
-    onSuccess: (newAiMessage) => {
+    onSuccess: (newAiMessage, variables) => {
       // Manually update the query cache with the user's message and AI's response
       queryClient.setQueryData(["aiChat", roomId], (oldData) => {
         const userMessage = {
           roomId,
           sender: "user",
-          content: input, // Use the input state at the time of mutation
+          content: variables.content,
           timestamp: new Date().toISOString(),
         };
         return [...(oldData || []), userMessage, newAiMessage];
@@ -110,7 +110,12 @@ const AiChatPanel = ({ userEmail, formatChatDate }) => {
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          onKeyPress={(e) => e.key === "Enter" && handleSend()}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              handleSend();
+            }
+          }}
           placeholder="Chat with your AI Assistant..."
           disabled={mutation.isPending}
         />

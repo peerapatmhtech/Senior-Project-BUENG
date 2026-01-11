@@ -108,7 +108,6 @@ export const useDeleteFriend = () => {
 
   return useMutation({
     mutationFn: async ({ type, userToDelete, roomName, infoMatchId }) => {
-      console.log('Deleting:', { type, userToDelete, roomName, infoMatchId });
       switch (type) {
         case 'match':
           try {

@@ -238,7 +238,12 @@ const ChatContainerAI = ({ isAiChatOpen, defaultProfileImage, roomId, disabled }
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSend();
+              }
+            }}
             placeholder={
               disabled
                 ? 'กรุณาเลือกห้องแชท'

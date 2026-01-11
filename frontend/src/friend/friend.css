@@ -547,7 +547,7 @@ s .search-friend-con::after {
   align-items: center;
   border-radius: 28px;
   padding: 8px 10px;
-  margin: 0 5px 1rem;
+  margin: 20px  5px 1rem;
   background-color: #f8f9fa;
   border: 1px solid #e2e8f0;
   transition: border-color 0.2s, box-shadow 0.2s;
