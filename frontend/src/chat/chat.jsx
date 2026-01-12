@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
+import PropTypes from "prop-types";
 import { db } from "../firebase/firebase";
 import RequireLogin from "../components/RequireLogin";
 import { FaSearch } from "react-icons/fa";
@@ -29,6 +30,7 @@ import CommunityList from "./components/javascript/communitylist";
 import ChatPanel from "./components/javascript/ChatPanel";
 import MatchList from "./components/javascript/matchlist";
 import ShowTitle from "./components/javascript/showtitle";
+import ProfileModal from "./components/javascript/ProfileModal";
 
 import "./components/css/ChatAI.css";
 import "./css/ListItems.css";
@@ -43,7 +45,6 @@ const formatRelativeTime = (timestamp) => {
   const diffSec = Math.floor(diffMs / 1000);
   const diffMin = Math.floor(diffSec / 60);
   const diffHour = Math.floor(diffMin / 60);
-  const diffDay = Math.floor(diffHour / 24);
 
   if (diffMin < 1) return "เมื่อสักครู่";
   if (diffMin < 60) return `${diffMin} นาทีที่แล้ว`;
@@ -102,6 +103,10 @@ const LoadingIndicator = ({ isDarkMode }) => (
   </div>
 );
 
+LoadingIndicator.propTypes = {
+  isDarkMode: PropTypes.bool.isRequired,
+};
+
 const ChatSidebar = ({
   openchat,
   searchTerm,
@@ -123,13 +128,11 @@ const ChatSidebar = ({
   isOpencom,
   setIsOpencom,
   setRoombar,
-  loadingFriendRooms,
   openMenuFor,
   setOpenMenuFor,
   isOpenMatch,
   setIsOpenMatch,
   handleProfileClick,
-  setJoinedRooms,
 }) => (
   <div className={`user-container ${openchat ? "mobile-layout-mode" : ""}`}>
     <div className="chat">
@@ -179,7 +182,6 @@ const ChatSidebar = ({
         getnickName={getnickName}
         setFriends={setFriends}
         setRoombar={setRoombar}
-        loadingFriendRooms={loadingFriendRooms}
         openMenuFor={openMenuFor}
         setOpenMenuFor={setOpenMenuFor}
       />
@@ -193,11 +195,9 @@ const ChatSidebar = ({
         handleProfileClick={handleProfileClick}
         setRoombar={setRoombar}
         setIsGroupChat={setIsGroupChat}
-        loadingFriendRooms={loadingFriendRooms}
         openMenuFor={openMenuFor}
         setOpenMenuFor={setOpenMenuFor}
         dropdownRefs={dropdownRefs}
-        setJoinedRooms={setJoinedRooms}
         getnickName={getnickName}
         setFriends={setFriends}
         setUserImage={setUserImage}
@@ -206,12 +206,39 @@ const ChatSidebar = ({
   </div>
 );
 
+ChatSidebar.propTypes = {
+  openchat: PropTypes.bool.isRequired,
+  searchTerm: PropTypes.string.isRequired,
+  setSearchTerm: PropTypes.func.isRequired,
+  sortedFriends: PropTypes.array.isRequired,
+  lastMessages: PropTypes.object.isRequired,
+  setOpenchat: PropTypes.func.isRequired,
+  setActiveUser: PropTypes.func.isRequired,
+  isOpen: PropTypes.bool.isRequired,
+  setIsOpen: PropTypes.func.isRequired,
+  setIsGroupChat: PropTypes.func.isRequired,
+  dropdownRefs: PropTypes.object.isRequired,
+  getnickName: PropTypes.oneOfType([PropTypes.func, PropTypes.array]),
+  setSelectedTab: PropTypes.func.isRequired,
+  selectedTab: PropTypes.string,
+  setUserImage: PropTypes.func.isRequired,
+  setFriends: PropTypes.func.isRequired,
+  formatOnlineStatus: PropTypes.func.isRequired,
+  isOpencom: PropTypes.bool.isRequired,
+  setIsOpencom: PropTypes.func.isRequired,
+  setRoombar: PropTypes.func.isRequired,
+  openMenuFor: PropTypes.string,
+  setOpenMenuFor: PropTypes.func.isRequired,
+  isOpenMatch: PropTypes.bool.isRequired,
+  setIsOpenMatch: PropTypes.func.isRequired,
+  handleProfileClick: PropTypes.func.isRequired,
+};
+
 const ChatWindow = ({
   openchat,
   messages,
   userEmail,
   userPhoto,
-  setJoinedRooms,
   userName,
   RoomsBar,
   input,
@@ -226,46 +253,74 @@ const ChatWindow = ({
   endOfMessagesRef,
   defaultProfileImage,
   loadingMessages,
-}) => (
-  <div className={`bg-chat-con ${openchat ? "mobile-layout-mode" : ""}`}>
-    <ChatPanel
-      messages={messages}
-      userEmail={userEmail}
-      userPhoto={userPhoto}
-      setJoinedRooms={setJoinedRooms}
-      userName={userName}
-      RoomsBar={RoomsBar}
-      input={input}
-      isOpencom={isOpencom}
-      isOpenMatch={isOpenMatch}
-      setFriends={setFriends}
-      userImage={userImage}
-      sortedFriends={sortedFriends}
-      openchat={openchat}
-      setInput={setInput}
-      handleSend={handleSend}
-      setOpenchat={setOpenchat}
-      endOfMessagesRef={endOfMessagesRef}
-      defaultProfileImage={defaultProfileImage}
-      formatChatDate={formatChatDate}
-    />
-    <div className="tabright">
-      <ShowTitle userimage={userImage} openchat={openchat} />
-      <ChatContainerAI
-        loadingMessages={loadingMessages}
+  isDefaultRoom,
+}) => {
+  return (
+    <div className={`bg-chat-con ${openchat ? "mobile-layout-mode" : ""}`}>
+      <ChatPanel
         messages={messages}
-        openchat={openchat}
         userEmail={userEmail}
-        defaultProfileImage={defaultProfileImage}
-        formatChatDate={formatChatDate}
-        endOfMessagesRef={endOfMessagesRef}
+        userPhoto={userPhoto}
+        userName={userName}
+        RoomsBar={RoomsBar}
         input={input}
+        isOpencom={isOpencom}
+        isOpenMatch={isOpenMatch}
+        setFriends={setFriends}
+        userImage={userImage}
+        sortedFriends={sortedFriends}
+        openchat={openchat}
         setInput={setInput}
         handleSend={handleSend}
+        setOpenchat={setOpenchat}
+        endOfMessagesRef={endOfMessagesRef}
+        defaultProfileImage={defaultProfileImage}
+        formatChatDate={formatChatDate}
+        disabled={isDefaultRoom}
       />
+      <div className="tabright">
+        <ShowTitle userimage={userImage} openchat={openchat} />
+        <ChatContainerAI
+          loadingMessages={loadingMessages}
+          messages={messages}
+          openchat={openchat}
+          isAiChatOpen={false} // This ChatContainerAI is embedded, not the modal
+          userEmail={userEmail}
+          roomId={RoomsBar.roomId} // Pass the current roomId
+          defaultProfileImage={defaultProfileImage}
+          formatChatDate={formatChatDate}
+          endOfMessagesRef={endOfMessagesRef}
+          input={input}
+          setInput={setInput}
+          handleSend={handleSend}
+          disabled={isDefaultRoom}
+        />
+      </div>
     </div>
-  </div>
-);
+  );
+};
+
+ChatWindow.propTypes = {
+  openchat: PropTypes.bool.isRequired,
+  messages: PropTypes.array.isRequired,
+  userEmail: PropTypes.string,
+  userPhoto: PropTypes.string,
+  userName: PropTypes.string,
+  RoomsBar: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
+  input: PropTypes.string.isRequired,
+  isOpencom: PropTypes.bool,
+  isOpenMatch: PropTypes.bool,
+  setFriends: PropTypes.func.isRequired,
+  userImage: PropTypes.object,
+  sortedFriends: PropTypes.array.isRequired,
+  setInput: PropTypes.func.isRequired,
+  handleSend: PropTypes.func.isRequired,
+  setOpenchat: PropTypes.func.isRequired,
+  endOfMessagesRef: PropTypes.object.isRequired,
+  defaultProfileImage: PropTypes.string.isRequired,
+  loadingMessages: PropTypes.bool,
+  isDefaultRoom: PropTypes.bool,
+};
 
 const AIChatButtonAndModal = ({
   hasNewAiMessage,
@@ -323,6 +378,17 @@ const AIChatButtonAndModal = ({
   </>
 );
 
+AIChatButtonAndModal.propTypes = {
+  hasNewAiMessage: PropTypes.bool.isRequired,
+  openAiChat: PropTypes.func.isRequired,
+  aiNotificationCount: PropTypes.number.isRequired,
+  isAiChatOpen: PropTypes.bool.isRequired,
+  handleAiModalClick: PropTypes.func.isRequired,
+  closeAiChat: PropTypes.func.isRequired,
+  userEmail: PropTypes.string,
+  defaultProfileImage: PropTypes.string.isRequired,
+};
+
 import { useQuery } from "@tanstack/react-query";
 import {
   fetchUsers,
@@ -340,26 +406,25 @@ const Chat = () => {
   const { isDarkMode } = useTheme();
   const [isOpencom, setIsOpencom] = useState(false);
   const { roomId } = useParams();
+  const isDefaultRoom = roomId === "some-default-room";
   const userPhoto = localStorage.getItem("userPhoto");
   const userName = localStorage.getItem("userName");
   const [searchTerm, setSearchTerm] = useState("");
   const [input, setInput] = useState("");
   const [selectedUser, setSelectedUser] = useState(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [messages, setMessages] = useState([]);
-  const [loadingFriendRooms, setLoadingRoomId] = useState(null);
   const [activeUser, setActiveUser] = useState(null);
   const userEmail = localStorage.getItem("userEmail");
-  const messagesRef = collection(db, "messages");
+  const messagesRef = useMemo(() => collection(db, "messages"), []);
   const [isOpen, setIsOpen] = useState(false);
   const endOfMessagesRef = useRef(null);
   const dropdownRefs = useRef({});
-  const [RoomsBar, setRoomBar] = useState([]);
+  const [RoomsBar, setRoomBar] = useState({});
   const [openMenuFor, setOpenMenuFor] = useState(null);
   const [isGroupChat, setIsGroupChat] = useState(false);
   const [getnickName, getNickName] = useState("");
   const [lastMessages, setLastMessages] = useState({});
-  const [loadingMessages, setLoadingMessages] = useState(false);
+  const [loadingMessages] = useState(false);
   const [isOpenMatch, setIsOpenMatch] = useState(false);
   const [userImage, setUserImage] = useState({});
   const [selectedTab, setSelectedTab] = useState(null);
@@ -369,7 +434,8 @@ const Chat = () => {
   const [hasNewAiMessage, setHasNewAiMessage] = useState(false);
   const displayName = localStorage.getItem("userName");
   const photoURL = localStorage.getItem("userPhoto");
-  const defaultProfileImage = 'https://cdn.pixabay.com/photo/2023/02/18/11/00/icon-7797704_640.png';
+  const defaultProfileImage =
+    "https://cdn.pixabay.com/photo/2023/02/18/11/00/icon-7797704_640.png";
 
   // React Query Data Fetching
   const { data: users = [], isLoading: isLoadingUsers } = useQuery({
@@ -383,7 +449,7 @@ const Chat = () => {
     enabled: !!userEmail,
   });
 
-  const { data: communityData = [], isLoading: isLoadingCommunityData } =
+  const { isLoading: isLoadingCommunityData } =
     useQuery({
       queryKey: ["userRooms", userEmail],
       queryFn: () => fetchUserRooms(userEmail),
@@ -396,7 +462,7 @@ const Chat = () => {
       queryFn: fetchInfoMatch,
     });
 
-  const { data: allRooms = [], isLoading: isLoadingAllRooms } = useQuery({
+  const { isLoading: isLoadingAllRooms } = useQuery({
     queryKey: ["allRooms"],
     queryFn: fetchAllRooms,
   });
@@ -412,14 +478,7 @@ const Chat = () => {
     queryFn: fetchInfos,
   });
 
-  const [joinedRooms, setJoinedRooms] = useState([]);
   const [friends, setFriends] = useState([]);
-
-  useEffect(() => {
-    if (communityData && communityData.length > 0) {
-      setJoinedRooms(communityData);
-    }
-  }, [communityData]);
 
   useEffect(() => {
     if (infos && infos.length > 0) {
@@ -459,6 +518,7 @@ const Chat = () => {
     }
   }, [processedFriends]);
 
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const handleProfileClick = (user) => {
     setSelectedUser(user);
     setIsModalOpen(true);
@@ -524,6 +584,7 @@ const Chat = () => {
 
     const messageData = {
       sender: userEmail,
+      receiver: null, // Default to null
       content: input,
       timestamp: serverTimestamp(),
       roomId: roomId || "direct",
@@ -532,7 +593,6 @@ const Chat = () => {
 
     if (isGroupChat === true) {
       messageData.type = "group";
-      messageData.receiver = null;
     } else if (selectedUser && selectedUser.email) {
       messageData.receiver = selectedUser.email;
     } else if (activeUser) {
@@ -553,7 +613,7 @@ const Chat = () => {
   };
 
   const setRoombar = (roomImage, roomName) => {
-    setRoomBar({ roomImage, roomName });
+    setRoomBar({ roomImage, roomName, roomId }); // Store roomId as well
   };
 
   useEffect(() => {
@@ -567,17 +627,17 @@ const Chat = () => {
       }
     }, 30000);
 
-    socket.on("update-users", (data) => {
+    socket.on("update-users", (_data) => {
       // Note: This is a side-effect that is hard to manage with React Query
       // For now, we will leave this as is, but a better solution would be
       // to use the queryClient to update the user data in the cache.
     });
 
-    socket.on("user-offline", (userData) => {
+    socket.on("user-offline", (_userData) => {
       // Similar to above, this should ideally update the cache
     });
 
-    socket.on("user-online", (userData) => {
+    socket.on("user-online", (_userData) => {
       // Similar to above, this should ideally update the cache
     });
 
@@ -621,7 +681,7 @@ const Chat = () => {
     });
 
     return () => unsubscribe();
-  }, [roomId, userEmail, isGroupChat, activeUser]);
+  }, [roomId, userEmail, isGroupChat, activeUser, messagesRef]);
 
   useEffect(() => {
     const markMessagesAsSeen = async () => {
@@ -732,7 +792,6 @@ const Chat = () => {
           isOpencom={isOpencom}
           setIsOpencom={setIsOpencom}
           setRoombar={setRoombar}
-          loadingFriendRooms={loadingFriendRooms}
           openMenuFor={openMenuFor}
           setOpenMenuFor={setOpenMenuFor}
           userMatchData={userMatchData}
@@ -742,7 +801,6 @@ const Chat = () => {
           setIsOpenMatch={setIsOpenMatch}
           infos={infos}
           handleProfileClick={handleProfileClick}
-          setJoinedRooms={setJoinedRooms}
         />
         <ChatWindow
           openchat={openchat}
@@ -750,7 +808,6 @@ const Chat = () => {
           users={users}
           userEmail={userEmail}
           userPhoto={userPhoto}
-          setJoinedRooms={setJoinedRooms}
           userName={userName}
           RoomsBar={RoomsBar}
           getnickName={getnickName}
@@ -766,7 +823,18 @@ const Chat = () => {
           endOfMessagesRef={endOfMessagesRef}
           defaultProfileImage={defaultProfileImage}
           loadingMessages={loadingMessages}
+          isDefaultRoom={isDefaultRoom}
         />
+        {isModalOpen && selectedUser && (
+          <ProfileModal
+            isOpen={isModalOpen}
+            onClose={() => setIsModalOpen(false)}
+            user={selectedUser}
+            userImage={selectedUser}
+            users={users}
+            isCom={false}
+          />
+        )}
       </div>
       <AIChatButtonAndModal
         hasNewAiMessage={hasNewAiMessage}

@@ -6,7 +6,6 @@ import TinderCard from "react-tinder-card";
 import { useTheme } from "../context/themecontext";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { FaHeart } from "react-icons/fa";
 import "./css/roommatch.css";
 import { useSocket } from "../context/make.com";
 import PropTypes from "prop-types";
@@ -49,21 +48,31 @@ const RoomMatch = ({ accordionComponent }) => {
     queryFn: fetchUsers,
     staleTime: 1000 * 60 * 2, // 2 minutes
   });
-
   // --- Mutations ---
   const likeMutation = useMutation({
-    mutationFn: async ({ roomId, updateData }) => {
-      const response = await api.put(`/api/infomatch/${roomId}`, updateData);
-      return response.data;
+    mutationFn: async ({ room, userEmail }) => {
+      // If the current user is NOT the one who initiated the match,
+      // this like will complete the match.
+      if (room.status === "pending" && room.initiatorEmail !== userEmail) {
+        const response = await api.patch(`/api/infomatch/${room._id}/match`, {
+          status: "matched",
+        });
+        return response.data;
+      }
+      // If the current user already initiated, do nothing, just wait.
+      // Or if you want to allow "liking" to create the initial record, that logic would go here.
+      // For now, we assume the record is created by the background process.
+      return room; // Return the room without change
     },
     onSuccess: (updatedRoom) => {
       toast.success("คุณกดไลค์แล้ว!");
+      // ตรวจสอบสถานะ "matched" จากข้อมูลที่ API ส่งกลับมา
       if (
         updatedRoom &&
-        updatedRoom.emailjoined &&
-        updatedRoom.usermatchjoined
+        updatedRoom.data &&
+        updatedRoom.data.status === "matched"
       ) {
-        setMatchedRoom(updatedRoom);
+        setMatchedRoom(updatedRoom.data);
         setShowMatchModal(true);
         localStorage.setItem(`match_shown_${updatedRoom._id}`, "true");
       }
@@ -73,8 +82,8 @@ const RoomMatch = ({ accordionComponent }) => {
   });
 
   const skipMutation = useMutation({
-    mutationFn: (roomId) => api.delete(`/api/infomatch/${roomId}`),
-    onSuccess: () => {
+    mutationFn: (roomId) => api.patch(`/api/infomatch/${roomId}/skip`),
+    onSuccess: (_data) => {
       queryClient.invalidateQueries({ queryKey: ["rooms", userEmail] });
     },
     onError: () => toast.error("เกิดข้อผิดพลาดในการข้าม"),
@@ -112,13 +121,7 @@ const RoomMatch = ({ accordionComponent }) => {
   // --- Handlers ---
   const handleEnterRoom = (roomId) => {
     const currentRoom = filteredRooms.find((room) => room._id === roomId);
-    if (currentRoom) {
-      let updateData = {};
-      if (currentRoom.email === userEmail) updateData.emailjoined = true;
-      else if (currentRoom.usermatch === userEmail)
-        updateData.usermatchjoined = true;
-      likeMutation.mutate({ roomId, updateData });
-    }
+    if (currentRoom) likeMutation.mutate({ room: currentRoom, userEmail });
   };
 
   const swiped = (direction, roomId) => {
@@ -147,7 +150,7 @@ const RoomMatch = ({ accordionComponent }) => {
   const getHighResPhoto = (url) =>
     url ? url.replace(/=s\d+-c(?=[&?]|$)/, "=s400-c") : url;
 
-   const getFullImageUrl = (url) => {
+  const getFullImageUrl = (url) => {
     if (!url) return url;
     if (url.startsWith("http://") || url.startsWith("https://")) return url;
     return `${api.defaults.baseURL}${url}`;
@@ -226,69 +229,76 @@ const RoomMatch = ({ accordionComponent }) => {
 
       {showMatchModal && matchedRoom && (
         <div className="match-modal-overlay">
-          <div className="match-modal">
-            <div className="match-celebration">
-              <div className="floating-hearts">
-                <FaHeart className="heart heart-1" />
-                <FaHeart className="heart heart-2" />
-                <FaHeart className="heart heart-3" />
-                <FaHeart className="heart heart-4" />
-                <FaHeart className="heart heart-5" />
+          <div className="activity-match-modal">
+            <div className="activity-match-header">
+              <h2>Found a Buddy!</h2>
+              <p>You both are interested in the same activity.</p>
+            </div>
+
+            <div className="activity-match-users">
+              <div className="activity-match-user">
+                <img
+                  src={getFullImageUrl(
+                    getHighResPhoto(
+                      users.find((u) => u.email === userEmail)?.photoURL
+                    )
+                  )}
+                  alt="You"
+                />
+                <span>You</span>
               </div>
-              <div className="match-text">
-                <h1>ITS A MATCH!</h1>
-                <p>
-                  You and{" "}
-                  {matchedRoom.email !== userEmail
-                    ? matchedRoom.email
-                    : matchedRoom.usermatch}{" "}
-                  liked each other
-                </p>
-              </div>
-              <div className="match-users">
-                <div className="user-avatar">
-                  <img
-                    src={getFullImageUrl(
-                      getHighResPhoto(
-                        users.find((u) => u.email === userEmail)?.photoURL
-                      )
-                    )}
-                    alt="Your Avatar"
-                  />
-                </div>
-                <FaHeart className="match-heart" />
-                <div className="user-avatar">
-                  <img
-                    src={getFullImageUrl(
-                      getHighResPhoto(
-                        users.find((u) => u.email === userEmail)?.photoURL
-                      )
-                    )}
-                    alt={
-                      matchedRoom.email !== userEmail
+              <div className="activity-match-icon">+</div>
+              <div className="activity-match-user">
+                <img
+                  src={getFullImageUrl(
+                    getHighResPhoto(
+                      users.find((u) => {
+                        const matchedUserEmail =
+                          matchedRoom.email !== userEmail
+                            ? matchedRoom.email
+                            : matchedRoom.usermatch;
+                        return u.email === matchedUserEmail;
+                      })?.photoURL
+                    )
+                  )}
+                  alt="Matched User"
+                />
+                <span>
+                  {users.find(
+                    (u) =>
+                      u.email ===
+                      (matchedRoom.email !== userEmail
                         ? matchedRoom.email
-                        : matchedRoom.usermatch
-                    }
-                  />
-                </div>
+                        : matchedRoom.usermatch)
+                  )?.displayName || "Buddy"}
+                </span>
               </div>
-              <div className="match-actions">
-                <button
-                  className="match-close-btn"
-                  onClick={() => setShowMatchModal(false)}
-                >
-                  Continue Swiping
-                </button>
-                <button
-                  className="match-chat-btn"
-                  onClick={() => {
-                    setShowMatchModal(false);
-                    navigate(`/chat/${matchedRoom._id}`);
-                  }}
-                >
-                  Send Message
-                </button>
-              </div>
+            </div>
+
+            <div className="activity-match-details">
+              <h3>{matchedRoom.title || "Activity"}</h3>
+              <p>
+                Now you can plan this activity together. Let&apos;s start a
+                conversation!
+              </p>
+            </div>
+
+            <div className="activity-match-actions">
+              <button
+                className="secondary-btn"
+                onClick={() => setShowMatchModal(false)}
+              >
+                Find More
+              </button>
+              <button
+                className="primary-btn"
+                onClick={() => {
+                  setShowMatchModal(false);
+                  navigate(`/chat/${matchedRoom._id}`);
+                }}
+              >
+                Plan in Chat
+              </button>
             </div>
           </div>
         </div>

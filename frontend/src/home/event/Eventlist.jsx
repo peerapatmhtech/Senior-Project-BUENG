@@ -4,18 +4,17 @@ import api from "../../server/api";
 import "./Eventlist.css";
 import { useTheme } from "../../context/themecontext";
 import { useSocket } from "../../context/make.com";
-import { MdFavorite, MdFavoriteBorder } from "react-icons/md";
-import { FiCalendar, FiX } from "react-icons/fi";
-import { TbFileDescription } from "react-icons/tb";
+import { MdFavorite, MdFavoriteBorder, MdStar } from "react-icons/md";
+import { FiCalendar, FiX, FiMapPin } from "react-icons/fi";
+import { TbFileDescription, TbTicket } from "react-icons/tb";
 import { toast } from "react-toastify";
-import axios from "axios";
 import PropTypes from "prop-types";
 
 // Helper function to fetch events
 const fetchEvents = async (email) => {
   try {
     const res = await api.get(`/api/events/${email}`);
-    return Array.isArray(res.data) ? res.data : [];
+    return res.data.events || []; // Assuming res.data is { events: [], ... }
   } catch (error) {
     if (error.response && error.response.status === 404) {
       toast.success("ไม่มีกิจกรรมในขณะนี้");
@@ -53,9 +52,10 @@ const EventListContent = ({
           <div key={event._id} className="event-card">
             <img
               className="event-image"
-              src={event.image}
+              src={event.image || event.thumbnail}
               alt={event.title}
               width="200"
+              loading="lazy"
             />
             <div className="row-favorite">
               <h3 className="event-name">{event.title}</h3>
@@ -66,13 +66,11 @@ const EventListContent = ({
                   if (isFav) {
                     handleUnlike(event._id);
                   } else {
-                    handleLike(event._id, event.title);
+                    handleLike(event._id);
                   }
                 }}
                 aria-label={
-                  favoriteEvents.includes(event._id)
-                    ? "Unfavorite"
-                    : "Favorite"
+                  favoriteEvents.includes(event._id) ? "Unfavorite" : "Favorite"
                 }
               >
                 {favoriteEvents.includes(event._id) ? (
@@ -83,7 +81,78 @@ const EventListContent = ({
               </button>
             </div>
             <div className="event-info">
-              <p>
+              {event.date && (
+                <p className="event-date" style={{ marginBottom: "0.5rem" }}>
+                  <FiCalendar style={{ marginRight: "0.5rem", verticalAlign: "text-bottom" }} />
+                  {typeof event.date === "object" && event.date.when
+                    ? event.date.when
+                    : new Date(event.date).toLocaleDateString("th-TH", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                      })}
+                </p>
+              )}
+              {(event.venue || (event.address && event.address.length > 0)) && (
+                <div className="event-venue" style={{ marginBottom: "0.5rem", display: "flex", alignItems: "flex-start" }}>
+                  <FiMapPin style={{ marginRight: "0.5rem", marginTop: "4px", flexShrink: 0 }} />
+                  <div>
+                    {event.venue && (
+                      <div style={{ fontWeight: "bold" }}>
+                        {event.venue.link ? (
+                          <a href={event.venue.link} target="_blank" rel="noopener noreferrer" style={{ color: "inherit", textDecoration: "none" }}>
+                            {event.venue.name}
+                          </a>
+                        ) : (
+                          event.venue.name
+                        )}
+                        {event.venue.rating && (
+                          <span style={{ marginLeft: "0.5rem", fontSize: "0.9em", color: "#f5c518" }}>
+                            <MdStar style={{ verticalAlign: "text-bottom" }} /> {event.venue.rating}
+                            {event.venue.reviews ? ` (${event.venue.reviews})` : ""}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    {event.address && (
+                      <div style={{ fontSize: "0.9em", opacity: 0.8 }}>
+                        {Array.isArray(event.address) ? event.address.join(", ") : event.address}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+              {event.event_location_map?.image && (
+                <div className="event-map-snapshot" style={{ marginBottom: "0.5rem" }}>
+                  <a href={event.event_location_map.link} target="_blank" rel="noopener noreferrer">
+                    {/* <img
+                      src={event.event_location_map.image}
+                      alt="Map"
+                      style={{ width: "100%", borderRadius: "8px", border: "1px solid #ddd", maxHeight: "150px", objectFit: "cover" }}
+                      loading="lazy"
+                    /> */}
+                  </a>
+                </div>
+              )}
+              {event.ticket_info && event.ticket_info.length > 0 && (
+                <div className="event-tickets" style={{ marginBottom: "0.5rem", display: "flex", alignItems: "center", flexWrap: "wrap", gap: "0.5rem" }}>
+                  <TbTicket />
+                  <span className="category-label">Tickets:</span>
+                  {event.ticket_info.map((ticket, idx) => (
+                    <a
+                      key={idx}
+                      href={ticket.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="genre-border"
+                      style={{ textDecoration: "none", cursor: "pointer" }}
+                    >
+                      {ticket.source || "Buy"}
+                    </a>
+                  ))}
+                </div>
+              )}
+              <div>
                 <span className="category-label">Category:</span>
                 {(event.genre ? Object.values(event.genre) : [])
                   .flat()
@@ -92,15 +161,15 @@ const EventListContent = ({
                       {subcategory}
                     </span>
                   ))}
-                {" "}
-              </p>
+              </div>
             </div>
-            <p className="event-description">
-              <TbFileDescription />{" "}
-              <span className="category-label">
-                Description:{event.description}
-              </span>
-            </p>
+            <div className="event-description">
+              <div style={{ display: "flex", alignItems: "center", marginBottom: "0.25rem" }}>
+                <TbFileDescription style={{ marginRight: "0.5rem" }} />
+                <span className="category-label">Description:</span>
+              </div>
+              <p style={{ margin: 0 }}>{event.description || "No description available."}</p>
+            </div>
             <div className="bottom-event">
               <a
                 href={event.link}
@@ -167,16 +236,15 @@ const EventList = ({ setWaiting, waiting }) => {
   const sendPendingFavoritesToWebhook = async () => {
     const pendingArr = pendingFavoritesRef.current;
     if (!Array.isArray(pendingArr) || pendingArr.length === 0) return;
-
     try {
-      await api.post(`/api/events/match`,{
+      await api.post(`/api/events/match`, {
         email: email,
-        action: { eventsTitle: pendingArr.map((event) => event.eventTitle) },
+        action: { eventsId: pendingArr }, // ส่ง eventId ไปตรงๆ
       });
-      await axios.post(import.meta.env.VITE_APP_MAKE_WEBHOOK_MATCH_URL, {
-        email: email,
-        actions: pendingArr.map((event) => ({ event: event.eventTitle })),
-      });
+      // await axios.post(import.meta.env.VITE_APP_MAKE_WEBHOOK_MATCH_URL, {
+      //   email: email,
+      //   actions: pendingArr.map((event) => ({ event: event.eventId })),
+      // });
       pendingFavoritesRef.current = [];
     } catch (error) {
       console.error("Error sending to webhook", error);
@@ -187,7 +255,10 @@ const EventList = ({ setWaiting, waiting }) => {
     if (debounceTimeoutRef.current) {
       clearTimeout(debounceTimeoutRef.current);
     }
-    debounceTimeoutRef.current = setTimeout(sendPendingFavoritesToWebhook, 5000);
+    debounceTimeoutRef.current = setTimeout(
+      sendPendingFavoritesToWebhook,
+      5000
+    );
   };
 
   // The original socket logic is correct for handling external updates,
@@ -254,12 +325,13 @@ const EventList = ({ setWaiting, waiting }) => {
     },
   });
 
-  const createListRefetchingMutation = (
+  const useListRefetchingMutation = (
     mutationFn,
     successMessage,
     errorMessage
   ) => {
-    return useMutation({ // This is the line that needs to be moved
+    return useMutation({
+      // This is the line that needs to be moved
       mutationFn,
       onSuccess: () => {
         toast.success(successMessage);
@@ -273,21 +345,22 @@ const EventList = ({ setWaiting, waiting }) => {
     });
   };
 
-  const deleteMutation = createListRefetchingMutation(
-    (eventId) => api.delete(`/api/events/${eventId}`),
+  const deleteMutation = useListRefetchingMutation(
+    (eventId) =>
+      api.delete(`/api/events/${eventId}`, { data: { email: email } }), // Pass email in request body
     "ลบกิจกรรมสำเร็จ",
     "เกิดข้อผิดพลาดในการลบกิจกรรม"
   );
 
-  const deleteAllMutation = createListRefetchingMutation(
+  const deleteAllMutation = useListRefetchingMutation(
     () => api.delete(`/api/events/user/${email}`),
     "ลบกิจกรรมทั้งหมดสำเร็จ",
     "เกิดข้อผิดพลาดในการลบกิจกรรมทั้งหมด"
   );
 
-  const handleLike = (eventId, title) => {
-    likeMutation.mutate({ userEmail: email, eventId, eventTitle: title });
-    pendingFavoritesRef.current.push({ eventId, eventTitle: title });
+  const handleLike = (eventId) => { // Ensure events is an array before using it
+    likeMutation.mutate({ userEmail: email, eventId });
+    pendingFavoritesRef.current.push(eventId); // เก็บ eventId เป็น string ตรงๆ
     debouncedSendWebhook();
   };
 
@@ -313,16 +386,17 @@ const EventList = ({ setWaiting, waiting }) => {
   return (
     <>
       <button
-        className="eventlist-modal-toggle-btn"
+        className={`eventlist-modal-toggle-btn ${isDarkMode ? "dark-mode" : ""}`}
         onClick={() => setIsModalOpen(true)}
         aria-label="Open Events"
       >
         <FiCalendar />
       </button>
       <div className="eventlist-desktop-view">
+        {/* Ensure events is an array before passing to content */}
         <EventListContent
           isDarkMode={isDarkMode}
-          events={events}
+          events={Array.isArray(events) ? events : []}
           favoriteEvents={favoriteEvents}
           handleUnlike={handleUnlike}
           handleLike={handleLike}
@@ -350,8 +424,9 @@ const EventList = ({ setWaiting, waiting }) => {
           </div>
           <div className="eventlist-modal-content">
             <EventListContent
+              // Ensure events is an array before passing to content
               isDarkMode={isDarkMode}
-              events={events}
+              events={Array.isArray(events) ? events : []}
               favoriteEvents={favoriteEvents}
               handleUnlike={handleUnlike}
               handleLike={handleLike}

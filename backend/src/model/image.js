@@ -1,6 +1,6 @@
 // models/ImageGenre.js
 
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
 
 const imageGenreSchema = new mongoose.Schema({
   image: {
@@ -8,7 +8,7 @@ const imageGenreSchema = new mongoose.Schema({
     required: true,
   },
   genres: {
-    type: String, 
+    type: String,
     required: true,
   },
   createdAt: {
@@ -17,4 +17,4 @@ const imageGenreSchema = new mongoose.Schema({
   },
 });
 
-export const ImageGenre = mongoose.model("ImageGenre", imageGenreSchema);
+export const ImageGenre = mongoose.model('ImageGenre', imageGenreSchema);

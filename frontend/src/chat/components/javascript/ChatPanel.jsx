@@ -1,15 +1,13 @@
-import React, { useEffect, useState } from "react";
-import { MdAttachFile } from "react-icons/md";
-import { IoIosArrowBack, IoMdSend } from "react-icons/io";
-import ProfileModal from "./ProfileModal";
-import { useQuery } from "@tanstack/react-query";
-import { fetchFollowInfo, fetchInfos, fetchUsers } from "../../../lib/queries";
+import React, { useEffect, useState } from 'react';
+import { IoIosArrowBack, IoMdSend } from 'react-icons/io';
+import PropTypes from 'prop-types';
+import ProfileModal from './ProfileModal';
+import { useQuery } from '@tanstack/react-query';
+import { fetchFollowInfo, fetchInfos, fetchUsers } from '../../../lib/queries';
 
 const ChatPanel = ({
   messages,
   userEmail,
-  userPhoto,
-  userName,
   sortedFriends,
   RoomsBar,
   openchat,
@@ -21,8 +19,8 @@ const ChatPanel = ({
   endOfMessagesRef,
   defaultProfileImage,
   setFriends,
-  setJoinedRooms,
   formatChatDate,
+  disabled,
 }) => {
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
@@ -30,16 +28,16 @@ const ChatPanel = ({
 
   // Fetch data using React Query
   const { data: users = [] } = useQuery({
-    queryKey: ["users"],
+    queryKey: ['users'],
     queryFn: fetchUsers,
   });
   const { data: getnickName = [] } = useQuery({
-    queryKey: ["infos"],
+    queryKey: ['infos'],
     queryFn: fetchInfos,
   });
 
   const { data: followInfo } = useQuery({
-    queryKey: ["followInfo", userImage?.email],
+    queryKey: ['followInfo', userImage?.email],
     queryFn: () => fetchFollowInfo(userImage?.email),
     enabled: !!userImage?.email, // Only run query if userImage.email exists
   });
@@ -62,35 +60,35 @@ const ChatPanel = ({
     }
   }, [userImage]);
   return (
-    <div className={`chat-container ${openchat ? "mobile-layout-mode" : ""}`}>
-      <div className={`show-info ${openchat ? "mobile-layout-mode" : ""}`}>
+    <div className={`chat-container ${openchat ? 'mobile-layout-mode' : ''}`}>
+      <div className={`show-info ${openchat ? 'mobile-layout-mode' : ''}`}>
         <button
-          className={`back-button-mobile ${
-            openchat ? "mobile-layout-mode" : ""
-          }`}
+          className={`back-button-mobile ${openchat ? 'mobile-layout-mode' : ''}`}
           onClick={() => setOpenchat(false)}
           style={{
-            WebkitTapHighlightColor: "transparent",
-            userSelect: "none",
+            WebkitTapHighlightColor: 'transparent',
+            userSelect: 'none',
           }}
         >
           <IoIosArrowBack />
         </button>
         <div className="center-mobile">
           <img
-            src={
-              (() => {
-                if (!userImage || !users) return defaultProfileImage;
-                // For group chats/communities
-                if (userImage.image) return userImage.image;
-                // For 1-on-1 chats (friends or matches)
-                const partnerEmail = userImage.usermatch ? (userImage.email === userEmail ? userImage.usermatch : userImage.email) : userImage.email;
-                const partnerUser = users.find(u => u.email === partnerEmail);
-                return partnerUser?.photoURL || defaultProfileImage;
-              })()
-            }
+            src={(() => {
+              if (!userImage || !users) return defaultProfileImage;
+              // For group chats/communities
+              if (userImage.image) return userImage.image;
+              // For 1-on-1 chats (friends or matches)
+              const partnerEmail = userImage.usermatch
+                ? userImage.email === userEmail
+                  ? userImage.usermatch
+                  : userImage.email
+                : userImage.email;
+              const partnerUser = users.find((u) => u.email === partnerEmail);
+              return partnerUser?.photoURL || defaultProfileImage;
+            })()}
             alt="Profile"
-            className={`chat-profile ${openchat ? "mobile-layout-mode" : ""}`}
+            className={`chat-profile ${openchat ? 'mobile-layout-mode' : ''}`}
             onClick={() => {
               if (!userImage || !users) return;
               const userObject =
@@ -101,34 +99,46 @@ const ChatPanel = ({
             }}
           />
         </div>
-        <h2 className={`chat-title ${openchat ? "mobile-layout-mode" : ""}`}>
-          {(userImage &&
-            Array.isArray(getnickName) &&
-            users &&
-            (getnickName.find((u) => u.email === userImage?.usermatch)
-              ?.nickname ||
-              getnickName.find((u) => u.email === userImage?.email)?.nickname ||
-              users.find((u) => u.email === userImage?.usermatch)
-                ?.displayName ||
-              users.find((u) => u.email === userImage?.email)?.displayName ||
+        <h2 className={`chat-title ${openchat ? 'mobile-layout-mode' : ''}`}>
+          {(() => {
+            const partnerEmail = userImage?.usermatch
+              ? userImage.email === userEmail
+                ? userImage.usermatch
+                : userImage.email
+              : userImage?.email;
+
+            const nickname =
+              partnerEmail &&
+              Array.isArray(getnickName) &&
+              getnickName.find((u) => u.email === partnerEmail)?.nickname;
+
+            const displayName =
+              partnerEmail &&
+              Array.isArray(users) &&
+              users.find((u) => u.email === partnerEmail)?.displayName;
+
+            return (
+              nickname ||
+              displayName ||
               (RoomsBar && RoomsBar.roomName) ||
-              userName)) ||
-            "Chat"}
+              userImage?.name ||
+              userImage?.displayName ||
+              'Chat'
+            );
+          })()}
         </h2>
       </div>
       <div className="chat-box">
         {messages.length === 0 ? (
           <div
             style={{
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              height: "100%",
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              height: '100%',
             }}
           >
-            <span style={{ color: "#888", fontSize: "1.1rem" }}>
-              ยังไม่มีข้อความ
-            </span>
+            <span style={{ color: '#888', fontSize: '1.1rem' }}>ยังไม่มีข้อความ</span>
           </div>
         ) : (
           messages.map((msg, index) => {
@@ -137,12 +147,10 @@ const ChatPanel = ({
               (user) => user.email?.toLowerCase() === msg.sender?.toLowerCase()
             );
             const messageDate = msg.timestamp?.toDate();
-            const previousMessageDate =
-              index > 0 ? messages[index - 1].timestamp?.toDate() : null;
+            const previousMessageDate = index > 0 ? messages[index - 1].timestamp?.toDate() : null;
             const isNewDay =
               !previousMessageDate ||
-              messageDate?.toDateString() !==
-                previousMessageDate?.toDateString();
+              messageDate?.toDateString() !== previousMessageDate?.toDateString();
 
             return (
               <React.Fragment key={msg.id}>
@@ -151,37 +159,23 @@ const ChatPanel = ({
                     {messageDate && formatChatDate(messageDate)}
                   </div>
                 )}
-                <div
-                  className={`chat-message ${
-                    isCurrentUser ? "my-message" : "other-message"
-                  }`}
-                >
+                <div className={`chat-message ${isCurrentUser ? 'my-message' : 'other-message'}`}>
                   {!isCurrentUser && (
                     <img
                       src={senderInfo?.photoURL || defaultProfileImage}
                       alt="Sender"
                       className="message-avatar"
                       onClick={() => handleProfileClick(senderInfo)}
-                      style={{ cursor: "pointer" }}
+                      style={{ cursor: 'pointer' }}
                     />
                   )}
-                  <div
-                    className={`message-content ${
-                      isCurrentUser ? "current" : "other"
-                    }`}
-                  >
+                  <div className={`message-content ${isCurrentUser ? 'current' : 'other'}`}>
                     <div className="colum-message">
-                      <div
-                        className={`message-bubble ${
-                          isCurrentUser ? "current" : "other"
-                        }`}
-                      >
+                      <div className={`message-bubble ${isCurrentUser ? 'current' : 'other'}`}>
                         {msg.content || msg.text}
                       </div>
                       {isCurrentUser && index === messages.length - 1 && (
-                        <div className="seen-status">
-                          {msg.isSeen ? "Seen" : ""}
-                        </div>
+                        <div className="seen-status">{msg.isSeen ? 'Seen' : ''}</div>
                       )}
                     </div>
                   </div>
@@ -199,13 +193,26 @@ const ChatPanel = ({
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyPress={(e) => e.key === "Enter" && handleSend()}
-            placeholder={"Writing something..."}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !disabled) {
+                e.preventDefault();
+                handleSend();
+              }
+            }}
+            placeholder={disabled ? 'กรุณาเลือกห้องแชท' : 'Writing something...'}
             className="chat-input"
+            disabled={disabled}
+            style={{
+              opacity: disabled ? 0.6 : 1,
+              cursor: disabled ? 'not-allowed' : 'text',
+            }}
           />
           <div className="emoji">{/* <MdAttachFile /> */}</div>
           <div className="emoji-left">
-            <IoMdSend onClick={handleSend} />
+            <IoMdSend
+              onClick={!disabled ? handleSend : undefined}
+              style={{ opacity: disabled ? 0.5 : 1, cursor: disabled ? 'not-allowed' : 'pointer' }}
+            />
           </div>
         </div>
       </div>
@@ -220,7 +227,6 @@ const ChatPanel = ({
         setFriends={setFriends}
         sortedFriends={sortedFriends}
         followers={followers}
-        setJoinedRooms={setJoinedRooms}
         following={following}
         users={users}
       />
@@ -229,3 +235,23 @@ const ChatPanel = ({
 };
 
 export default ChatPanel;
+
+ChatPanel.propTypes = {
+  messages: PropTypes.array.isRequired,
+  userEmail: PropTypes.string.isRequired,
+  userPhoto: PropTypes.string,
+  sortedFriends: PropTypes.array.isRequired,
+  RoomsBar: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
+  openchat: PropTypes.bool.isRequired,
+  input: PropTypes.string.isRequired,
+  setInput: PropTypes.func.isRequired,
+  handleSend: PropTypes.func.isRequired,
+  userImage: PropTypes.object,
+  setOpenchat: PropTypes.func.isRequired,
+  endOfMessagesRef: PropTypes.object.isRequired,
+  defaultProfileImage: PropTypes.string.isRequired,
+  formatChatDate: PropTypes.func.isRequired,
+  setFriends: PropTypes.func.isRequired,
+  disabled: PropTypes.bool,
+};
+

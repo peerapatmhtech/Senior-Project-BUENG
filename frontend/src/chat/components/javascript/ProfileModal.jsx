@@ -8,6 +8,8 @@ import {
   fetchUserPhotos,
 } from "../../../lib/queries";
 import api from "../../../server/api";
+import ProfileModalBody from "./ProfileModalBody";
+import ProfileModalGallery from "./ProfileModalGallery";
 
 const ProfileModal = ({
   isOpen,
@@ -66,22 +68,37 @@ const ProfileModal = ({
     }
   };
 
+  const getDeleteType = () => {
+    if (userImage?.usermatch) return "match";
+    if (isCom) return "room";
+    return "friend";
+  };
+
+  const deleteType = getDeleteType();
+
   const handleDeleteClick = () => {
+
     deleteFriendMutation.mutate(
       {
-        type: isCom ? "room" : "friend",
+        type: deleteType,
         userToDelete: userImage.email,
         roomName: userImage.name,
         infoMatchId: userImage._id,
       },
       {
         onSuccess: () => {
-          toast.success("ลบผู้ใช้สำเร็จ");
+          toast.success(
+            deleteType === "match"
+              ? "ยกเลิกแมตช์สำเร็จ"
+              : deleteType === "room"
+              ? "ออกจากกลุ่มสำเร็จ"
+              : "ลบเพื่อนสำเร็จ"
+          );
           onClose();
         },
         onError: (error) => {
-          console.error("Error deleting user:", error);
-          toast.error("เกิดข้อผิดพลาดในการลบผู้ใช้");
+          console.error("Error deleting:", error);
+          toast.error("เกิดข้อผิดพลาดในการลบ");
         },
       }
     );
@@ -106,89 +123,27 @@ const ProfileModal = ({
   return (
     <div className="profile-modal-overlay" onClick={onClose}>
       <div className="profile-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="profile-modal-body">
-          <div className="profile-modal-user">
-            <img
-              src={getFullImageUrl(getHighResPhoto(profilePhotoUrl))}
-              alt={
-                matchedUser?.displayName ||
-                userImage?.displayName ||
-                "ผู้ใช้" ||
-                userImage.name ||
-                "ไม่มีชื่อ"
-              }
-              className="profile-modal-avatar"
-            />
-            <div className="profile-modal-name">
-              {matchedUser?.displayName ||
-                userImage?.displayName ||
-                userImage?.name ||
-                "ไม่มีชื่อ"}
-            </div>
-            <div className="profile-modal-email">
-              {userImage.email === userEmail
-                ? userImage.usermatch
-                : userImage.email}
-            </div>
-          </div>
-          <div className="profile-modal-follow-info">
-            {isCom ? (
-              <ul className="show-com">
-                <li>
-                  <span className="Created">Created By : </span>
-                  <span className="Created-detail">{userImage.createdBy}</span>
-                </li>
-                <li>
-                  <span className="Created">Description : </span>
-                  <span className="Created-detail">
-                    {userImage.description}
-                  </span>
-                </li>
-              </ul>
-            ) : (
-              <div className="profile-modal-follow-info-details">
-                <div className="profile-modal-follow-info-header">
-                  <ul className="followers">
-                    <li>{followers.length} followers</li>
-                  </ul>
-                  <ul className="following">
-                    <li>{following.length} following</li>
-                  </ul>
-                </div>
-                <button
-                  className="chat-dropdown-item"
-                  onClick={handleFollowClick}
-                  disabled={followMutation.isLoading}
-                >
-                  {followMutation.isLoading
-                    ? "กำลังดำเนินการ..."
-                    : isFollowing
-                    ? "กำลังติดตาม"
-                    : "ติดตาม"}
-                </button>
-              </div>
-            )}
-          </div>
-
-          <button
-            className="modal-profile"
-            onClick={handleDeleteClick}
-            disabled={deleteFriendMutation.isLoading}
-          >
-            {deleteFriendMutation.isLoading ? "กำลังลบ..." : "ลบเพื่อน"}
-          </button>
-        </div>
-        {userPhotosData && userPhotosData.length > 0 && (
-          <div className="profile-modal-gallery">
-            <div className="photo-grid">
-              {userPhotosData.map((photo) => (
-                <div key={photo.url} className="photo-grid-item">
-                  <img src={getFullImageUrl(photo.url)} alt="User upload" />
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        <ProfileModalBody
+          getFullImageUrl={getFullImageUrl}
+          getHighResPhoto={getHighResPhoto}
+          profilePhotoUrl={profilePhotoUrl}
+          matchedUser={matchedUser}
+          userImage={userImage}
+          userEmail={userEmail}
+          isCom={isCom}
+          followers={followers}
+          following={following}
+          handleFollowClick={handleFollowClick}
+          isFollowLoading={followMutation.isLoading}
+          isFollowing={isFollowing}
+          handleDeleteClick={handleDeleteClick}
+          isDeleteLoading={deleteFriendMutation.isLoading}
+          deleteType={deleteType}
+        />
+        <ProfileModalGallery
+          userPhotosData={userPhotosData}
+          getFullImageUrl={getFullImageUrl}
+        />
       </div>
       <ToastContainer position="top-right" autoClose={3000} hideProgressBar />
     </div>

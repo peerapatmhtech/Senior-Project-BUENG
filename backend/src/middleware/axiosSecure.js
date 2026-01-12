@@ -44,7 +44,6 @@
 //   }
 // );
 
-
 // // Response interceptor for handling token expiration (existing logic)
 // api.interceptors.response.use(
 //   (response) => {
@@ -52,7 +51,7 @@
 //   },
 //   async (error) => {
 //     const originalRequest = error.config;
-    
+
 //     // Handle CSRF validation failure
 //     if (error.response?.status === 403 && error.response?.data?.code === 'EBADCSRFTOKEN') {
 //         console.error('❌ CSRF Token validation failed. Refetching token and retrying...');
@@ -63,7 +62,7 @@
 //             return api(originalRequest); // Retry the request
 //         }
 //     }
-    
+
 //     return Promise.reject(error);
 //   }
 // );

@@ -1,5 +1,5 @@
 // Friend.js
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
 
 const FriendSchema = new mongoose.Schema(
   {
@@ -9,7 +9,7 @@ const FriendSchema = new mongoose.Schema(
       {
         email: String,
         roomId: String,
-      }
+      },
     ],
     following: { type: [String], default: [] },
     followers: { type: [String], default: [] },
@@ -26,7 +26,7 @@ FriendSchema.statics.addFriend = async function (userEmail, friendEmail, roomId)
       friends: [{ email: friendEmail, roomId }],
     });
   } else {
-    if (!user.friends.some(f => f.email === friendEmail)) {
+    if (!user.friends.some((f) => f.email === friendEmail)) {
       user.friends.push({ email: friendEmail, roomId });
     }
   }
@@ -37,16 +37,16 @@ FriendSchema.statics.addFriend = async function (userEmail, friendEmail, roomId)
 // removeFriend: ลบเพื่อน (ลบด้วย email)
 FriendSchema.statics.removeFriend = async function (userEmail, friendEmail) {
   const user = await this.findOne({ email: userEmail });
-  if (!user) throw new Error("User not found");
+  if (!user) throw new Error('User not found');
   user.friends = user.friends.filter((f) => f.email !== friendEmail);
   await user.save();
   return user;
 };
 
 // ✅ เพิ่ม getAllUsers ตรงนี้
-FriendSchema.statics.getAllUsers = async function () {
-  return await this.find(); // ดึง users ทั้งหมดใน collection 'friends'
+FriendSchema.statics.getAllUsers = function () {
+  return this.find(); // ดึง users ทั้งหมดใน collection 'friends'
 };
 
-export const Friend = mongoose.model("Friend", FriendSchema);
+export const Friend = mongoose.model('Friend', FriendSchema);
 export default Friend;

@@ -1,12 +1,26 @@
 import mongoose from 'mongoose';
 
 const roomSchema = new mongoose.Schema({
-  name: String,
-  image: String,
+  name: {
+    type: String,
+    required: [true, 'กรุณาระบุชื่อห้อง'],
+    unique: true,
+    trim: true,
+  },
+  image: {
+    type: String,
+    required: [true, 'กรุณาใส่ URL รูปภาพ'],
+  },
   description: String,
   roomId: String,
+  memberLimit: {
+    type: Number,
+    required: [true, 'กรุณาระบุจำนวนสมาชิกสูงสุด'],
+    min: 1,
+  },
+  tags: [String],
   createdBy: String, // ชื่อหรืออีเมลของผู้สร้าง
   createdAt: { type: Date, default: Date.now },
 });
 
-export const Room = mongoose.model("Room", roomSchema);
+export const Room = mongoose.model('Room', roomSchema);

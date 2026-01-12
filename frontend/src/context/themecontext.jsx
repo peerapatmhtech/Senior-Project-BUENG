@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 
 // สร้าง context
 const ThemeContext = createContext();
@@ -27,4 +27,5 @@ export const ThemeProvider = ({ children }) => {
 };
 
 // hook เรียกใช้ theme ได้ง่าย ๆ
+// eslint-disable-next-line react-refresh/only-export-components
 export const useTheme = () => useContext(ThemeContext);

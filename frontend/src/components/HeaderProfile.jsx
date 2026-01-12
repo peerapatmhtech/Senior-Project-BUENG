@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect } from "react";
 import { useTheme } from "../context/themecontext";
 import { useNotifications } from "../context/notificationContext";
 import "./HeaderProfile.css";

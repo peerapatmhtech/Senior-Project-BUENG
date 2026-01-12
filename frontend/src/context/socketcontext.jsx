@@ -1,8 +1,9 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState, useMemo } from 'react';
 import io from 'socket.io-client';
 
 const SocketContext = createContext();
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useSocket = () => {
   const context = useContext(SocketContext);
   if (!context) {
@@ -21,13 +22,15 @@ export const SocketProvider = ({ children }) => {
   const displayName = localStorage.getItem('userName');
   const photoURL = localStorage.getItem('userPhoto');
   // สร้าง socket connection
-  const socket = io(import.meta.env.VITE_APP_API_BASE_URL);
+  const socket = useMemo(() => io(import.meta.env.VITE_APP_API_BASE_URL), []);
 
   useEffect(() => {
     if (!userEmail) {
       console.warn('No user email found');
       return;
     }
+
+    if (!socket.connected) socket.connect();
 
     // Set up event listeners
     setupSocketListeners(socket);
@@ -62,8 +65,9 @@ export const SocketProvider = ({ children }) => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
       clearInterval(pingInterval);
       socket.close();
+      socket.removeAllListeners();
     };
-  }, [userEmail, displayName, photoURL]);
+  }, [userEmail, displayName, photoURL, socket]);
 
   const setupSocketListeners = (socket) => {
     // รับข้อมูลการอัปเดตสถานะผู้ใช้

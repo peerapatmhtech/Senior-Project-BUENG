@@ -12,7 +12,7 @@ export const authMiddleware = async (req, res, next) => {
 
   try {
     const decodedToken = await admin.auth().verifyIdToken(idToken);
-    
+
     // Find or create user in local MongoDB
     let user = await Gmail.findOne({ email: decodedToken.email });
 

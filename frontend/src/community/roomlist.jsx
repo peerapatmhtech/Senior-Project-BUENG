@@ -1,21 +1,23 @@
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import api from "../server/api";
 import { useNavigate } from "react-router-dom";
 import "./css/roomlist.css";
 import { toast } from "react-toastify";
 import { useTheme } from "../context/themecontext";
+import PropTypes from "prop-types";
+import { FaUsers } from "react-icons/fa";
 
 const RoomList = ({
+  rooms = [],
+  isLoading: isLoadingRooms,
   showOnlyMyRooms,
   isDeleteMode,
   selectedRooms,
   setSelectedRooms,
 }) => {
   const userEmail = localStorage.getItem("userEmail");
-  const displayName = localStorage.getItem("userName");
   const { isDarkMode } = useTheme();
-  const [rooms, setRooms] = useState([]);
-  const [joinedRoomIds, setJoinedRoomIds] = useState([]);
   const navigate = useNavigate();
 
   const handleRoomSelect = (roomId) => {
@@ -26,41 +28,28 @@ const RoomList = ({
     );
   };
 
-  useEffect(() => {
-    const fetchRooms = async () => {
-      try {
-        const res = await api.get(`/api/allrooms`);
-
-        // ดึงห้องที่ user join แล้ว
+  const { data: joinedRoomIds = [], isLoading: isLoadingJoined } = useQuery({
+    queryKey: ["userJoinedRooms", userEmail],
+    queryFn: async () => {
         const filterjoinedRooms = await api.get(`/api/user-rooms/${userEmail}`);
-        // สมมติ API ส่งกลับเป็น { roomNames: [{ _id, name, ... }] }
-        const joinedIds = Array.isArray(filterjoinedRooms.data.roomIds)
+        return Array.isArray(filterjoinedRooms.data.roomIds)
           ? filterjoinedRooms.data.roomIds.filter((id) => !!id)
           : [];
-        setJoinedRoomIds(joinedIds);
-        setRooms(res.data);
-
-        // ดึงห้องทั้งหมด
-      } catch (error) {
-        console.error("ไม่สามารถโหลดห้อง:", error);
-      }
-    };
-    fetchRooms();
-  }, [userEmail]);
+    },
+    enabled: !!userEmail,
+  });
 
   // filter ห้องที่ user ยังไม่ได้ join
-  let filteredRooms;
+  const filteredRooms = useMemo(() => {
+    if (showOnlyMyRooms) {
+      return rooms.filter((room) => joinedRoomIds.includes(room._id));
+    }
+    return rooms;
+  }, [rooms, showOnlyMyRooms, joinedRoomIds]);
 
-  if (showOnlyMyRooms) {
-    filteredRooms = rooms.filter((room) => room.createdBy === displayName);
-  } else if (!joinedRoomIds || joinedRoomIds.length === 0) {
-    filteredRooms = rooms; // แสดงทุกห้อง
-  } else {
-    filteredRooms = rooms.filter((room) => !joinedRoomIds.includes(room._id));
-  }
+  const isJoined = (roomId) => joinedRoomIds.includes(roomId);
 
   const handleAddCommunity = async (roomId, roomName) => {
-    // console.log(roomId, roomName);
     try {
       const res = await api.post(`/api/join-community`, {
         userEmail,
@@ -82,8 +71,14 @@ const RoomList = ({
     }
   };
 
-  const handleEnterRoom = (roomId, roomName) => {
-    handleAddCommunity(roomId, roomName);
+  const handleRoomClick = (room) => {
+    if (isDeleteMode) {
+      handleRoomSelect(room._id);
+    } else if (showOnlyMyRooms || isJoined(room._id)) {
+      navigate(`/chat/${room._id}`);
+    } else {
+      handleAddCommunity(room._id, room.name);
+    }
   };
 
   const getFullImageUrl = (url) => {
@@ -92,11 +87,13 @@ const RoomList = ({
     return `${api.defaults.baseURL}${url}`;
   };
 
+  const isLoading = isLoadingRooms || isLoadingJoined;
+  
   return (
     <section className={`roomlist-section ${isDarkMode ? "dark-mode" : ""}`}>
       <header className="roomlist-header"></header>
       <div className="room-list">
-        {filteredRooms.length === 0 ? (
+        {isLoading ? (
           <div className="roomlist-empty-loading">
             <div className="roomlist-empty-spinner">
               <div className="roomlist-empty-bar"></div>
@@ -104,6 +101,10 @@ const RoomList = ({
               <div className="roomlist-empty-bar"></div>
               <div className="roomlist-empty-bar"></div>
             </div>
+            <div className="roomlist-empty-text">กำลังโหลดห้อง...</div>
+          </div>
+        ) : filteredRooms.length === 0 ? (
+          <div className="roomlist-empty-loading">
             <div className="roomlist-empty-text">ยังไม่มีห้องในขณะนี้</div>
           </div>
         ) : (
@@ -113,11 +114,7 @@ const RoomList = ({
               className={`room-container card-room ${
                 selectedRooms.includes(room._id) ? "selected" : ""
               }`}
-              onClick={() =>
-                isDeleteMode
-                  ? handleRoomSelect(room._id)
-                  : handleEnterRoom(room._id, room.name)
-              }
+              onClick={() => handleRoomClick(room)}
             >
               <div className="room-image-wrap">
                 {room.image ? (
@@ -155,10 +152,24 @@ const RoomList = ({
               <>
                 <h4 className="room-name">{room.name}</h4>
                 <p className="room-desc">{room.description}</p>
-                <div className="room-meta">
-                  <span className="room-creator">
-                    สร้างโดย: {room.createdBy}
-                  </span>
+                <div className="room-actions">
+                  <div className="room-member-count">
+                    <FaUsers />
+                    <span>{room.memberCount || 0}</span>
+                  </div>
+                  {!showOnlyMyRooms && (
+                    <button
+                      className={`join-button ${
+                        isJoined(room._id) ? "joined" : ""
+                      }`}
+                      onClick={(e) => {
+                        e.stopPropagation(); // Prevent card click
+                        handleRoomClick(room);
+                      }}
+                    >
+                      {isJoined(room._id) ? "Joined" : "Join"}
+                    </button>
+                  )}
                 </div>
               </>
             </div>
@@ -170,3 +181,12 @@ const RoomList = ({
 };
 
 export default RoomList;
+
+RoomList.propTypes = {
+  rooms: PropTypes.array,
+  isLoading: PropTypes.bool,
+  showOnlyMyRooms: PropTypes.bool.isRequired,
+  isDeleteMode: PropTypes.bool.isRequired,
+  selectedRooms: PropTypes.array.isRequired,
+  setSelectedRooms: PropTypes.func.isRequired,
+};

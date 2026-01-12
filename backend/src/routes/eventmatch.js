@@ -1,99 +1,89 @@
-import express from "express";
-import { EventMatch } from "../model/eventmatch.js";
-import { Like } from "../model/like.js";
-import { InfoMatch } from "../model/infomatch.js";
+import express from 'express';
+import { Like } from '../model/like.js';
+import { InfoMatch } from '../model/infomatch.js';
 
 export default function (io) {
   const router = express.Router();
 
-  router.post("/events/match", async (req, res) => {
+  router.post('/events/match', async (req, res) => {
     const { email, action } = req.body;
 
+    if (!email) {
+      return res.status(400).json({ message: 'Email is required' });
+    }
+
+    // Check if there are any likes for the provided email
+    // FIX: Check Like model instead of InfoMatch (InfoMatch doesn't have userEmail and is for results)
+    const emailExists = await Like.findOne({ userEmail: email });
+    if (!emailExists) {
+      return res.status(404).json({ message: 'No likes found for the provided email' });
+    }
+
     try {
-      // Find likes from other users
-      const otherUserLikes = await Like.find({ userEmail: { $ne: email } });
+      const currentUserEventIds = action.eventsId;
+
+      // Find likes from other users that match the current user's liked events
+      const otherUserLikes = await Like.find({
+        userEmail: { $ne: email },
+        eventId: { $in: currentUserEventIds },
+      });
 
       if (!otherUserLikes || otherUserLikes.length === 0) {
-        return res
-          .status(404)
-          .json({ message: "No likes found from other users" });
+        return res.status(200).json({ message: 'No likes found from other users' });
       }
 
-      const currentUserEventTitles = action.eventsTitle;
-
-      const matchedLikes = [];
-
-      // Loop through other users' likes and find matches
       for (const like of otherUserLikes) {
-        if (currentUserEventTitles.includes(like.eventTitle)) {
-          matchedLikes.push(like);
-        }
-      }
+        // To ensure uniqueness, sort emails alphabetically
+        const users = [email, like.userEmail].sort();
 
-      if (matchedLikes.length === 0) {
-        return res.status(404).json({ message: "No matching events found" });
-      }
-
-      for (const like of matchedLikes) {
-        const newInfoMatch = new InfoMatch({
-          detail: like.eventTitle,
-          usermatchjoined: false,
-          emailjoined: false,
-          email: req.body.email,
-          chance: 40,
-          usermatch: like.userEmail,
+        // Avoid creating duplicate pending matches
+        const existingMatch = await InfoMatch.findOne({
+          // eventId: like.eventId, // เอาออกเพื่อเช็คแค่ว่า User คู่นี้เคย Match กันหรือยัง (ไม่สนว่า Event ไหน)
+          email: users[0],
+          usermatch: users[1],
+          status: { $in: ['pending', 'matched'] }, // Don't recreate if it was already unmatched
         });
+        if (existingMatch) continue;
+
+        const newInfoMatch = new InfoMatch({
+          eventId: like.eventId,
+          detail: like.eventTitle,
+          email: users[0], // Always store the alphabetically first email here
+          usermatch: users[1], // And the second here
+          chance: 40,
+          status: 'pending', // Initial status
+          initiatorEmail: email, // The user who triggered this action
+        });
+
         await newInfoMatch.save();
-        io.emit("match_updated"); // Emit event here
+        io.emit('match_updated'); // Emit event here
       }
 
-      res.status(200).json({ message: "Matching events found", matchedLikes });
+      res.status(200).json({
+        message: 'Matching process completed',
+        matchedLikes: otherUserLikes,
+      });
     } catch (error) {
-      console.error("Error matching events:", error);
-      res.status(500).json({ message: "Server error" });
+      console.error('Error matching events:', error);
+      res.status(500).json({ message: 'Server error' });
     }
   });
 
-  router.get("/events-match/:email", async (req, res) => {
+  // This route is now used for "skipping" a match
+  router.delete('/infomatch/:id', async (req, res) => {
     try {
-      const events = await EventMatch.find({ email: req.params.email }); // เรียงตามวันที่
-      res.json(events);
-    } catch (error) {
-      console.error("❌ Error fetching events:", error);
-      res.status(500).json({ message: "Server error" });
-    }
-  });
-  router.delete("/events-match", async (req, res) => {
-    try {
-      await EventMatch.deleteMany({}); // ลบทุกเอกสารใน collection
-      res.status(200).json({ message: "ลบกิจกรรมทั้งหมดเรียบร้อยแล้ว" });
-    } catch (error) {
-      console.error("❌ Error deleting events:", error);
-      res.status(500).json({ message: "Server error" });
-    }
-  });
+      const { id } = req.params;
+      const match = await InfoMatch.findById(id);
 
-  // ลบ event match เฉพาะห้องที่ระบุ
-  router.delete("/delete-event-match/:roomId", async (req, res) => {
-    try {
-      const { roomId } = req.params;
-      const result = await EventMatch.deleteOne({ roomId });
-      if (result.deletedCount === 0) {
-        return res.status(404).json({ message: "Event match not found" });
+      if (!match) {
+        return res.status(404).json({ message: 'Match not found' });
       }
-      res.status(200).json({ message: "ลบ event match เรียบร้อยแล้ว" });
+      console.log('Deleting match with ID:', id);
+      await InfoMatch.findByIdAndDelete(id);
+      res.status(200).json({ message: 'Match deleted successfully', match });
     } catch (error) {
-      console.error("❌ Error deleting event match:", error);
-      res.status(500).json({ message: "Server error" });
-    }
-  });
-  router.delete("/delete-event-match-all", async (req, res) => {
-    try {
-      await EventMatch.deleteMany({});
-      res.status(200).json({ message: "ลบ event match ทั้งหมดเรียบร้อยแล้ว" });
-    } catch (error) {
-      console.error("❌ Error deleting event match:", error);
-      res.status(500).json({ message: "Server error" });
+      console.error('❌ Error updating match status:', error);
+      res.status(500).json({ message: 'Server error' });
     }
   });
 

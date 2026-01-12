@@ -1,37 +1,36 @@
 // ✅ Import libraries และตั้งค่าเบื้องต้น
-import express from "express";
-import cors from "cors";
-import bodyParser from "body-parser";
-import dotenv from "dotenv";
-import http from "http";
-import { Server } from "socket.io";
-import path from "path";
-import { fileURLToPath } from "url";
-import userRoutes from "./src/routes/gmail.js";
-import friendRoutes from "./src/routes/friend.js";
-import roomRoutes from "./src/routes/room.js";
-import infoRoutes from "./src/routes/info.js";
-import eventRoutes from "./src/routes/event.js";
-import likeRoutes from "./src/routes/like.js"; // Routes from "./routes/like.js";
-import roommatchRoutes from "./src/routes/eventmatch.js"; // Routes from "./routes/room.js";
-import mongoose from "mongoose";
-import { Filter } from "./src/model/filter.js";
-import { Event } from "./src/model/event.js";
-import axios from "axios";
+import express from 'express';
+import cors from 'cors';
+import bodyParser from 'body-parser';
+import dotenv from 'dotenv';
+import http from 'http';
+import { Server } from 'socket.io';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import userRoutes from './src/routes/gmail.js';
+import friendRoutes from './src/routes/friend.js';
+import roomRoutes from './src/routes/room.js';
+import infoRoutes from './src/routes/info.js';
+import eventRoutes from './src/routes/event.js';
+import likeRoutes from './src/routes/like.js'; // Routes from "./routes/like.js";
+import roommatchRoutes from './src/routes/eventmatch.js'; // Routes from "./routes/room.js";
+import mongoose from 'mongoose';
+import { Filter } from './src/model/filter.js';
+import { Event } from './src/model/event.js';
+import axios from 'axios';
 
 // Import new routes (ES Modules style)
-import friendRequestRoutes from "./src/routes/friendRequest.js";
-import aiRoute from "./src/routes/ai.js";
-import friendApiRoutes from "./src/routes/friendApi.js";
-import userPhotoRoutes from "./src/routes/userPhoto.js";
-import MakeRoutes from "./src/routes/make.js";
-import infoMatchRoutes from "./src/routes/infomatch.js"; // Import info match routes
-import helmet from "helmet";
-import rateLimit from "express-rate-limit";
-import { authMiddleware } from "./src/middleware/authMiddleware.js";
+import friendRequestRoutes from './src/routes/friendRequest.js';
+import aiRoute from './src/routes/ai.js';
+import friendApiRoutes from './src/routes/friendApi.js';
+import userPhotoRoutes from './src/routes/userPhoto.js';
+import MakeRoutes from './src/routes/make.js';
+import infoMatchRoutes from './src/routes/infomatch.js'; // Import info match routes
+import { authMiddleware } from './src/middleware/authMiddleware.js';
+import { saveEventsFromSource } from './src/services/eventService.js';
 
 /////////Midleware for owner and admin/////////
-import { limiter } from "./src/middleware/ratelimit.js";
+// import { limiter } from "./src/middleware/ratelimit.js";
 
 dotenv.config();
 const allowedOrigins = process.env.VITE_APP_WEB_BASE_URL;
@@ -44,7 +43,7 @@ const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
     origin: allowedOrigins,
-    methods: ["GET", "POST"],
+    methods: ['GET', 'POST'],
     credentials: true,
   },
 });
@@ -87,13 +86,13 @@ app.use(bodyParser.json());
 // );
 
 // Serve static files from the uploads directory
-app.use("/uploads", express.static(path.join(__dirname, "..", "uploads")));
+app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 
 // ✅ Connect MongoDB
 mongoose.connect(MONGO_URI);
 const db = mongoose.connection;
-db.once("open", () => console.log("🔥 MongoDB Connected"));
-db.on("error", (err) => console.error("❌ MongoDB Error:", err));
+db.once('open', () => console.info('🔥 MongoDB Connected'));
+db.on('error', (err) => console.error('❌ MongoDB Error:', err));
 
 const onlineUsers = new Map(); // email => Set of socket IDs
 const userDetails = new Map(); // email => {displayName, photoURL, email}
@@ -111,15 +110,14 @@ const broadcastUserStatus = () => {
     lastSeenObj[email] = timestamp;
   });
 
-  io.emit("update-users", {
+  io.emit('update-users', {
     onlineUsers: onlineUsersEmails,
     lastSeenTimes: lastSeenObj,
   });
 };
 
-io.on("connection", (socket) => {
-  socket.on("user-online", (user) => {
-    console.log("🧑‍💻 User online", user);
+io.on('connection', (socket) => {
+  socket.on('user-online', (user) => {
     const { email, displayName, photoURL } = user;
     if (!email) return;
 
@@ -144,7 +142,7 @@ io.on("connection", (socket) => {
     broadcastUserStatus();
 
     // ส่งเฉพาะข้อมูลผู้ใช้นี้ว่าออนไลน์
-    io.emit("user-online", {
+    io.emit('user-online', {
       email,
       displayName,
       photoURL,
@@ -152,7 +150,7 @@ io.on("connection", (socket) => {
     });
   });
 
-  socket.on("user-ping", (userData) => {
+  socket.on('user-ping', (userData) => {
     // อัปเดตเวลาล่าสุดที่เห็นผู้ใช้
     if (userData && userData.email) {
       const { email, displayName, photoURL } = userData;
@@ -177,7 +175,7 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on("user-offline", (userData) => {
+  socket.on('user-offline', (userData) => {
     if (userData && userData.email) {
       const { email } = userData;
       if (email && onlineUsers.has(email)) {
@@ -189,7 +187,7 @@ io.on("connection", (socket) => {
           lastSeenTimes.set(email, timestamp);
 
           // ส่งข้อมูลว่าผู้ใช้ออฟไลน์พร้อมเวลาล่าสุด
-          io.emit("user-offline", {
+          io.emit('user-offline', {
             email,
             isOnline: false,
             lastSeen: timestamp,
@@ -204,7 +202,7 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on("disconnect", () => {
+  socket.on('disconnect', () => {
     const email = socket.email;
     if (email && onlineUsers.has(email)) {
       onlineUsers.get(email).delete(socket.id);
@@ -215,7 +213,7 @@ io.on("connection", (socket) => {
         lastSeenTimes.set(email, timestamp);
 
         // ส่งข้อมูลว่าผู้ใช้ออฟไลน์พร้อมเวลาล่าสุด
-        io.emit("user-offline", {
+        io.emit('user-offline', {
           email,
           isOnline: false,
           lastSeen: timestamp,
@@ -231,22 +229,15 @@ io.on("connection", (socket) => {
 });
 // 📌 API บันทึกหมวดหมู่เพลงที่ผู้ใช้เลือก
 app.post(
-  "/api/update-genres",
+  '/api/update-genres',
   // limiter
   async (req, res) => {
     const { email, genres, subGenres, updatedAt } = req.body;
     if (!email || !genres || !subGenres) {
-      return res
-        .status(400)
-        .json({ message: "Missing email, genres, or subGenres" });
+      return res.status(400).json({ message: 'Missing email, genres, or subGenres' });
     }
 
     try {
-      //////validate email//////////
-      if (!email) {
-        return res.status(400).json({ message: "Missing email" });
-      }
-
       /////////////Find user and update genres and subgenres////////////
       const user = await Filter.findOneAndUpdate(
         { email },
@@ -257,7 +248,7 @@ app.post(
       const filter = {};
 
       ////////////Filter out events from the provided userEmail////////
-      // Exclude events from the provided userEmail
+      // Exclude events created by the current user
       if (user.email) {
         filter.email = { $ne: user.email };
       }
@@ -265,17 +256,17 @@ app.post(
       // Validate subgenres structure - it should be an object
       if (
         !user.subGenres ||
-        typeof user.subGenres !== "object" ||
+        typeof user.subGenres !== 'object' ||
         Array.isArray(user.subGenres) ||
         user.subGenres === null
       ) {
         return res.status(400).json({
-          message:
-            "A 'subgenres' object with category filters is required in the request body.",
+          message: "A 'subgenres' object with category filters is required in the request body.",
         });
       }
 
       const subgenresObject = user.subGenres;
+      // Build a dynamic query based on the user's selected genres and subgenres
       const genreFilters = Array.from(subgenresObject.entries())
         .map(([category, subgenreList]) => {
           const trimmedCategory = category.trim();
@@ -306,6 +297,7 @@ app.post(
         return res.json([]);
       }
 
+      // Find events that match the user's filter preferences
       const events = await Event.find(filter).sort({ date: 1 });
 
       // หา events ที่มี title หรือ link ซ้ำกับที่มีอยู่แล้ว
@@ -321,7 +313,7 @@ app.post(
         ],
       });
 
-      // กรองเอาเฉพาะที่ไม่ซ้ำ
+      // Filter out events that are potential duplicates based on title or link
       const duplicateTitles = new Set(duplicateCheck.map((e) => e.title));
       const duplicateLinks = new Set(duplicateCheck.map((e) => e.link));
 
@@ -329,19 +321,17 @@ app.post(
         (e) => !duplicateTitles.has(e.title) && !duplicateLinks.has(e.link)
       );
 
-      //////////////Send unique events to make.com////////
+      // Trigger a webhook to an external service like Make.com
       if (uniqueEvents.length === 0 || uniqueEvents.length === events.length) {
         // ✅ ส่งข้อมูลไปยัง Make.com เฉพาะกรณีที่ genres/subGenres มีข้อมูล
         const hasGenres = Array.isArray(genres) ? genres.length > 0 : false;
         const hasSubGenres =
           subGenres &&
-          typeof subGenres === "object" &&
-          Object.values(subGenres).some((arr) =>
-            Array.isArray(arr) ? arr.length > 0 : false
-          );
+          typeof subGenres === 'object' &&
+          Object.values(subGenres).some((arr) => (Array.isArray(arr) ? arr.length > 0 : false));
         if (hasGenres && hasSubGenres) {
           await axios.post(MAKE_WEBHOOK_URL, {
-            type: "update-genres",
+            type: 'update-genres',
             filter_info: {
               email: user.email,
               genres: user.genres,
@@ -352,12 +342,12 @@ app.post(
         }
       }
 
-      ///////////Prepare response data//////////
+      // If no unique events are found after filtering, return an empty array.
       if (uniqueEvents.length === 0) {
         return res.status(200).json([]);
       }
 
-      //////////Prepare data to save//////////
+      // Prepare the found unique events to be saved for the user
       const data = uniqueEvents.map((e) => ({
         title: e.title,
         snippet: e.description,
@@ -365,39 +355,31 @@ app.post(
         image: e.image,
       }));
 
-      //////////Send data to save-event API//////////
+      // Automatically save the recommended events for the user by calling the service
       if (data.length > 0) {
-        await axios.post(
-          `${process.env.VITE_APP_API_BASE_URL}/api/save-event`,
-          {
-            data: data,
-            email: user.email,
-            indicesToExclude: [],
-            updatedAt: new Date().toISOString(),
-            subGenres: user.subGenres,
-          },
-          {
-            headers: {
-              "Content-Type": "application/json",
-            },
-          }
-        );
+        await saveEventsFromSource({
+          data,
+          email,
+          subGenres,
+          updatedAt, // This is no longer used in the service but kept for compatibility
+        });
       }
 
+      // Return the unique events to the frontend
       res.json(uniqueEvents);
     } catch (error) {
-      console.error("❌ Update failed:", error);
-      res.status(500).json({ message: "Server error" });
+      console.error('❌ Update failed:', error);
+      res.status(500).json({ message: 'Server error' });
     }
   }
 );
 
 // เก็บ socket instance ไว้ใช้ใน middleware
-app.set("io", io);
-app.set("userSockets", userSockets);
+app.set('io', io);
+app.set('userSockets', userSockets);
 
 // ใช้งานเส้นทาง debug เพื่อตรวจสอบ API routes ทั้งหมด
-app.get("/api/debug/routes", (req, res) => {
+app.get('/api/debug/routes', (req, res) => {
   const routes = [];
   app._router.stack.forEach((middleware) => {
     if (middleware.route) {
@@ -406,12 +388,12 @@ app.get("/api/debug/routes", (req, res) => {
         path: middleware.route.path,
         methods: Object.keys(middleware.route.methods),
       });
-    } else if (middleware.name === "router") {
+    } else if (middleware.name === 'router') {
       // Router middleware
       middleware.handle.stack.forEach((handler) => {
         if (handler.route) {
           routes.push({
-            path: "/api" + handler.route.path,
+            path: '/api' + handler.route.path,
             methods: Object.keys(handler.route.methods),
           });
         }
@@ -422,28 +404,28 @@ app.get("/api/debug/routes", (req, res) => {
 });
 
 // ใช้งาน routes ที่แยกไว้
-app.use("/api", MakeRoutes(io));
+app.use('/api', MakeRoutes(io));
 // ใช้ authMiddleware กับทุก request ที่เข้ามาที่ /api
-app.use("/api", authMiddleware);
+app.use('/api', authMiddleware);
 
 // userPhotoRoutes must come before express.json() to handle multipart/form-data
-app.use("/api", userPhotoRoutes);
+app.use('/api', userPhotoRoutes);
 
 // All routes after this will have their body parsed as JSON
-app.use(express.json({ limit: "5mb" }));
+app.use(express.json({ limit: '5mb' }));
 
 // Register friendRequestRoutes with high priority to prevent 404 issues.
-app.use("/api", infoMatchRoutes);
-app.use("/api", aiRoute); // ใช้ aiRoute ก่อน routes อื่นๆ เพื่อป้องกัน 404
-app.use("/api", eventRoutes(io));
-app.use("/api", friendRequestRoutes);
-app.use("/api", userRoutes);
-app.use("/api", friendRoutes);
-app.use("/api", roomRoutes);
-app.use("/api", infoRoutes);
-app.use("/api", roommatchRoutes);
-app.use("/api", likeRoutes);
-app.use("/api", friendApiRoutes);
+app.use('/api', infoMatchRoutes);
+app.use('/api', aiRoute); // ใช้ aiRoute ก่อน routes อื่นๆ เพื่อป้องกัน 404
+app.use('/api', eventRoutes(io));
+app.use('/api', friendRequestRoutes);
+app.use('/api', userRoutes);
+app.use('/api', friendRoutes);
+app.use('/api', roomRoutes);
+app.use('/api', infoRoutes);
+app.use('/api', likeRoutes);
+app.use('/api', roommatchRoutes(io)); // Correctly call roommatchRoutes as a function with `io`
+app.use('/api', friendApiRoutes);
 
 // Log API requests for debugging
 app.use((req, res, next) => {
@@ -451,6 +433,4 @@ app.use((req, res, next) => {
 });
 
 // เริ่มต้นเซิร์ฟเวอร์
-server.listen(port, () =>
-  console.log(`🚀 Server is running on port ${(8080, "0.0.0.0")}`)
-);
+server.listen(port, () => console.info(`🚀 Server is running on port ${(8080, '0.0.0.0')}`));

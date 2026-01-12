@@ -184,7 +184,7 @@
   opacity: 0;
   display: flex;
   justify-content: center;
-  align-items: center;
+  /* align-items: center; */
   transform: translateY(-10px);
   pointer-events: none; /* ป้องกันการคลิกเมื่อซ่อน */
 }
@@ -192,7 +192,7 @@
 .list-content.expanded {
   max-height: 2000px;
   opacity: 1;
-  display: flex;
+  /* display: flex; */
   justify-content: center;
   align-items: center;
   width: 100%;
@@ -547,7 +547,7 @@ s .search-friend-con::after {
   align-items: center;
   border-radius: 28px;
   padding: 8px 10px;
-  margin: 0 5px 1rem;
+  margin: 20px  5px 1rem;
   background-color: #f8f9fa;
   border: 1px solid #e2e8f0;
   transition: border-color 0.2s, box-shadow 0.2s;
@@ -588,7 +588,7 @@ s .search-friend-con::after {
   height: calc(100vh - 650px);
   list-style-type: none;
   padding: 0;
-  width: max-content;
+  width: 600px;
   /* background-color: #fff;
   border-radius: 10px;
   box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1); */
@@ -1089,7 +1089,7 @@ s .search-friend-con::after {
   display: flex;
   justify-content: center;
   padding-top: 30px;
-  padding-bottom: 140px;
+  padding-bottom: 30px;
 }
 
 .empty-friend-list {
@@ -1104,8 +1104,8 @@ s .search-friend-con::after {
 }
 
 .con-friend-recommand {
-  /* height: calc(100vh - 507px); */
-  height: max-content;
+  height: calc(100vh - 200px);
+  /* height: max-content; */
   overflow-y: auto;
   scroll-behavior: smooth;
   width: 100%;
@@ -1195,10 +1195,6 @@ s .search-friend-con::after {
   }
   .status.offline {
     display: none;
-  }
-
-  .dark-mode .button-friend-item {
-    width: 400px;
   }
   .search-friend-con {
     max-width: 400px;
