@@ -53,6 +53,10 @@
     text-align: center;
     border-radius: 0;
   }
+  .menu-link:hover {
+  width: 61.6px;
+  height: 62px;
+  }
 
   .menu-link svg {
     font-size: 1.5rem;
@@ -284,7 +288,7 @@
   }
 
   .menu-link {
-    flex: 1;
+    flex: none;
     flex-direction: column;
     justify-content: center;
     gap: 0.25rem;
@@ -306,7 +310,7 @@
   }
 
   .logout-link {
-    flex: 1;
+    flex: none;
     display: flex;
     flex-direction: column;
     align-items: center;

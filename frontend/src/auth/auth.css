@@ -91,14 +91,9 @@ body {
 .error-message {
   color: #dc2626;
   font-size: 13px;
-  margin-top: 16px;
-  text-align: center;
+  margin: 20px auto;
   background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
-  padding: 12px 16px;
-  border-radius: 12px;
-  border: 1px solid #fecaca;
-  animation: shake 0.5s ease-in-out;
-  font-weight: 500;
+
 }
 
 @keyframes shake {
