@@ -30,7 +30,7 @@ import { authMiddleware } from './src/middleware/authMiddleware.js';
 import { saveEventsFromSource } from './src/services/eventService.js';
 
 /////////Midleware for owner and admin/////////
-// import { limiter } from "./src/middleware/ratelimit.js";
+import { limiter } from './src/middleware/ratelimit.js'; // Strings must use singlequote.
 
 dotenv.config();
 const allowedOrigins = process.env.VITE_APP_WEB_BASE_URL;
@@ -230,7 +230,7 @@ io.on('connection', (socket) => {
 // 📌 API บันทึกหมวดหมู่เพลงที่ผู้ใช้เลือก
 app.post(
   '/api/update-genres',
-  // limiter
+  limiter, // ใช้ rate limiter เพื่อลดความเสี่ยงจาก DDoS
   async (req, res) => {
     const { email, genres, subGenres, updatedAt } = req.body;
     if (!email || !genres || !subGenres) {
