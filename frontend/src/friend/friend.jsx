@@ -122,7 +122,7 @@ const Friend = () => {
 
   const fetchGmailUser = useCallback(async () => {
     try {
-      const res = await api.get(`/api/users/${userEmail}`);
+      const res = await api.get(`/api/user/${userEmail}/follow-info`);
       setCurrentUserfollow(res.data);
     } catch (err) {
       setError('โหลด Gmail currentUser ไม่ได้');
@@ -281,20 +281,18 @@ const Friend = () => {
         requestId: requestId,
       };
 
-      const response = await api.post(`/api/friend-request`, requestData, {
+      await api.post(`/api/friend-request`, requestData, {
         headers: {
           'Content-Type': 'application/json',
         },
       });
-      if (response.status !== 400) {
-        toast.error(response.data.message || 'ไม่สามารถเพิ่มเพื่อนได้');
-      }
 
       toast.success('เพิ่มเพื่อนสำเร็จ! กรุณารอการตอบกลับจาก ' + friendEmail);
     } catch (error) {
       console.error('ข้อผิดพลาดในการเพิ่มเพื่อน:', error);
-      setError('ไม่สามารถเพิ่มเพื่อนได้');
-      toast.error('ไม่สามารถเพิ่มเพื่อนได้');
+      const errorMessage = error.response?.data?.message || 'ไม่สามารถเพิ่มเพื่อนได้';
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoadingFriendEmail(null);
     }
@@ -383,23 +381,38 @@ const Friend = () => {
   }, [userEmail]);
 
   const handleFollow = async (targetEmail) => {
-    await fetchGmailUser();
+    // ใช้ state `currentUserfollow` ที่มีอยู่แล้ว ไม่ต้อง fetch ใหม่
     if (!currentUserfollow || !Array.isArray(currentUserfollow.following)) {
-      toast.error('ข้อมูลผู้ใช้ยังไม่พร้อม');
+      toast.error('ข้อมูลผู้ใช้ยังไม่พร้อม กรุณาลองอีกครั้ง');
       return;
     }
+
     const isFollowing = currentUserfollow.following.includes(targetEmail);
-    const url = `${import.meta.env.VITE_APP_API_BASE_URL}/api/users/${userEmail}/${
-      isFollowing ? 'unfollow' : 'follow'
-    }/${targetEmail}`;
+
+    // แก้ไข URL ให้เป็น relative path และใช้ endpoint ที่ถูกต้อง
+    const url = `/api/users/${userEmail}/${isFollowing ? 'unfollow' : 'follow'}/${targetEmail}`;
     const method = isFollowing ? 'DELETE' : 'POST';
+
     try {
+      // ทำการ call API เพื่อ follow/unfollow
       await api({ method, url });
-      await fetchGmailUser();
-      toast.success(isFollowing ? 'Unfollowed' : 'Followed');
+
+      // อัปเดต State ในฝั่ง Client ทันทีเพื่อ UX ที่ดีขึ้น ไม่ต้องรอ fetch ใหม่
+      setCurrentUserfollow((prevUser) => {
+        if (!prevUser) return null;
+
+        const newFollowing = isFollowing
+          ? prevUser.following.filter((email) => email !== targetEmail)
+          : [...prevUser.following, targetEmail];
+
+        return { ...prevUser, following: newFollowing };
+      });
+
+      toast.success(isFollowing ? 'เลิกติดตามสำเร็จ' : 'ติดตามสำเร็จ');
     } catch (err) {
-      setError('Follow/unfollow error');
-      toast.error('Follow/unfollow error');
+      console.error('เกิดข้อผิดพลาดในการกดติดตาม:', err);
+      setError('เกิดข้อผิดพลาดในการกดติดตาม');
+      toast.error('เกิดข้อผิดพลาดในการกดติดตาม');
     }
   };
 
@@ -611,11 +624,6 @@ const Friend = () => {
                                 <button
                                   className="dropdown-item"
                                   onClick={() => {
-                                    if (
-                                      !currentUserfollow ||
-                                      !Array.isArray(currentUserfollow.following)
-                                    )
-                                      return;
                                     handleFollow(friend.email);
                                   }}
                                   aria-label={
@@ -789,11 +797,6 @@ const Friend = () => {
                                   <button
                                     className="dropdown-item"
                                     onClick={() => {
-                                      if (
-                                        !currentUserfollow ||
-                                        !Array.isArray(currentUserfollow.following)
-                                      )
-                                        return;
                                       handleFollow(user.email);
                                     }}
                                     aria-label={

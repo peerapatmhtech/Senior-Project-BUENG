@@ -134,10 +134,10 @@ const ProfileModal = ({
           followers={followers}
           following={following}
           handleFollowClick={handleFollowClick}
-          isFollowLoading={followMutation.isLoading}
+          isFollowLoading={followMutation.isPending}
           isFollowing={isFollowing}
           handleDeleteClick={handleDeleteClick}
-          isDeleteLoading={deleteFriendMutation.isLoading}
+          isDeleteLoading={deleteFriendMutation.isPending}
           deleteType={deleteType}
         />
         <ProfileModalGallery

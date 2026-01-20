@@ -51,11 +51,18 @@ app.get('/friends', async (req, res) => {
 app.delete('/users/:userEmail/friends/:friendEmail', async (req, res) => {
   const { userEmail, friendEmail } = req.params;
   try {
-    const user = await Friend.findOne({ email: userEmail });
+    const [user, friend] = await Promise.all([
+      Friend.findOne({ email: userEmail }),
+      Friend.findOne({ email: friendEmail }),
+    ]);
     if (!user) return res.status(404).json({ message: 'User not found' });
     // Remove friend object from friends array by email
     user.friends = user.friends.filter((f) => f.email !== friendEmail);
     await user.save();
+    if (friend) {
+      friend.friends = friend.friends.filter((f) => f.email !== userEmail);
+      await friend.save();
+    }
     res.json({ message: 'Friend removed successfully', friends: user.friends });
   } catch (err) {
     console.error('Error removing friend:', err);
@@ -111,10 +118,10 @@ app.get('/user/:email/follow-info', async (req, res) => {
     if (!userEmail) {
       return res.status(400).json({ message: 'Email is required.' });
     }
-    const user = await Friend.findOne({ email: userEmail });
+    const user = await Friend.findOne({ email: userEmail }).select('followers following');
     if (!user) return res.status(204).json({ message: 'User not found' });
-    const followers = await Friend.find({ email: { $in: user.followers } });
-    const following = await Friend.find({ email: { $in: user.following } });
+    const followers = await Friend.find({ email: { $in: user.followers } }).select('email');
+    const following = await Friend.find({ email: { $in: user.following } }).select('email');
     res.json({ followers, following });
   } catch (err) {
     res.status(500).json({ message: 'Server error', error: err.message });

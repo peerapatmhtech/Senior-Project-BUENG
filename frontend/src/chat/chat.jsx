@@ -133,6 +133,9 @@ const ChatSidebar = ({
   isOpenMatch,
   setIsOpenMatch,
   handleProfileClick,
+  users,
+  userMatchData,
+  allEvents,
 }) => (
   <div className={`user-container ${openchat ? "mobile-layout-mode" : ""}`}>
     <div className="chat">
@@ -164,6 +167,7 @@ const ChatSidebar = ({
         setUserImage={setUserImage}
         setFriends={setFriends}
         formatOnlineStatus={formatOnlineStatus}
+        users={users}
       />
       <CommunityList
         isOpencom={isOpencom}
@@ -184,6 +188,8 @@ const ChatSidebar = ({
         setRoombar={setRoombar}
         openMenuFor={openMenuFor}
         setOpenMenuFor={setOpenMenuFor}
+        users={users}
+        allEvents={allEvents}
       />
       <MatchList
         isOpenMatch={isOpenMatch}
@@ -201,6 +207,8 @@ const ChatSidebar = ({
         getnickName={getnickName}
         setFriends={setFriends}
         setUserImage={setUserImage}
+        users={users}
+        userMatchData={userMatchData}
       />
     </div>
   </div>
@@ -218,7 +226,7 @@ ChatSidebar.propTypes = {
   setIsOpen: PropTypes.func.isRequired,
   setIsGroupChat: PropTypes.func.isRequired,
   dropdownRefs: PropTypes.object.isRequired,
-  getnickName: PropTypes.oneOfType([PropTypes.func, PropTypes.array]),
+  getnickName: PropTypes.array,
   setSelectedTab: PropTypes.func.isRequired,
   selectedTab: PropTypes.string,
   setUserImage: PropTypes.func.isRequired,
@@ -232,6 +240,9 @@ ChatSidebar.propTypes = {
   isOpenMatch: PropTypes.bool.isRequired,
   setIsOpenMatch: PropTypes.func.isRequired,
   handleProfileClick: PropTypes.func.isRequired,
+  users: PropTypes.array,
+  userMatchData: PropTypes.array,
+  allEvents: PropTypes.array,
 };
 
 const ChatWindow = ({
@@ -296,6 +307,26 @@ const ChatWindow = ({
           disabled={isDefaultRoom}
         />
       </div>
+      {!openchat && (
+        <div className="tabright">
+          <ShowTitle userimage={userImage} openchat={openchat} />
+          <ChatContainerAI
+            loadingMessages={loadingMessages}
+            messages={messages}
+            openchat={openchat}
+            isAiChatOpen={false} // This ChatContainerAI is embedded, not the modal
+            userEmail={userEmail}
+            roomId={RoomsBar.roomId} // Pass the current roomId
+            defaultProfileImage={defaultProfileImage}
+            formatChatDate={formatChatDate}
+            endOfMessagesRef={endOfMessagesRef}
+            input={input}
+            setInput={setInput}
+            handleSend={handleSend}
+            disabled={isDefaultRoom}
+          />
+        </div>
+      )}
     </div>
   );
 };
@@ -422,7 +453,6 @@ const Chat = () => {
   const [RoomsBar, setRoomBar] = useState({});
   const [openMenuFor, setOpenMenuFor] = useState(null);
   const [isGroupChat, setIsGroupChat] = useState(false);
-  const [getnickName, getNickName] = useState("");
   const [lastMessages, setLastMessages] = useState({});
   const [loadingMessages] = useState(false);
   const [isOpenMatch, setIsOpenMatch] = useState(false);
@@ -479,12 +509,6 @@ const Chat = () => {
   });
 
   const [friends, setFriends] = useState([]);
-
-  useEffect(() => {
-    if (infos && infos.length > 0) {
-      getNickName(infos);
-    }
-  }, [infos]);
 
   const isLoading =
     isLoadingUsers ||
@@ -783,7 +807,7 @@ const Chat = () => {
           setIsOpen={setIsOpen}
           setIsGroupChat={setIsGroupChat}
           dropdownRefs={dropdownRefs}
-          getnickName={getnickName}
+          getnickName={infos}
           setSelectedTab={setSelectedTab}
           selectedTab={selectedTab}
           setUserImage={setUserImage}
@@ -795,22 +819,19 @@ const Chat = () => {
           openMenuFor={openMenuFor}
           setOpenMenuFor={setOpenMenuFor}
           userMatchData={userMatchData}
-          allEvents={allEvents}
+          allEvents={Array.isArray(allEvents) ? allEvents : []}
           users={users}
           isOpenMatch={isOpenMatch}
           setIsOpenMatch={setIsOpenMatch}
-          infos={infos}
           handleProfileClick={handleProfileClick}
         />
         <ChatWindow
           openchat={openchat}
           messages={messages}
-          users={users}
           userEmail={userEmail}
           userPhoto={userPhoto}
           userName={userName}
           RoomsBar={RoomsBar}
-          getnickName={getnickName}
           input={input}
           isOpencom={isOpencom}
           isOpenMatch={isOpenMatch}

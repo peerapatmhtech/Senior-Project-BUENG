@@ -6,7 +6,7 @@ import api from "../server/api";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import HeaderProfile from "../components/HeaderProfile";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import PropTypes from "prop-types";
 import {
   fetchUserPhotos,
@@ -32,78 +32,41 @@ ProfileStat.propTypes = {
 const Profile = () => {
   const userEmail = localStorage.getItem("userEmail");
   const { isDarkMode } = useTheme();
+  const queryClient = useQueryClient();
 
-  const [userInfo, setUserInfo] = useState({ detail: "" });
+  // Form States (Draft) - ใช้เฉพาะตอนแก้ไข
   const [tempInfo, setTempInfo] = useState({ detail: "" });
   const [nickName, setNickName] = useState("");
+  
+  // UI States
   const [isEditingName, setIsEditingName] = useState(false);
   const [isEditingAbout, setIsEditingAbout] = useState(false);
-  const [followers, setFollowers] = useState([]);
-  const [following, setFollowing] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [setError] = useState("");
-  const [userPhotos, setUserPhotos] = useState([]);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef(null);
 
-  const { data: photoUsers, refetch: refetchPhotos } = useQuery({
+  // Server States - ใช้สำหรับแสดงผล
+  const { data: photoUsers = [], refetch: refetchPhotos, isLoading: isLoadingPhotos } = useQuery({
     queryKey: ["userPhotos", userEmail],
     queryFn: () => fetchUserPhotos(userEmail),
     enabled: !!userEmail,
   });
-  const { data: infoUser = { detail: "" }, refetch: refetchUserInfo } =
+  const { data: infoUser = { detail: "" }, isLoading: isLoadingInfo } =
     useQuery({
       queryKey: ["userInfos", userEmail],
       queryFn: () => fetchUserInfo(userEmail),
       enabled: !!userEmail,
     });
-  const { data: currentUser, refetch: refetchCurrentUser } = useQuery({
+  const { data: currentUser = {}, isLoading: isLoadingUser } = useQuery({
     queryKey: ["currentUser", userEmail],
     queryFn: () => fetchCurrentUser(userEmail),
     enabled: !!userEmail,
   });
 
-  useEffect(() => {
-    if (!userEmail) {
-      setLoading(false);
-      return;
-    }
-    try {
-      if (infoUser && infoUser.length > 0) {
-        setTempInfo(infoUser);
-        setUserInfo(infoUser);
-      } else {
-        refetchUserInfo();
-      }
-      if (currentUser && currentUser.length > 0) {
-        setFollowers(currentUser.followers || []);
-        setFollowing(currentUser.following || []);
-      } else {
-        refetchCurrentUser();
-      }
-      if (photoUsers && photoUsers.length > 0) {
-        setUserPhotos(photoUsers);
-      } else {
-        refetchPhotos();
-      }
-      setLoading(true);
-    } catch (err) {
-      setError("Could not fetch profile data.");
-      toast.error("Could not fetch profile data.");
-    } finally {
-      setLoading(false);
-    }
-  }, [
-    userEmail,
-    userInfo,
-    currentUser,
-    photoUsers,
-    refetchCurrentUser,
-    refetchPhotos,
-    refetchUserInfo,
-    infoUser,
-    setError
-  ]);
+  const loading = isLoadingPhotos || isLoadingInfo || isLoadingUser;
+  
+  // Derived Data
+  const followers = currentUser.followers || [];
+  const following = currentUser.following || [];
 
   const handleSaveNickName = async () => {
     if (!nickName.trim()) {
@@ -118,6 +81,7 @@ const Profile = () => {
     try {
       await api.post(`/api/save-user-name`, { userEmail, nickName });
       toast.success("nicknameUpdated");
+      queryClient.invalidateQueries(["currentUser", userEmail]); // Sync ข้อมูลใหม่จาก Server
       setIsEditingName(false);
     } catch (err) {
       toast.error("failedToUpdateNickname");
@@ -136,7 +100,7 @@ const Profile = () => {
         userInfo: tempInfo,
       });
       if (res.status === 200) {
-        setUserInfo(tempInfo);
+        queryClient.invalidateQueries(["userInfos", userEmail]); // Sync ข้อมูลใหม่จาก Server
         setIsEditingAbout(false);
         toast.success("profileUpdated");
       } else {
@@ -212,14 +176,15 @@ const Profile = () => {
   };
 
   const handleSetMainPhoto = (selectedPhoto) => {
-    if (userPhotos[0]?._id === selectedPhoto._id) return;
+    if (photoUsers[0]?._id === selectedPhoto._id) return;
 
     const newOrder = [
       selectedPhoto,
-      ...userPhotos.filter((p) => p._id !== selectedPhoto._id),
+      ...photoUsers.filter((p) => p._id !== selectedPhoto._id),
     ];
 
-    setUserPhotos(newOrder);
+    // Optimistic Update: อัปเดต Cache ทันทีเพื่อให้ UI เปลี่ยนโดยไม่ต้องรอ Refetch
+    queryClient.setQueryData(["userPhotos", userEmail], newOrder);
     localStorage.setItem("userPhoto", selectedPhoto.url);
 
     const photoIds = newOrder.map((p) => p._id);
@@ -227,15 +192,16 @@ const Profile = () => {
   };
 
   const handleRemovePhoto = async (photoId) => {
-    const isMainPhoto = userPhotos[0]?._id === photoId;
-    const remainingPhotos = userPhotos.filter((photo) => photo._id !== photoId);
+    const isMainPhoto = photoUsers[0]?._id === photoId;
+    const remainingPhotos = photoUsers.filter((photo) => photo._id !== photoId);
 
     try {
       const response = await api.delete(`/api/user-photo/${photoId}`, {
         data: { email: userEmail },
       });
       if (response.data.success) {
-        setUserPhotos(remainingPhotos);
+        // อัปเดต Cache ทันที หรือจะใช้ refetchPhotos() ก็ได้
+        queryClient.setQueryData(["userPhotos", userEmail], remainingPhotos);
         toast.success("photoDeleted");
 
         if (isMainPhoto && remainingPhotos.length > 0) {
@@ -263,8 +229,8 @@ const Profile = () => {
   }
 
   const mainProfilePhoto =
-    userPhotos.length > 0
-      ? userPhotos[0].url
+    photoUsers.length > 0
+      ? photoUsers[0].url
       : localStorage.getItem("userPhoto");
   return (
     <div className={`profile-page ${isDarkMode ? "dark-mode" : ""}`}>
@@ -308,15 +274,18 @@ const Profile = () => {
                 </div>
               ) : (
                 <h1 className="profile-nickname">
-                  {nickName}
+                  {currentUser.displayName || nickName}
                   <FaEdit
-                    onClick={() => setIsEditingName(true)}
+                    onClick={() => {
+                      setNickName(currentUser.displayName || "");
+                      setIsEditingName(true);
+                    }}
                     className="edit-icon-new"
                   />
                 </h1>
               )}
               <div className="profile-stats">
-                <ProfileStat count={userPhotos.length} label={"photos"} />
+                <ProfileStat count={photoUsers.length} label={"photos"} />
                 <ProfileStat count={followers.length} label={"followers"} />
                 <ProfileStat count={following.length} label={"following"} />
               </div>
@@ -349,8 +318,11 @@ const Profile = () => {
                 </div>
               </div>
             ) : (
-              <p onClick={() => setIsEditingAbout(true)} className="about-text">
-                {userInfo.detail || "tellUsAboutYourself"}
+              <p onClick={() => {
+                  setTempInfo(infoUser || { detail: "" });
+                  setIsEditingAbout(true);
+                }} className="about-text">
+                {infoUser.detail || "tellUsAboutYourself"}
                 <FaEdit className="edit-icon-new" />
               </p>
             )}
@@ -360,11 +332,11 @@ const Profile = () => {
         <div className="profile-gallery">
           <h3>{"myPhotos"}</h3>
           <div className="photo-grid">
-            {userPhotos.map((photo) => (
+            {photoUsers.map((photo) => (
               <div key={photo._id} className="photo-wrapper">
                 <img src={getFullImageUrl(photo.url)} alt="User photo" />
                 <div className="photo-overlay">
-                  {userPhotos[0]?._id !== photo._id ? (
+                  {photoUsers[0]?._id !== photo._id ? (
                     <button
                       className="set-main-btn"
                       onClick={() => handleSetMainPhoto(photo)}
@@ -390,7 +362,7 @@ const Profile = () => {
                 </div>
               </div>
             ))}
-            {userPhotos.length < 9 && (
+            {photoUsers.length < 9 && (
               <div
                 className="add-photo-box"
                 onClick={() => fileInputRef.current.click()}
