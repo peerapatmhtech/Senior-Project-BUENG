@@ -1,7 +1,9 @@
 import express from 'express';
 import { Room } from '../model/room.js';
 import { Info } from '../model/info.js';
+import { UserPhoto } from '../model/userPhoto.js';
 import { requireOwner } from '../middleware/required.js'; // Import middleware for authentication
+import { Gmail } from '../model/gmail.js';
 const router = express.Router();
 
 // Join community
@@ -116,6 +118,72 @@ router.get('/allrooms', async (req, res) => {
   }
 });
 
+// Get room by ID
+router.get('/room/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Optimize: Fetch room and members in parallel
+    const [room, membersInfo] = await Promise.all([
+      Room.findById(id).lean(),
+      Info.find({ 'joinedRooms.roomId': id }).select('email nickname').lean(),
+    ]);
+
+    if (!room) {
+      return res.status(404).json({ error: 'ไม่พบห้อง' });
+    }
+
+    const memberEmails = membersInfo.map((m) => m.email);
+
+    // Fetch users from Gmail model to check for custom photo order
+    const users = await Gmail.find({ email: { $in: memberEmails } }).lean();
+
+    // Optimization: Batch fetch photos for users with custom order
+    const photoIds = users
+      .filter((u) => u.photosOrder && u.photosOrder.length > 0)
+      .map((u) => u.photosOrder[0]);
+
+    let customPhotoMap = new Map();
+    if (photoIds.length > 0) {
+      const photos = await UserPhoto.find({ _id: { $in: photoIds } })
+        .select('_id url')
+        .lean();
+      customPhotoMap = new Map(photos.map((p) => [p._id.toString(), p.url]));
+    }
+
+    // Create a map for O(1) lookup of final photo URLs
+    const userPhotoMap = users.reduce((acc, user) => {
+      let photoURL = user.photoURL;
+      if (user.photosOrder && user.photosOrder.length > 0) {
+        const customUrl = customPhotoMap.get(user.photosOrder[0]);
+        if (customUrl) photoURL = customUrl;
+      }
+      acc[user.email] = photoURL;
+      return acc;
+    }, {});
+
+    // Attach photoURL to member details
+    const memberDetails = memberEmails.map((email) => {
+      const info = membersInfo.find((m) => m.email === email);
+      return {
+        email,
+        photoURL: userPhotoMap[email] || null,
+        nickname: info?.nickname || null,
+      };
+    });
+
+    res.json({
+      ...room,
+      members: memberEmails,
+      memberDetails,
+      memberCount: memberEmails.length,
+    });
+  } catch (err) {
+    console.error('Error fetching room:', err);
+    res.status(500).json({ error: 'เกิดข้อผิดพลาดในการดึงข้อมูลห้อง' });
+  }
+});
+
 // Delete multiple rooms
 router.post('/delete-rooms', requireOwner, async (req, res) => {
   const { selectedRooms } = req.body;
@@ -155,7 +223,7 @@ router.delete('/delete-joined-rooms/:roomName/:userEmail', requireOwner, async (
     }
     res.json({
       success: true,
-      message: "Room removed from user's joinedRooms",
+      message: 'Room removed from user\'s joinedRooms',
       roomName,
       userEmail,
     });

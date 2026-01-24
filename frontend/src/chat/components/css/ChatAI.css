@@ -2,7 +2,7 @@
 .chat-container-ai {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 265px) !important; 
+  height: calc(100vh - 470px) !important; 
   max-width: 500px;
   margin: 0;
   background-color: #ffffff;
@@ -540,6 +540,83 @@
   background-color: #475569;
   color: #818cf8;
   border-color: #6366f1;
+}
+
+/* AI Actions Bar & Chips */
+.ai-actions-bar {
+  display: flex;
+  gap: 10px;
+  padding: 0 20px 10px;
+  overflow-x: auto;
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.ai-actions-bar::-webkit-scrollbar {
+  display: none;
+}
+
+.action-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #eff6ff; /* Light indigo tint */
+  border: 1px solid #c7d2fe;
+  color: #4f46e5;
+  padding: 8px 14px;
+  border-radius: 16px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.action-chip svg {
+  font-size: 16px;
+}
+
+.action-chip:hover:not(:disabled) {
+  background-color: #e0e7ff;
+  border-color: #818cf8;
+  color: #4338ca;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.15);
+}
+
+.action-chip:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+.action-chip:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background-color: #f1f5f9;
+  border-color: #e2e8f0;
+  color: #94a3b8;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Dark mode adjustments for chips */
+.dark-mode .action-chip {
+  background-color: #1e293b;
+  border-color: #334155;
+  color: #818cf8;
+}
+
+.dark-mode .action-chip:hover:not(:disabled) {
+  background-color: #334155;
+  border-color: #6366f1;
+  color: #a5b4fc;
+}
+
+.dark-mode .action-chip:disabled {
+  background-color: #0f172a;
+  border-color: #1e293b;
+  color: #475569;
 }
 
 /* Responsive Design */

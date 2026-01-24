@@ -1,13 +1,13 @@
-import { useState, useEffect, useRef } from "react";
-import PropTypes from "prop-types";
-import { db } from "../firebase/firebase";
-import RequireLogin from "../components/RequireLogin";
-import { FaSearch } from "react-icons/fa";
-import { RiRobot2Fill } from "react-icons/ri";
-import { MdClose } from "react-icons/md";
-import { toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
-import { useParams } from "react-router-dom";
+import { useState, useEffect, useRef } from 'react';
+import PropTypes from 'prop-types';
+import { db } from '../firebase/firebase';
+import RequireLogin from '../components/RequireLogin';
+import { FaSearch } from 'react-icons/fa';
+import { RiRobot2Fill } from 'react-icons/ri';
+import { MdClose } from 'react-icons/md';
+import { toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import { useParams } from 'react-router-dom';
 import {
   collection,
   addDoc,
@@ -19,41 +19,41 @@ import {
   getDocs,
   doc,
   where,
-} from "firebase/firestore";
+} from 'firebase/firestore';
 
-import { useNotifications } from "../context/notificationContext";
-import { useTheme } from "../context/themecontext";
+import { useNotifications } from '../context/notificationContext';
+import { useTheme } from '../context/themecontext';
 
-import ChatContainerAI from "./components/javascript/ChatContainerAI";
-import ListUser from "./components/javascript/userlist";
-import CommunityList from "./components/javascript/communitylist";
-import ChatPanel from "./components/javascript/ChatPanel";
-import MatchList from "./components/javascript/matchlist";
-import ShowTitle from "./components/javascript/showtitle";
-import ProfileModal from "./components/javascript/ProfileModal";
+import ChatContainerAI from './components/javascript/ChatContainerAI';
+import ListUser from './components/javascript/userlist';
+import CommunityList from './components/javascript/communitylist';
+import ChatPanel from './components/javascript/ChatPanel';
+import MatchList from './components/javascript/matchlist';
+import ShowTitle from './components/javascript/showtitle';
+import ProfileModal from './components/javascript/ProfileModal';
 
-import "./components/css/ChatAI.css";
-import "./css/ListItems.css";
-import "./css/DropdownMenu.css";
-import "./css/OnlineStatus.css";
+import './components/css/ChatAI.css';
+import './css/ListItems.css';
+import './css/DropdownMenu.css';
+import './css/OnlineStatus.css';
 
 // Helper Functions
 const formatRelativeTime = (timestamp) => {
-  if (!timestamp) return "";
+  if (!timestamp) return '';
   const now = new Date();
   const diffMs = now - timestamp;
   const diffSec = Math.floor(diffMs / 1000);
   const diffMin = Math.floor(diffSec / 60);
   const diffHour = Math.floor(diffMin / 60);
 
-  if (diffMin < 1) return "เมื่อสักครู่";
+  if (diffMin < 1) return 'เมื่อสักครู่';
   if (diffMin < 60) return `${diffMin} นาทีที่แล้ว`;
   if (diffHour < 24) return `${diffHour} ชม.ที่แล้ว`;
 
-  return timestamp.toLocaleDateString("th-TH", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
+  return timestamp.toLocaleDateString('th-TH', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
   });
 };
 
@@ -63,19 +63,19 @@ const formatChatDate = (date) => {
   const diffInDays = diffInMs / (1000 * 60 * 60 * 24);
 
   if (diffInDays <= 7) {
-    return date.toLocaleString("en-GB", {
-      weekday: "short",
-      hour: "2-digit",
-      minute: "2-digit",
+    return date.toLocaleString('en-GB', {
+      weekday: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
       hour12: false,
     });
   } else {
-    return date.toLocaleString("en-GB", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
+    return date.toLocaleString('en-GB', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
       hour12: false,
     });
   }
@@ -84,21 +84,17 @@ const formatChatDate = (date) => {
 // Child Components
 const LoadingIndicator = ({ isDarkMode }) => (
   <div
-    className={`main-container ${isDarkMode ? "dark-mode" : ""}`}
+    className={`main-container ${isDarkMode ? 'dark-mode' : ''}`}
     style={{
-      display: "flex",
-      justifyContent: "center",
-      alignItems: "center",
-      minHeight: "100vh",
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      minHeight: '100vh',
     }}
   >
-    <div style={{ textAlign: "center" }}>
-      <div style={{ fontSize: "2rem", animation: "spin 1s linear infinite" }}>
-        ⏳
-      </div>
-      <p style={{ marginTop: "1rem", color: isDarkMode ? "#fff" : "#333" }}>
-        กำลังโหลด...
-      </p>
+    <div style={{ textAlign: 'center' }}>
+      <div style={{ fontSize: '2rem', animation: 'spin 1s linear infinite' }}>⏳</div>
+      <p style={{ marginTop: '1rem', color: isDarkMode ? '#fff' : '#333' }}>กำลังโหลด...</p>
     </div>
   </div>
 );
@@ -137,7 +133,7 @@ const ChatSidebar = ({
   userMatchData,
   allEvents,
 }) => (
-  <div className={`user-container ${openchat ? "mobile-layout-mode" : ""}`}>
+  <div className={`user-container ${openchat ? 'mobile-layout-mode' : ''}`}>
     <div className="chat">
       <h2>Chat</h2>
     </div>
@@ -154,6 +150,7 @@ const ChatSidebar = ({
     <div className="slide-chat">
       <ListUser
         sortedFriends={sortedFriends}
+        searchTerm={searchTerm}
         lastMessages={lastMessages}
         setOpenchat={setOpenchat}
         setActiveUser={setActiveUser}
@@ -170,6 +167,7 @@ const ChatSidebar = ({
         users={users}
       />
       <CommunityList
+        searchTerm={searchTerm}
         isOpencom={isOpencom}
         setUserImage={setUserImage}
         setIsOpen={setIsOpen}
@@ -192,6 +190,7 @@ const ChatSidebar = ({
         allEvents={allEvents}
       />
       <MatchList
+        searchTerm={searchTerm}
         isOpenMatch={isOpenMatch}
         setOpenchat={setOpenchat}
         setSelectedTab={setSelectedTab}
@@ -267,7 +266,7 @@ const ChatWindow = ({
   isDefaultRoom,
 }) => {
   return (
-    <div className={`bg-chat-con ${openchat ? "mobile-layout-mode" : ""}`}>
+    <div className={`bg-chat-con ${openchat ? 'mobile-layout-mode' : ''}`}>
       <ChatPanel
         messages={messages}
         userEmail={userEmail}
@@ -307,26 +306,6 @@ const ChatWindow = ({
           disabled={isDefaultRoom}
         />
       </div>
-      {!openchat && (
-        <div className="tabright">
-          <ShowTitle userimage={userImage} openchat={openchat} />
-          <ChatContainerAI
-            loadingMessages={loadingMessages}
-            messages={messages}
-            openchat={openchat}
-            isAiChatOpen={false} // This ChatContainerAI is embedded, not the modal
-            userEmail={userEmail}
-            roomId={RoomsBar.roomId} // Pass the current roomId
-            defaultProfileImage={defaultProfileImage}
-            formatChatDate={formatChatDate}
-            endOfMessagesRef={endOfMessagesRef}
-            input={input}
-            setInput={setInput}
-            handleSend={handleSend}
-            disabled={isDefaultRoom}
-          />
-        </div>
-      )}
     </div>
   );
 };
@@ -365,21 +344,21 @@ const AIChatButtonAndModal = ({
 }) => (
   <>
     <button
-      className={`ai-chat-float-button ${hasNewAiMessage ? "new-message" : ""}`}
+      className={`ai-chat-float-button ${hasNewAiMessage ? 'new-message' : ''}`}
       onClick={openAiChat}
       title="แชทกับ AI Assistant"
     >
       <RiRobot2Fill />
       {aiNotificationCount > 0 && (
         <span className="ai-chat-notification-badge">
-          {aiNotificationCount > 9 ? "9+" : aiNotificationCount}
+          {aiNotificationCount > 9 ? '9+' : aiNotificationCount}
         </span>
       )}
     </button>
 
     {isAiChatOpen && (
       <div
-        className={`ai-chat-overlay ${isAiChatOpen ? "active" : ""}`}
+        className={`ai-chat-overlay ${isAiChatOpen ? 'active' : ''}`}
         onClick={handleAiModalClick}
       >
         <div className="ai-chat-modal">
@@ -388,11 +367,7 @@ const AIChatButtonAndModal = ({
               <RiRobot2Fill />
               AI Assistant
             </h3>
-            <button
-              className="ai-chat-close-btn"
-              onClick={closeAiChat}
-              title="ปิด"
-            >
+            <button className="ai-chat-close-btn" onClick={closeAiChat} title="ปิด">
               <MdClose />
             </button>
           </div>
@@ -420,7 +395,7 @@ AIChatButtonAndModal.propTypes = {
   defaultProfileImage: PropTypes.string.isRequired,
 };
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from '@tanstack/react-query';
 import {
   fetchUsers,
   fetchCurrentUser,
@@ -429,26 +404,27 @@ import {
   fetchAllRooms,
   fetchEvents,
   fetchInfos,
-} from "../lib/queries";
-import { useMemo } from "react";
+} from '../lib/queries';
+import { useMemo } from 'react';
 
 const Chat = () => {
   const { socket, onlineUsers } = useNotifications();
   const { isDarkMode } = useTheme();
   const [isOpencom, setIsOpencom] = useState(false);
   const { roomId } = useParams();
-  const isDefaultRoom = roomId === "some-default-room";
-  const userPhoto = localStorage.getItem("userPhoto");
-  const userName = localStorage.getItem("userName");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [input, setInput] = useState("");
+  const isDefaultRoom = roomId === 'some-default-room';
+  const userPhoto = localStorage.getItem('userPhoto');
+  const userName = localStorage.getItem('userName');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [input, setInput] = useState('');
   const [selectedUser, setSelectedUser] = useState(null);
   const [messages, setMessages] = useState([]);
   const [activeUser, setActiveUser] = useState(null);
-  const userEmail = localStorage.getItem("userEmail");
-  const messagesRef = useMemo(() => collection(db, "messages"), []);
+  const userEmail = localStorage.getItem('userEmail');
+  const messagesRef = useMemo(() => collection(db, 'messages'), []);
   const [isOpen, setIsOpen] = useState(false);
   const endOfMessagesRef = useRef(null);
+  const isInitialLoad = useRef(true);
   const dropdownRefs = useRef({});
   const [RoomsBar, setRoomBar] = useState({});
   const [openMenuFor, setOpenMenuFor] = useState(null);
@@ -462,49 +438,46 @@ const Chat = () => {
   const [isAiChatOpen, setIsAiChatOpen] = useState(false);
   const [aiNotificationCount, setAiNotificationCount] = useState(0);
   const [hasNewAiMessage, setHasNewAiMessage] = useState(false);
-  const displayName = localStorage.getItem("userName");
-  const photoURL = localStorage.getItem("userPhoto");
-  const defaultProfileImage =
-    "https://cdn.pixabay.com/photo/2023/02/18/11/00/icon-7797704_640.png";
+  const displayName = localStorage.getItem('userName');
+  const photoURL = localStorage.getItem('userPhoto');
+  const defaultProfileImage = 'https://cdn.pixabay.com/photo/2023/02/18/11/00/icon-7797704_640.png';
 
   // React Query Data Fetching
   const { data: users = [], isLoading: isLoadingUsers } = useQuery({
-    queryKey: ["users"],
+    queryKey: ['users'],
     queryFn: fetchUsers,
   });
 
   const { data: currentUser, isLoading: isLoadingCurrentUser } = useQuery({
-    queryKey: ["currentUser", userEmail],
+    queryKey: ['currentUser', userEmail],
     queryFn: () => fetchCurrentUser(userEmail),
     enabled: !!userEmail,
   });
 
-  const { isLoading: isLoadingCommunityData } =
-    useQuery({
-      queryKey: ["userRooms", userEmail],
-      queryFn: () => fetchUserRooms(userEmail),
-      enabled: !!userEmail,
-    });
+  const { isLoading: isLoadingCommunityData } = useQuery({
+    queryKey: ['userRooms', userEmail],
+    queryFn: () => fetchUserRooms(userEmail),
+    enabled: !!userEmail,
+  });
 
-  const { data: userMatchData = [], isLoading: isLoadingUserMatchData } =
-    useQuery({
-      queryKey: ["infoMatch"],
-      queryFn: fetchInfoMatch,
-    });
+  const { data: userMatchData = [], isLoading: isLoadingUserMatchData } = useQuery({
+    queryKey: ['infoMatch'],
+    queryFn: fetchInfoMatch,
+  });
 
   const { isLoading: isLoadingAllRooms } = useQuery({
-    queryKey: ["allRooms"],
+    queryKey: ['allRooms'],
     queryFn: fetchAllRooms,
   });
 
   const { data: allEvents = [], isLoading: isLoadingAllEvents } = useQuery({
-    queryKey: ["events", userEmail],
+    queryKey: ['events', userEmail],
     queryFn: () => fetchEvents(userEmail),
     enabled: !!userEmail,
   });
 
   const { data: infos = [], isLoading: isLoadingInfos } = useQuery({
-    queryKey: ["infos"],
+    queryKey: ['infos'],
     queryFn: fetchInfos,
   });
 
@@ -525,17 +498,22 @@ const Chat = () => {
       const friendEmails = currentUser.map((f) => f.email);
       return users
         .filter((user) => friendEmails.includes(user.email))
-        .map((user) => ({
-          photoURL: user.photoURL,
-          email: user.email,
-          displayName: user.displayName,
-          _id: user._id,
-          isOnline: user.isOnline || false,
-        }))
+        .map((user) => {
+          const userInfo = infos.find((info) => info.email === user.email);
+          return {
+            photoURL: user.photoURL,
+            email: user.email,
+            displayName: user.displayName,
+            nickname: userInfo?.nickname,
+            _id: user._id,
+            isOnline: user.isOnline || false,
+          };
+        })
         .sort((a, b) => a.displayName.localeCompare(b.displayName));
     }
     return [];
-  }, [currentUser, users]);
+  }, [currentUser, users, infos]);
+
   useEffect(() => {
     if (processedFriends && processedFriends.length > 0) {
       setFriends(processedFriends);
@@ -548,9 +526,9 @@ const Chat = () => {
     setIsModalOpen(true);
   };
 
-  const scrollToBottom = () => {
+  const scrollToBottom = (behavior = 'smooth') => {
     if (endOfMessagesRef.current) {
-      endOfMessagesRef.current.scrollIntoView({ behavior: "smooth" });
+      endOfMessagesRef.current.scrollIntoView({ behavior });
     }
   };
 
@@ -571,19 +549,19 @@ const Chat = () => {
   };
 
   const handleAiModalClick = (e) => {
-    if (e.target.classList.contains("ai-chat-overlay")) {
+    if (e.target.classList.contains('ai-chat-overlay')) {
       closeAiChat();
     }
   };
 
   useEffect(() => {
     const handleEscKey = (e) => {
-      if (e.key === "Escape" && isAiChatOpen) {
+      if (e.key === 'Escape' && isAiChatOpen) {
         closeAiChat();
       }
     };
-    document.addEventListener("keydown", handleEscKey);
-    return () => document.removeEventListener("keydown", handleEscKey);
+    document.addEventListener('keydown', handleEscKey);
+    return () => document.removeEventListener('keydown', handleEscKey);
   }, [isAiChatOpen]);
 
   useEffect(() => {
@@ -600,9 +578,9 @@ const Chat = () => {
   }, [isAiChatOpen]);
 
   const handleSend = async () => {
-    if (input.trim() === "") return;
+    if (input.trim() === '') return;
     if (!isGroupChat && !selectedUser && !activeUser) {
-      console.warn("ไม่สามารถส่งข้อความได้: ไม่มีผู้รับที่ระบุ");
+      console.warn('ไม่สามารถส่งข้อความได้: ไม่มีผู้รับที่ระบุ');
       return;
     }
 
@@ -611,97 +589,93 @@ const Chat = () => {
       receiver: null, // Default to null
       content: input,
       timestamp: serverTimestamp(),
-      roomId: roomId || "direct",
+      roomId: roomId || 'direct',
       isSeen: false,
     };
 
     if (isGroupChat === true) {
-      messageData.type = "group";
+      messageData.type = 'group';
     } else if (selectedUser && selectedUser.email) {
       messageData.receiver = selectedUser.email;
     } else if (activeUser) {
-      messageData.receiver =
-        typeof activeUser === "string" ? activeUser : activeUser.email;
+      messageData.receiver = typeof activeUser === 'string' ? activeUser : activeUser.email;
     } else {
-      console.error("ไม่สามารถส่งข้อความได้: ไม่มีผู้รับ");
+      console.error('ไม่สามารถส่งข้อความได้: ไม่มีผู้รับ');
       return;
     }
 
     try {
       await addDoc(messagesRef, messageData);
-      setInput("");
+      setInput('');
     } catch (error) {
-      console.error("Error sending message:", error);
-      toast.error("ไม่สามารถส่งข้อความได้ กรุณาลองใหม่อีกครั้ง");
+      console.error('Error sending message:', error);
+      toast.error('ไม่สามารถส่งข้อความได้ กรุณาลองใหม่อีกครั้ง');
     }
   };
 
-  const setRoombar = (roomImage, roomName) => {
-    setRoomBar({ roomImage, roomName, roomId }); // Store roomId as well
+  const setRoombar = (roomImage, roomName, targetRoomId) => {
+    setRoomBar({ roomImage, roomName, roomId: targetRoomId || roomId }); // Store roomId as well
   };
 
   useEffect(() => {
     if (!userEmail) return;
 
-    socket.emit("user-online", { displayName, photoURL, email: userEmail });
+    socket.emit('user-online', { displayName, photoURL, email: userEmail });
 
     const pingInterval = setInterval(() => {
       if (socket.connected) {
-        socket.emit("user-ping", { email: userEmail });
+        socket.emit('user-ping', { email: userEmail });
       }
     }, 30000);
 
-    socket.on("update-users", (_data) => {
+    socket.on('update-users', (_data) => {
       // Note: This is a side-effect that is hard to manage with React Query
       // For now, we will leave this as is, but a better solution would be
       // to use the queryClient to update the user data in the cache.
     });
 
-    socket.on("user-offline", (_userData) => {
+    socket.on('user-offline', (_userData) => {
       // Similar to above, this should ideally update the cache
     });
 
-    socket.on("user-online", (_userData) => {
+    socket.on('user-online', (_userData) => {
       // Similar to above, this should ideally update the cache
     });
 
-    socket.on("connect", () => {
-      socket.emit("user-online", { displayName, photoURL, email: userEmail });
+    socket.on('connect', () => {
+      socket.emit('user-online', { displayName, photoURL, email: userEmail });
     });
 
     return () => {
-      socket.emit("user-offline", { email: userEmail });
-      socket.off("update-users");
-      socket.off("user-offline");
-      socket.off("user-online");
-      socket.off("connect");
+      socket.emit('user-offline', { email: userEmail });
+      socket.off('update-users');
+      socket.off('user-offline');
+      socket.off('user-online');
+      socket.off('connect');
       clearInterval(pingInterval);
     };
   }, [userEmail, displayName, photoURL, socket]);
 
   useEffect(() => {
     if (!roomId) return;
-    const q = query(messagesRef, orderBy("timestamp"));
+    setMessages([]); // Clear messages to prevent ghost content during switch
+    isInitialLoad.current = true; // Reset initial load state
+    const q = query(messagesRef, orderBy('timestamp'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const allMessages = snapshot.docs
         .map((doc) => ({ id: doc.id, ...doc.data() }))
         .filter((msg) => msg.roomId === roomId);
 
       const filteredMessages = isGroupChat
-        ? allMessages.filter(
-            (msg) => msg.type === "group" && msg.roomId === roomId
-          )
+        ? allMessages.filter((msg) => msg.type === 'group' && msg.roomId === roomId)
         : allMessages.filter((msg) => {
-            const isMyMsg =
-              msg.sender === userEmail && msg.receiver === activeUser;
+            const isMyMsg = msg.sender === userEmail && msg.receiver === activeUser;
             const isTheirMsg =
-              msg.sender === activeUser &&
-              (msg.receiver === userEmail || !msg.receiver);
+              msg.sender === activeUser && (msg.receiver === userEmail || !msg.receiver);
             return isMyMsg || isTheirMsg;
           });
 
       setMessages(filteredMessages);
-      scrollToBottom();
     });
 
     return () => unsubscribe();
@@ -710,18 +684,15 @@ const Chat = () => {
   useEffect(() => {
     const markMessagesAsSeen = async () => {
       const q = query(
-        collection(db, "messages"),
-        where("roomId", "==", roomId),
-        where("isSeen", "==", false)
+        collection(db, 'messages'),
+        where('roomId', '==', roomId),
+        where('isSeen', '==', false)
       );
       const querySnapshot = await getDocs(q);
       querySnapshot.forEach(async (docSnap) => {
         const msg = docSnap.data();
-        if (
-          msg.sender !== userEmail &&
-          (!msg.receiver || msg.receiver === userEmail)
-        ) {
-          await updateDoc(doc(db, "messages", docSnap.id), { isSeen: true });
+        if (msg.sender !== userEmail && (!msg.receiver || msg.receiver === userEmail)) {
+          await updateDoc(doc(db, 'messages', docSnap.id), { isSeen: true });
         }
       });
     };
@@ -731,12 +702,17 @@ const Chat = () => {
   }, [messages, userEmail, roomId]);
 
   useEffect(() => {
-    scrollToBottom();
+    if (messages.length > 0) {
+      // Use 'auto' (instant) for initial load to prevent sliding effect
+      const behavior = isInitialLoad.current ? 'auto' : 'smooth';
+      scrollToBottom(behavior);
+      isInitialLoad.current = false;
+    }
   }, [messages]);
 
   useEffect(() => {
     if (!userEmail) return;
-    const q = query(collection(db, "messages"), orderBy("timestamp", "desc"));
+    const q = query(collection(db, 'messages'), orderBy('timestamp', 'desc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const newMessages = snapshot.docs.map((doc) => ({
         id: doc.id,
@@ -746,9 +722,7 @@ const Chat = () => {
       newMessages.forEach((msg) => {
         const otherEmail = msg.sender === userEmail ? msg.receiver : msg.sender;
         if (
-          (msg.sender === userEmail ||
-            msg.receiver === userEmail ||
-            msg.receiver === null) &&
+          (msg.sender === userEmail || msg.receiver === userEmail || msg.receiver === null) &&
           !latest[otherEmail]
         ) {
           latest[otherEmail] = msg;
@@ -759,17 +733,14 @@ const Chat = () => {
     return () => unsubscribe();
   }, [userEmail]);
 
-  const isOnline = (email) =>
-    email && onlineUsers && onlineUsers[email]?.online;
+  const isOnline = (email) => email && onlineUsers && onlineUsers[email]?.online;
   const formatOnlineStatus = (user) => {
-    if (!user || !user.email) return "";
-    if (isOnline(user.email)) return "ออนไลน์";
+    if (!user || !user.email) return '';
+    if (isOnline(user.email)) return 'ออนไลน์';
     if (onlineUsers[user.email]?.lastActive) {
-      return `ออฟไลน์ - ${formatRelativeTime(
-        new Date(onlineUsers[user.email].lastActive)
-      )}`;
+      return `ออฟไลน์ - ${formatRelativeTime(new Date(onlineUsers[user.email].lastActive))}`;
     }
-    return "ออฟไลน์";
+    return 'ออฟไลน์';
   };
   const friendsWithOnlineStatus = friends.map((friend) => ({
     ...friend,
@@ -794,7 +765,7 @@ const Chat = () => {
 
   return (
     <RequireLogin>
-      <div className={`main-container ${isDarkMode ? "dark-mode" : ""}`}>
+      <div className={`main-container ${isDarkMode ? 'dark-mode' : ''}`}>
         <ChatSidebar
           openchat={openchat}
           searchTerm={searchTerm}

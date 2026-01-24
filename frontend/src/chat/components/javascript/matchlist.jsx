@@ -1,10 +1,11 @@
 import { useEffect, useState, useRef } from 'react';
 import PropTypes from 'prop-types';
 import { FaChevronDown, FaChevronRight } from 'react-icons/fa';
-import { FaHeart, FaHeartBroken } from 'react-icons/fa';
+import { FaHeartBroken } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { fetchInfoMatch, fetchUsers } from '../../../lib/queries';
+import { getFullImageUrl, getHighResPhoto } from '../../../common/utils/image';
 
 const MatchList = ({
   setActiveUser,
@@ -12,9 +13,9 @@ const MatchList = ({
   setIsGroupChat,
   isOpenMatch,
   setIsOpenMatch,
+  searchTerm,
   setSelectedTab,
   setOpenchat,
-  handleProfileClick,
   selectedTab,
   openMenuFor,
   setUserImage,
@@ -43,6 +44,16 @@ const MatchList = ({
     const hasValidId = !!matchData._id;
 
     return isUserInMatch && bothJoined && hasValidId;
+  });
+
+  const filteredMatches = validMatches.filter((matchData) => {
+    const partnerEmail = matchData.email === userEmail ? matchData.usermatch : matchData.email;
+    const user = users.find((u) => u.email === partnerEmail);
+    const name = user && user.displayName ? user.displayName : partnerEmail;
+    return (
+      name.toLowerCase().includes(searchTerm || '') ||
+      (matchData.detail || '').toLowerCase().includes(searchTerm || '')
+    );
   });
 
   // ตรวจสอบการ match ใหม่
@@ -103,9 +114,9 @@ const MatchList = ({
             >
               กำลังโหลด...
             </div>
-          ) : validMatches.length > 0 ? (
+          ) : filteredMatches.length > 0 ? (
             <ul className="friend-list-chat">
-              {validMatches.map((matchData, index) => {
+              {filteredMatches.map((matchData, index) => {
                 const partnerEmail =
                   matchData.email === userEmail ? matchData.usermatch : matchData.email;
                 return (
@@ -126,20 +137,15 @@ const MatchList = ({
                       setActiveUser(partnerEmail);
 
                       const partnerUser = users.find((u) => u.email === partnerEmail);
-                      setRoombar(partnerUser?.photoURL || matchData.image, matchData.title);
+                      setRoombar(partnerUser?.photoURL || matchData.image, matchData.title, matchData._id);
                       setIsGroupChat(false);
-
-                      const userObject = users.find((u) => u.email === partnerEmail) || {
-                        email: partnerEmail,
-                      };
-                      handleProfileClick(userObject);
                     }}
                   >
                     <img
                       src={(() => {
                         const user = users.find((u) => u.email === partnerEmail);
                         return user && user.photoURL
-                          ? user.photoURL
+                          ? getFullImageUrl(user.photoURL)
                           : 'https://cdn.pixabay.com/photo/2023/02/18/11/00/icon-7797704_640.png';
                       })()}
                       alt={matchData.detail}
@@ -157,7 +163,7 @@ const MatchList = ({
                       {((matchData.emailjoined && matchData.usermatchjoined) ||
                         matchData.status === 'matched') && (
                         <div className="match-badge">
-                          <FaHeart className="match-icon" />
+                          {/* <FaHeart className="match-icon" /> */}
                           <span className="match-text">It&apos;s a Match!</span>
                         </div>
                       )}
@@ -196,7 +202,9 @@ const MatchList = ({
             <div className="activity-match-users">
               <div className="activity-match-user">
                 <img
-                  src={users.find((u) => u.email === userEmail)?.photoURL || '/default-profile.png'}
+                  src={getFullImageUrl(
+                    getHighResPhoto(users.find((u) => u.email === userEmail)?.photoURL)
+                  )}
                   alt="You"
                 />
                 <span>You</span>
@@ -204,12 +212,18 @@ const MatchList = ({
               <div className="activity-match-icon">+</div>
               <div className="activity-match-user">
                 <img
-                  src={(() => {
-                    const partnerEmail =
-                      matchedData.email === userEmail ? matchedData.usermatch : matchedData.email;
-                    const partnerUser = users.find((u) => u.email === partnerEmail);
-                    return partnerUser?.photoURL || '/default-profile.png';
-                  })()}
+                  src={getFullImageUrl(
+                    getHighResPhoto(
+                      (() => {
+                        const partnerEmail =
+                          matchedData.email === userEmail
+                            ? matchedData.usermatch
+                            : matchedData.email;
+                        const partnerUser = users.find((u) => u.email === partnerEmail);
+                        return partnerUser?.photoURL;
+                      })()
+                    )
+                  )}
                   alt="Matched User"
                 />
                 <span>
@@ -257,21 +271,7 @@ MatchList.propTypes = {
   setIsGroupChat: PropTypes.func.isRequired,
   isOpenMatch: PropTypes.bool.isRequired,
   setIsOpenMatch: PropTypes.func.isRequired,
-  setSelectedTab: PropTypes.func.isRequired,
-  setOpenchat: PropTypes.func.isRequired,
-  handleProfileClick: PropTypes.func.isRequired,
-  selectedTab: PropTypes.string,
-  openMenuFor: PropTypes.string,
-  setUserImage: PropTypes.func.isRequired,
-  setOpenMenuFor: PropTypes.func.isRequired,
-};
-
-MatchList.propTypes = {
-  setActiveUser: PropTypes.func.isRequired,
-  setRoombar: PropTypes.func.isRequired,
-  setIsGroupChat: PropTypes.func.isRequired,
-  isOpenMatch: PropTypes.bool.isRequired,
-  setIsOpenMatch: PropTypes.func.isRequired,
+  searchTerm: PropTypes.string,
   setSelectedTab: PropTypes.func.isRequired,
   setOpenchat: PropTypes.func.isRequired,
   handleProfileClick: PropTypes.func.isRequired,

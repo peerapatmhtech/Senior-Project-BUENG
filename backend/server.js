@@ -496,4 +496,4 @@ app.use((req, res, next) => {
 });
 
 // เริ่มต้นเซิร์ฟเวอร์
-server.listen(port, () => console.info(`🚀 Server is running on port ${(8080, '0.0.0.0')}`));
+server.listen(port, () => console.info(`🚀 Server is running on port ${port}`));

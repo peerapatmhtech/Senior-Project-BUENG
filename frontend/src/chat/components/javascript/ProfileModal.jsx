@@ -7,9 +7,9 @@ import {
   useDeleteFriend,
   fetchUserPhotos,
 } from "../../../lib/queries";
-import api from "../../../server/api";
 import ProfileModalBody from "./ProfileModalBody";
 import ProfileModalGallery from "./ProfileModalGallery";
+import { getFullImageUrl } from "../../../common/utils/image";
 
 const ProfileModal = ({
   isOpen,
@@ -54,19 +54,6 @@ const ProfileModal = ({
     user.photoURL ||
     userImage?.photoURL ||
     userImage.image;
-
-  const getHighResPhoto = (url) => {
-    if (!url) return "/default-profile.png";
-    try {
-      if (typeof url === "string" && url.includes("=s")) {
-        return url.replace(/=s\d+-c(?=[&?]|$)/, "=s400-c");
-      }
-      return url;
-    } catch (error) {
-      console.error("Error processing photo URL:", error);
-      return url || "/default-profile.png";
-    }
-  };
 
   const getDeleteType = () => {
     if (userImage?.usermatch) return "match";
@@ -114,18 +101,12 @@ const ProfileModal = ({
       },
     });
   };
-  const getFullImageUrl = (url) => {
-    if (!url) return url;
-    if (url.startsWith("http://") || url.startsWith("https://")) return url;
-    return `${api.defaults.baseURL}${url}`;
-  };
 
   return (
     <div className="profile-modal-overlay" onClick={onClose}>
       <div className="profile-modal" onClick={(e) => e.stopPropagation()}>
         <ProfileModalBody
           getFullImageUrl={getFullImageUrl}
-          getHighResPhoto={getHighResPhoto}
           profilePhotoUrl={profilePhotoUrl}
           matchedUser={matchedUser}
           userImage={userImage}

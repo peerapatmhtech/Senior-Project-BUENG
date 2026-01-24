@@ -5,6 +5,7 @@ import { fetchAllRooms, fetchUserRooms } from "../../../lib/queries";
 
 const CommunityList = ({
   setActiveUser,
+  searchTerm,
   setRoombar,
   isOpencom,
   setIsOpencom,
@@ -35,6 +36,10 @@ const CommunityList = ({
           .filter((room) => !!room)
       : [];
 
+  const filteredRooms = validRooms.filter((room) =>
+    (room.name || '').toLowerCase().includes(searchTerm || '')
+  );
+
   const handleEnterRoom = (roomId) => {
     navigate(`/chat/${roomId}`);
   };
@@ -63,9 +68,9 @@ const CommunityList = ({
             >
               กำลังโหลด...
             </div>
-          ) : validRooms.length > 0 ? (
+          ) : filteredRooms.length > 0 ? (
             <ul className="friend-list-chat">
-              {validRooms.map((room, index) => {
+              {filteredRooms.map((room, index) => {
                 return (
                   <li
                     key={room._id || index}
@@ -75,7 +80,7 @@ const CommunityList = ({
                     onClick={() => {
                       setSelectedTab(room.name);
                       setActiveUser(room.name);
-                      setRoombar(room.image, room.name);
+                      setRoombar(room.image, room.name, room._id);
                       setIsGroupChat(true);
                       setOpenchat(true);
                       setUserImage(room);

@@ -1,5 +1,6 @@
 import express from 'express';
 import { Gmail } from '../model/gmail.js';
+import { UserPhoto } from '../model/userPhoto.js';
 const app = express.Router();
 
 // 📌 3️⃣ API บันทึก/อัปเดตผู้ใช้จาก Google Login และสร้าง Session
@@ -34,10 +35,29 @@ app.post('/login', async (req, res) => {
   }
 });
 
-// 📌 4️⃣ API ดึงผู้ใช้ทั้งหมด (สำหรับแสดง Friend List)
+// สำหรับดึงข้อมูลผู้ใช้ทั้งหมด (users)
 app.get('/users', async (req, res) => {
   try {
-    const users = await Gmail.find();
+    const users = await Gmail.find().lean();
+
+    // Optimization: Batch fetch photos for users with custom order
+    const photoIds = users
+      .filter((u) => u.photosOrder && u.photosOrder.length > 0)
+      .map((u) => u.photosOrder[0]);
+
+    if (photoIds.length > 0) {
+      const photos = await UserPhoto.find({ _id: { $in: photoIds } })
+        .select('_id url')
+        .lean();
+      const photoMap = new Map(photos.map((p) => [p._id.toString(), p.url]));
+
+      users.forEach((user) => {
+        if (user.photosOrder && user.photosOrder.length > 0) {
+          const customPhotoUrl = photoMap.get(user.photosOrder[0]);
+          if (customPhotoUrl) user.photoURL = customPhotoUrl;
+        }
+      });
+    }
     res.json(users);
   } catch (error) {
     console.error('Error fetching users:', error);
@@ -51,8 +71,16 @@ app.get('/users/:email', async (req, res) => {
     if (!email) {
       return res.status(400).send('Email is required.');
     }
-    const user = await Gmail.findOne({ email });
+    const user = await Gmail.findOne({ email }).lean();
     if (!user) return res.status(404).send('User not found');
+
+    // Check for custom photo order
+    if (user.photosOrder && user.photosOrder.length > 0) {
+      const photo = await UserPhoto.findById(user.photosOrder[0]).select('url').lean();
+      if (photo) {
+        user.photoURL = photo.url;
+      }
+    }
     res.json(user);
   } catch (error) {
     console.error('Error fetching friends:', error);
@@ -64,7 +92,26 @@ app.get('/users/:email', async (req, res) => {
 app.get('/usersfriends', async (req, res) => {
   try {
     const email = JSON.parse(decodeURIComponent(req.query.emails));
-    const users = await Gmail.find({ email: { $in: email } });
+    const users = await Gmail.find({ email: { $in: email } }).lean();
+
+    // Optimization: Batch fetch photos
+    const photoIds = users
+      .filter((u) => u.photosOrder && u.photosOrder.length > 0)
+      .map((u) => u.photosOrder[0]);
+
+    if (photoIds.length > 0) {
+      const photos = await UserPhoto.find({ _id: { $in: photoIds } })
+        .select('_id url')
+        .lean();
+      const photoMap = new Map(photos.map((p) => [p._id.toString(), p.url]));
+
+      users.forEach((user) => {
+        if (user.photosOrder && user.photosOrder.length > 0) {
+          const customPhotoUrl = photoMap.get(user.photosOrder[0]);
+          if (customPhotoUrl) user.photoURL = customPhotoUrl;
+        }
+      });
+    }
     res.json(users);
   } catch (error) {
     console.error(error);

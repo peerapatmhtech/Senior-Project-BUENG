@@ -1,10 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { MdSend, MdLightbulbOutline } from 'react-icons/md';
+import { MdSend, MdLightbulbOutline, MdAutoAwesome } from 'react-icons/md';
 import { RiRobot2Fill } from 'react-icons/ri';
 import api from '../../../server/api';
-import { sendMessageToAI } from '../../../server/aiService'; // Import the AI service
-import { fetchAllEvents, fetchInfoMatch } from '../../../lib/queries';
+import { toast } from 'react-toastify';
 import '../css/ChatAI.css';
 import PropTypes from 'prop-types';
 
@@ -20,41 +19,24 @@ const fetchAiChatHistory = async (roomId) => {
   }
 };
 
-// Helper function to send a message to the AI
-const saveAiConversation = async ({ roomId, userMessageContent, aiMessageContent }) => {
-  const { data } = await api.post(`/api/aichat/${roomId}/save`, {
-    userMessageContent,
-    aiMessageContent,
-  });
-  return data;
-};
-
-const ChatContainerAI = ({ isAiChatOpen, defaultProfileImage, roomId, disabled }) => {
+const ChatContainerAI = ({ isAiChatOpen, defaultProfileImage, roomId, disabled, userEmail }) => {
   const [input, setInput] = useState('');
   const [isAiThinking, setIsAiThinking] = useState(false);
   const endOfMessagesRef = useRef(null);
   const inputRef = useRef(null);
+  const isInitialLoad = useRef(true);
   const queryClient = useQueryClient();
   const aiProfileImage = 'https://cdn-icons-png.flaticon.com/512/10829/10829273.png';
 
+  // Use the provided roomId, or fallback to a user-specific global AI room ID
+  const activeRoomId = roomId || (userEmail ? `ai-global-${userEmail}` : null);
+
   // Fetch chat history using React Query
   const { data: messages = [], isLoading: isLoadingHistory } = useQuery({
-    queryKey: ['aiChat', roomId],
-    queryFn: () => fetchAiChatHistory(roomId),
-    enabled: !!roomId, // Only run query if roomId exists
+    queryKey: ['aiChat', activeRoomId],
+    queryFn: () => fetchAiChatHistory(activeRoomId),
+    enabled: !!activeRoomId, // Only run query if activeRoomId exists
     staleTime: 1000 * 60 * 5, // 5 minutes
-  });
-
-  // Fetch all events to provide context for the AI
-  const { data: allEvents = [] } = useQuery({
-    queryKey: ['allEvents'],
-    queryFn: fetchAllEvents,
-  });
-
-  // Fetch infoMatch to find the eventId associated with the current roomId
-  const { data: infoMatches = [] } = useQuery({
-    queryKey: ['infoMatch'],
-    queryFn: fetchInfoMatch,
   });
 
   // Focus input field when component mounts
@@ -62,9 +44,17 @@ const ChatContainerAI = ({ isAiChatOpen, defaultProfileImage, roomId, disabled }
     inputRef.current?.focus();
   }, []);
 
+  useEffect(() => {
+    isInitialLoad.current = true;
+  }, [activeRoomId]);
+
   // Scroll to bottom when messages change
   useEffect(() => {
-    endOfMessagesRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (messages.length > 0) {
+      const behavior = isInitialLoad.current ? 'auto' : 'smooth';
+      endOfMessagesRef.current?.scrollIntoView({ behavior });
+      isInitialLoad.current = false;
+    }
   }, [messages]);
 
   // Format date to display in chat
@@ -79,10 +69,14 @@ const ChatContainerAI = ({ isAiChatOpen, defaultProfileImage, roomId, disabled }
   };
 
   const mutation = useMutation({
-    mutationFn: saveAiConversation,
-    onSuccess: () => {
-      // Invalidate and refetch the chat history to get the latest messages
-      queryClient.invalidateQueries({ queryKey: ['aiChat', roomId] });
+    mutationFn: async ({ content, history }) => {
+      // Use the unified endpoint that handles context, generation, and saving
+      const { data } = await api.post(`/api/aichat/${activeRoomId}`, { content, history });
+      return data.data; // Returns the saved AI message
+    },
+    onSuccess: (aiMessage) => {
+      // Update cache with the real AI response
+      queryClient.setQueryData(['aiChat', activeRoomId], (oldData = []) => [...oldData, aiMessage]);
     },
     onError: (error) => {
       console.error('Error sending message to AI:', error);
@@ -99,50 +93,58 @@ const ChatContainerAI = ({ isAiChatOpen, defaultProfileImage, roomId, disabled }
     // Optimistically add user's message
     const userMessage = {
       _id: `temp-${Date.now()}`,
-      roomId,
+      roomId: activeRoomId,
       sender: 'user',
       content: userInput,
       timestamp: new Date().toISOString(),
     };
 
-    queryClient.setQueryData(['aiChat', roomId], (oldData = []) => [...oldData, userMessage]);
+    queryClient.setQueryData(['aiChat', activeRoomId], (oldData = []) => [...oldData, userMessage]);
 
     setIsAiThinking(true);
 
     try {
-      // Generate chat history for the AI context
+      // Prepare history for context (limit to last few messages if needed, but backend handles it too)
       const history = messages.map((msg) => ({
         role: msg.sender === 'ai' ? 'assistant' : 'user',
         content: msg.content,
-      }));
+      })).filter((msg) => msg.content && typeof msg.content === 'string' && msg.content.trim() !== '');
 
-      const currentMatch = infoMatches.find((match) => match._id === roomId);
-      const targetEventId = currentMatch?.eventId;
-
-      const eventsContext = allEvents
-        .filter((event) => event._id === targetEventId)
-        .map((event) => ({
-          title: event.title,
-          description: event.description,
-          date: event.date,
-          location: event.location,
-          genre: event.genre,
-          link: event.link,
-        }));
-
-      // Send message to AI service
-
-      const aiResponseContent = await sendMessageToAI(userInput, history, eventsContext);
-      setIsAiThinking(false);
-      mutation.mutate({
-        roomId,
-        userMessageContent: userInput,
-        aiMessageContent: aiResponseContent,
-      });
+      await mutation.mutateAsync({ content: userInput, history });
     } catch (error) {
-      setIsAiThinking(false);
       console.error('Failed to get AI response:', error);
       // Optionally, remove the optimistic update or show an error message in the chat
+    } finally {
+      setIsAiThinking(false);
+    }
+  };
+
+  const handleDailyRecommend = async () => {
+    if (isAiThinking) return;
+    setIsAiThinking(true);
+    try {
+      const { data } = await api.post('/api/aichat/daily-recommendation');
+      const recs = data.data.recommendations;
+      
+      // Format the recommendation as a message
+      const formattedContent = "📅 **กิจกรรมแนะนำประจำวัน (Daily Picks)**\n\n" + 
+        recs.map((r, idx) => `${idx + 1}. **${r.title}**\n   ${r.reason}`).join('\n\n');
+
+      // Add as a local AI message (ephemeral or we could save it if we want)
+      const aiMsg = {
+        _id: `daily-${Date.now()}`,
+        roomId: activeRoomId,
+        sender: 'ai',
+        content: formattedContent,
+        timestamp: new Date().toISOString(),
+      };
+      
+      queryClient.setQueryData(['aiChat', activeRoomId], (oldData = []) => [...oldData, aiMsg]);
+    } catch (error) {
+      console.error("Failed to fetch recommendations", error);
+      toast.error("ไม่สามารถดึงข้อมูลแนะนำได้ในขณะนี้ กรุณาลองใหม่ภายหลัง");
+    } finally {
+      setIsAiThinking(false);
     }
   };
 
@@ -221,6 +223,13 @@ const ChatContainerAI = ({ isAiChatOpen, defaultProfileImage, roomId, disabled }
         )}
         <div ref={endOfMessagesRef} />
       </div>
+      
+      {/* Daily Recommendation Button */}
+      <div className="ai-actions-bar">
+        <button className="action-chip" onClick={handleDailyRecommend} disabled={isAiThinking || disabled}>
+          <MdAutoAwesome /> Daily Picks
+        </button>
+      </div>
       {messages.length === 0 && !isLoadingHistory && (
         <div className="prompt-suggestions">
           {examplePrompts.map((prompt, i) => (
@@ -251,18 +260,18 @@ const ChatContainerAI = ({ isAiChatOpen, defaultProfileImage, roomId, disabled }
                   ? 'กำลังรอคำตอบ...'
                   : 'พิมพ์คำถามของคุณ...'
             }
-            disabled={isAiThinking || mutation.isPending || !roomId || disabled}
+            disabled={isAiThinking || mutation.isPending || !activeRoomId || disabled}
             className="chat-input-ai"
             style={{
               cursor:
-                isAiThinking || mutation.isPending || !roomId || disabled ? 'not-allowed' : 'text',
+                isAiThinking || mutation.isPending || !activeRoomId || disabled ? 'not-allowed' : 'text',
             }}
-            // disabled={mutation.isPending || !roomId}
+            // disabled={mutation.isPending || !activeRoomId}
           />
           <button
             onClick={handleSend}
             className="chat-send-button"
-            disabled={isAiThinking || mutation.isPending || !input.trim() || !roomId || disabled}
+            disabled={isAiThinking || mutation.isPending || !input.trim() || !activeRoomId || disabled}
           >
             <MdSend /> ส่ง
           </button>

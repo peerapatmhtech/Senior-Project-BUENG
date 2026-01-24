@@ -1,18 +1,15 @@
-import { useState, useEffect, useRef } from "react";
-import "./Profile.css";
-import { FaEdit, FaPlus, FaTimes, FaStar } from "react-icons/fa";
-import { useTheme } from "../context/themecontext";
-import api from "../server/api";
-import { ToastContainer, toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
-import HeaderProfile from "../components/HeaderProfile";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import PropTypes from "prop-types";
-import {
-  fetchUserPhotos,
-  fetchCurrentUser,
-  fetchUserInfo,
-} from "../lib/queries";
+import { useState, useRef } from 'react';
+import './Profile.css';
+import { FaEdit, FaPlus, FaTimes, FaStar } from 'react-icons/fa';
+import { useTheme } from '../context/themecontext';
+import api from '../server/api';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import HeaderProfile from '../components/HeaderProfile';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import PropTypes from 'prop-types';
+import { fetchUserPhotos, fetchCurrentUser, fetchUserInfo } from '../lib/queries';
+import { getFullImageUrl, getHighResPhoto } from '../common/utils/image';
 
 const MAX_CHARS = 400;
 const MAX_NICKNAME = 30;
@@ -30,14 +27,14 @@ ProfileStat.propTypes = {
 };
 
 const Profile = () => {
-  const userEmail = localStorage.getItem("userEmail");
+  const userEmail = localStorage.getItem('userEmail');
   const { isDarkMode } = useTheme();
   const queryClient = useQueryClient();
 
   // Form States (Draft) - ใช้เฉพาะตอนแก้ไข
-  const [tempInfo, setTempInfo] = useState({ detail: "" });
-  const [nickName, setNickName] = useState("");
-  
+  const [tempInfo, setTempInfo] = useState({ detail: '' });
+  const [nickName, setNickName] = useState('');
+
   // UI States
   const [isEditingName, setIsEditingName] = useState(false);
   const [isEditingAbout, setIsEditingAbout] = useState(false);
@@ -45,52 +42,55 @@ const Profile = () => {
   const fileInputRef = useRef(null);
 
   // Server States - ใช้สำหรับแสดงผล
-  const { data: photoUsers = [], refetch: refetchPhotos, isLoading: isLoadingPhotos } = useQuery({
-    queryKey: ["userPhotos", userEmail],
+  const {
+    data: photoUsers = [],
+    refetch: refetchPhotos,
+    isLoading: isLoadingPhotos,
+  } = useQuery({
+    queryKey: ['userPhotos', userEmail],
     queryFn: () => fetchUserPhotos(userEmail),
     enabled: !!userEmail,
   });
-  const { data: infoUser = { detail: "" }, isLoading: isLoadingInfo } =
-    useQuery({
-      queryKey: ["userInfos", userEmail],
-      queryFn: () => fetchUserInfo(userEmail),
-      enabled: !!userEmail,
-    });
+  const { data: infoUser = { detail: '' }, isLoading: isLoadingInfo } = useQuery({
+    queryKey: ['userInfos', userEmail],
+    queryFn: () => fetchUserInfo(userEmail),
+    enabled: !!userEmail,
+  });
   const { data: currentUser = {}, isLoading: isLoadingUser } = useQuery({
-    queryKey: ["currentUser", userEmail],
+    queryKey: ['currentUser', userEmail],
     queryFn: () => fetchCurrentUser(userEmail),
     enabled: !!userEmail,
   });
 
   const loading = isLoadingPhotos || isLoadingInfo || isLoadingUser;
-  
+
   // Derived Data
   const followers = currentUser.followers || [];
   const following = currentUser.following || [];
 
   const handleSaveNickName = async () => {
     if (!nickName.trim()) {
-      toast.error("nicknameCannotBeEmpty");
+      toast.error('nicknameCannotBeEmpty');
       return;
     }
     if (nickName.length > MAX_NICKNAME) {
-      toast.error("nicknameTooLong", { max: MAX_NICKNAME });
+      toast.error('nicknameTooLong', { max: MAX_NICKNAME });
       return;
     }
 
     try {
       await api.post(`/api/save-user-name`, { userEmail, nickName });
-      toast.success("nicknameUpdated");
-      queryClient.invalidateQueries(["currentUser", userEmail]); // Sync ข้อมูลใหม่จาก Server
+      toast.success('nicknameUpdated');
+      queryClient.invalidateQueries(['currentUser', userEmail]); // Sync ข้อมูลใหม่จาก Server
       setIsEditingName(false);
     } catch (err) {
-      toast.error("failedToUpdateNickname");
+      toast.error('failedToUpdateNickname');
     }
   };
 
   const handleSaveAbout = async () => {
     if (tempInfo.detail.length > MAX_CHARS) {
-      toast.error("aboutMeTooLong", { max: MAX_CHARS });
+      toast.error('aboutMeTooLong', { max: MAX_CHARS });
       return;
     }
 
@@ -100,64 +100,61 @@ const Profile = () => {
         userInfo: tempInfo,
       });
       if (res.status === 200) {
-        queryClient.invalidateQueries(["userInfos", userEmail]); // Sync ข้อมูลใหม่จาก Server
+        queryClient.invalidateQueries(['userInfos', userEmail]); // Sync ข้อมูลใหม่จาก Server
         setIsEditingAbout(false);
-        toast.success("profileUpdated");
+        toast.success('profileUpdated');
       } else {
-        toast.error("failedToSaveProfile");
+        toast.error('failedToSaveProfile');
       }
 
       // ส่งข้อมูลไปยัง Make.com webhook
-      const webhookResponse = await fetch(
-        import.meta.env.VITE_APP_MAKE_WEBHOOK_MATCH_ABOUT_URL,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            detail: tempInfo.detail,
-            userEmail: userEmail,
-          }),
-        }
-      );
+      const webhookResponse = await fetch(import.meta.env.VITE_APP_MAKE_WEBHOOK_MATCH_ABOUT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          detail: tempInfo.detail,
+          userEmail: userEmail,
+        }),
+      });
       if (!webhookResponse.ok) {
         console.error(
-          "ข้อผิดพลาดในการส่งข้อมูลไปยัง Make.com webhook:",
+          'ข้อผิดพลาดในการส่งข้อมูลไปยัง Make.com webhook:',
           webhookResponse.statusText
         );
       }
     } catch (error) {
-      console.error("เกิดข้อผิดพลาดในการบันทึกข้อมูล:", error);
-      toast.error("failedToSaveProfile");
+      console.error('เกิดข้อผิดพลาดในการบันทึกข้อมูล:', error);
+      toast.error('failedToSaveProfile');
     }
   };
 
   const handlePhotoUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    if (!file.type.startsWith("image/")) {
-      toast.error("pleaseUploadImage");
+    if (!file.type.startsWith('image/')) {
+      toast.error('pleaseUploadImage');
       return;
     }
     if (file.size > 5 * 1024 * 1024) {
-      toast.error("fileSizeTooLarge");
+      toast.error('fileSizeTooLarge');
       return;
     }
 
     setUploading(true);
     const formData = new FormData();
-    formData.append("photo", file);
-    formData.append("email", userEmail);
+    formData.append('photo', file);
+    formData.append('email', userEmail);
 
     try {
       const response = await api.post(`/api/upload-user-photo`, formData);
       if (response.data.success) {
         await refetchPhotos();
-        toast.success("photoUploaded");
+        toast.success('photoUploaded');
       } else {
-        throw new Error(response.data.message || "uploadFailed");
+        throw new Error(response.data.message || 'uploadFailed');
       }
     } catch (err) {
-      toast.error(err.message || "uploadFailed");
+      toast.error(err.message || 'uploadFailed');
     } finally {
       setUploading(false);
     }
@@ -169,23 +166,20 @@ const Profile = () => {
         email: userEmail,
         photoIds,
       });
-      toast.success("profilePhotoUpdated");
+      toast.success('profilePhotoUpdated');
     } catch (error) {
-      toast.error("failedToUpdateProfilePhoto");
+      toast.error('failedToUpdateProfilePhoto');
     }
   };
 
   const handleSetMainPhoto = (selectedPhoto) => {
     if (photoUsers[0]?._id === selectedPhoto._id) return;
 
-    const newOrder = [
-      selectedPhoto,
-      ...photoUsers.filter((p) => p._id !== selectedPhoto._id),
-    ];
+    const newOrder = [selectedPhoto, ...photoUsers.filter((p) => p._id !== selectedPhoto._id)];
 
     // Optimistic Update: อัปเดต Cache ทันทีเพื่อให้ UI เปลี่ยนโดยไม่ต้องรอ Refetch
-    queryClient.setQueryData(["userPhotos", userEmail], newOrder);
-    localStorage.setItem("userPhoto", selectedPhoto.url);
+    queryClient.setQueryData(['userPhotos', userEmail], newOrder);
+    localStorage.setItem('userPhoto', selectedPhoto.url);
 
     const photoIds = newOrder.map((p) => p._id);
     handleSavePhotoOrder(photoIds);
@@ -201,27 +195,20 @@ const Profile = () => {
       });
       if (response.data.success) {
         // อัปเดต Cache ทันที หรือจะใช้ refetchPhotos() ก็ได้
-        queryClient.setQueryData(["userPhotos", userEmail], remainingPhotos);
-        toast.success("photoDeleted");
+        queryClient.setQueryData(['userPhotos', userEmail], remainingPhotos);
+        toast.success('photoDeleted');
 
         if (isMainPhoto && remainingPhotos.length > 0) {
-          localStorage.setItem("userPhoto", remainingPhotos[0].url);
+          localStorage.setItem('userPhoto', remainingPhotos[0].url);
         } else if (remainingPhotos.length === 0) {
-          localStorage.removeItem("userPhoto");
+          localStorage.removeItem('userPhoto');
         }
       } else {
-        throw new Error("deletionFailed");
+        throw new Error('deletionFailed');
       }
     } catch (err) {
-      toast.error("deletionFailed");
+      toast.error('deletionFailed');
     }
-  };
-  const getFullImageUrl = (url) => {
-    if (!url) return "";
-    if (url.startsWith("http")) {
-      return url;
-    }
-    return `${import.meta.env.VITE_APP_API_BASE_URL}${url}`;
   };
 
   if (loading) {
@@ -229,15 +216,10 @@ const Profile = () => {
   }
 
   const mainProfilePhoto =
-    photoUsers.length > 0
-      ? photoUsers[0].url
-      : localStorage.getItem("userPhoto");
+    photoUsers.length > 0 ? photoUsers[0].url : localStorage.getItem('userPhoto');
   return (
-    <div className={`profile-page ${isDarkMode ? "dark-mode" : ""}`}>
-      <ToastContainer
-        theme={isDarkMode ? "dark" : "light"}
-        position="bottom-right"
-      />
+    <div className={`profile-page ${isDarkMode ? 'dark-mode' : ''}`}>
+      <ToastContainer theme={isDarkMode ? 'dark' : 'light'} position="bottom-right" />
       <header className="header-home">
         <HeaderProfile />
       </header>
@@ -247,7 +229,7 @@ const Profile = () => {
           <div className="profile-header-new">
             <div className="profile-image-container">
               <img
-                src={getFullImageUrl(mainProfilePhoto)}
+                src={getFullImageUrl(getHighResPhoto(mainProfilePhoto))}
                 alt="Profile"
                 className="profile-image-new"
               />
@@ -263,21 +245,18 @@ const Profile = () => {
                     className="nickname-input"
                   />
                   <div onClick={handleSaveNickName} className="save-btn">
-                    {"save"}
+                    {'save'}
                   </div>
-                  <div
-                    onClick={() => setIsEditingName(false)}
-                    className="cancel-btn"
-                  >
-                    {"cancel"}
+                  <div onClick={() => setIsEditingName(false)} className="cancel-btn">
+                    {'cancel'}
                   </div>
                 </div>
               ) : (
                 <h1 className="profile-nickname">
-                  {currentUser.displayName || nickName}
+                  {infoUser.nickname || currentUser.displayName}
                   <FaEdit
                     onClick={() => {
-                      setNickName(currentUser.displayName || "");
+                      setNickName(infoUser.nickname || currentUser.displayName || '');
                       setIsEditingName(true);
                     }}
                     className="edit-icon-new"
@@ -285,22 +264,20 @@ const Profile = () => {
                 </h1>
               )}
               <div className="profile-stats">
-                <ProfileStat count={photoUsers.length} label={"photos"} />
-                <ProfileStat count={followers.length} label={"followers"} />
-                <ProfileStat count={following.length} label={"following"} />
+                <ProfileStat count={photoUsers.length} label={'photos'} />
+                <ProfileStat count={followers.length} label={'followers'} />
+                <ProfileStat count={following.length} label={'following'} />
               </div>
             </div>
           </div>
 
           <div className="profile-about">
-            <h3>{"aboutMe"}</h3>
+            <h3>{'aboutMe'}</h3>
             {isEditingAbout ? (
               <div className="edit-container">
                 <textarea
                   value={tempInfo.detail}
-                  onChange={(e) =>
-                    setTempInfo({ ...tempInfo, detail: e.target.value })
-                  }
+                  onChange={(e) => setTempInfo({ ...tempInfo, detail: e.target.value })}
                   maxLength={MAX_CHARS}
                   className="about-textarea"
                 />
@@ -308,21 +285,21 @@ const Profile = () => {
                   {tempInfo.detail.length} / {MAX_CHARS}
                 </p>
                 <div onClick={handleSaveAbout} className="save-btn">
-                  {"save"}
+                  {'save'}
                 </div>
-                <div
-                  onClick={() => setIsEditingAbout(false)}
-                  className="cancel-btn"
-                >
-                  {"cancel"}
+                <div onClick={() => setIsEditingAbout(false)} className="cancel-btn">
+                  {'cancel'}
                 </div>
               </div>
             ) : (
-              <p onClick={() => {
-                  setTempInfo(infoUser || { detail: "" });
+              <p
+                onClick={() => {
+                  setTempInfo(infoUser || { detail: '' });
                   setIsEditingAbout(true);
-                }} className="about-text">
-                {infoUser.detail || "tellUsAboutYourself"}
+                }}
+                className="about-text"
+              >
+                {infoUser.detail || 'tellUsAboutYourself'}
                 <FaEdit className="edit-icon-new" />
               </p>
             )}
@@ -330,7 +307,7 @@ const Profile = () => {
         </div>
 
         <div className="profile-gallery">
-          <h3>{"myPhotos"}</h3>
+          <h3>{'myPhotos'}</h3>
           <div className="photo-grid">
             {photoUsers.map((photo) => (
               <div key={photo._id} className="photo-wrapper">
@@ -340,22 +317,19 @@ const Profile = () => {
                     <button
                       className="set-main-btn"
                       onClick={() => handleSetMainPhoto(photo)}
-                      title={"setAsProfilePicture"}
+                      title={'setAsProfilePicture'}
                     >
                       <FaStar />
                     </button>
                   ) : (
-                    <div
-                      className="main-photo-badge"
-                      title={"currentProfilePicture"}
-                    >
+                    <div className="main-photo-badge" title={'currentProfilePicture'}>
                       <FaStar />
                     </div>
                   )}
                   <button
                     className="remove-photo-btn-gallery"
                     onClick={() => handleRemovePhoto(photo._id)}
-                    title={"removePhoto"}
+                    title={'removePhoto'}
                   >
                     <FaTimes />
                   </button>
@@ -363,16 +337,13 @@ const Profile = () => {
               </div>
             ))}
             {photoUsers.length < 9 && (
-              <div
-                className="add-photo-box"
-                onClick={() => fileInputRef.current.click()}
-              >
+              <div className="add-photo-box" onClick={() => fileInputRef.current.click()}>
                 {uploading ? (
                   <div className="loader"></div>
                 ) : (
                   <>
                     <FaPlus />
-                    <span>{"addPhoto"}</span>
+                    <span>{'addPhoto'}</span>
                   </>
                 )}
               </div>
@@ -382,7 +353,7 @@ const Profile = () => {
             type="file"
             ref={fileInputRef}
             onChange={handlePhotoUpload}
-            style={{ display: "none" }}
+            style={{ display: 'none' }}
             accept="image/*"
             disabled={uploading}
           />

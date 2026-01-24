@@ -3,6 +3,7 @@ import { OpenAI } from 'openai';
 import dotenv from 'dotenv';
 import { AiChatMessage } from '../model/AiChatMessage.js';
 import { InfoMatch } from '../model/infomatch.js';
+import { Event } from '../model/event.js';
 
 dotenv.config();
 
@@ -11,6 +12,70 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 const app = express.Router();
+
+// POST /api/aichat/daily-recommendation - Generate daily event recommendations
+app.post('/daily-recommendation', async (req, res) => {
+  try {
+    // 1. Fetch recent events (limit 20 to provide variety but save tokens)
+    const events = await Event.find()
+      .sort({ createdAt: -1 })
+      .limit(20)
+      .select('title description date location address venue');
+
+    if (!events || events.length === 0) {
+      return res.status(404).json({ success: false, message: 'No events found to recommend.' });
+    }
+
+    // 2. Prepare data for AI
+    const eventList = events
+      .map((e) => {
+        // Format date safely
+        let dateStr = 'N/A';
+        if (e.date) {
+          if (typeof e.date === 'object') {
+            dateStr = e.date.when || e.date.start_date || JSON.stringify(e.date);
+          } else {
+            dateStr = String(e.date);
+          }
+        }
+
+        let locationStr = e.location || 'ไม่ระบุ';
+        if (Array.isArray(e.address)) locationStr = e.address.join(', ');
+
+        return `- ID: ${e._id}, Title: ${e.title}, Date: ${dateStr}, Location: ${locationStr}`;
+      })
+      .join('\n');
+
+    const systemPrompt = `
+Role: BUENG AI (Event Curator)
+Task: เลือกกิจกรรมที่น่าสนใจ 3 อันดับแรกจากรายการที่ให้ เพื่อแนะนำเป็น "Daily Highlights"
+Output Format: JSON Object ที่มี key "recommendations" เป็น array
+Constraint: เหตุผล (reason) ต้องเป็นภาษาไทยที่ดึงดูดใจและเป็นกันเอง
+JSON Structure:
+{ "recommendations": [{ "id": "...", "title": "...", "reason": "..." }] }`;
+
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: `รายการกิจกรรม:\n${eventList}` },
+      ],
+      response_format: { type: 'json_object' },
+    });
+
+    const content = completion.choices[0].message.content;
+    if (!content) {
+      throw new Error('AI returned empty content');
+    }
+
+    const result = JSON.parse(content);
+    res.status(200).json({ success: true, data: result });
+  } catch (error) {
+    console.error('Error generating daily recommendation:', error);
+    res.status(500).json({ success: false, message: 'Error generating recommendations.' });
+  }
+});
+
 // GET /api/aichat/:roomId - Fetch AI chat history for a room
 app.get('/:roomId', async (req, res) => {
   try {
@@ -23,29 +88,136 @@ app.get('/:roomId', async (req, res) => {
   }
 });
 
+// GET /api/aichat/:roomId/insight - Generate a quick insight/ice-breaker for the room
+app.get('/:roomId/insight', async (req, res) => {
+  try {
+    const { roomId } = req.params;
+    const match = await InfoMatch.findById(roomId);
+
+    if (!match) {
+      return res.status(404).json({ success: false, message: 'Match context not found' });
+    }
+
+    const eventInfo = match.detail || 'กิจกรรม';
+    const systemPrompt = `
+Role: BUENG AI
+Task: สร้างประโยคทักทายสั้นๆ หรือ Fun Fact เกี่ยวกับ "${eventInfo}" เพื่อเริ่มบทสนทนา (Ice Breaking)
+Tone: สนุก, เป็นกันเอง, สั้นกระชับ (ไม่เกิน 1 ประโยค)
+Language: Thai`;
+
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [{ role: 'system', content: systemPrompt }],
+      max_tokens: 100,
+    });
+
+    const insight = completion.choices[0].message.content;
+    res.status(200).json({ success: true, data: insight });
+  } catch (error) {
+    console.error('AI Insight Error:', error);
+    res.status(500).json({ success: false, message: 'Error generating insight.' });
+  }
+});
+
 // POST /api/aichat/:roomId - Send a message to the AI
 app.post('/:roomId', async (req, res) => {
   try {
     const { roomId } = req.params;
     const { content, history } = req.body;
 
+    if (!content || typeof content !== 'string') {
+      return res.status(400).json({ success: false, message: 'Invalid content' });
+    }
+
     // 1. AI Logic: Generate a response
-    const match = await InfoMatch.findById(roomId);
-    let systemContent =
-      'คุณเป็นผู้ช่วยอัจฉริยะสำหรับแอพจับคู่กิจกรรมและห้อง ชื่อ AI Assistant ที่ให้คำแนะนำเกี่ยวกับการใช้งานแอพ การหาเพื่อนที่มีความสนใจคล้ายกัน และแนะนำกิจกรรมที่น่าสนใจ ตอบเป็นภาษาไทย';
+    let match = null;
+    if (/^[0-9a-fA-F]{24}$/.test(roomId)) {
+      match = await InfoMatch.findById(roomId);
+    }
+
+    // Prepare Date Context
+    const now = new Date();
+    const todayThai = now.toLocaleDateString('th-TH', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+    const tomorrow = new Date(now);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0);
+
+    // RAG: Fetch recent events (fallback to createdAt because date field is Mixed/Unstructured)
+    const recentEvents = await Event.find()
+      .sort({ createdAt: -1 })
+      // .limit(15)
+      .select('title date location address venue');
+
+    const eventsContext = recentEvents
+      .map((e) => {
+        let dateStr = 'N/A';
+        if (e.date) {
+          if (typeof e.date === 'object') {
+            dateStr = e.date.when || e.date.start_date || JSON.stringify(e.date);
+          } else {
+            dateStr = String(e.date);
+          }
+        }
+
+        let locationStr = e.location || 'ไม่ระบุ';
+        if (Array.isArray(e.address)) locationStr = e.address.join(', ');
+        else if (e.venue && e.venue.name) locationStr = e.venue.name;
+
+        return `- ${e.title} (เวลา: ${dateStr}) @ ${locationStr}`;
+      })
+      .join('\n');
+
+    // Modern System Prompt Engineering
+    let systemContent = `
+Role: คุณคือ "BUENG AI" (บึง) ผู้ช่วยอัจฉริยะประจำแอพพลิเคชัน Senior Project BUENG
+Personality: เป็นมิตร, กระตือรือร้น, ทันสมัย, และมีความเข้าอกเข้าใจ (Empathy)
+Language: ภาษาไทย (เป็นธรรมชาติ ไม่ทางการจนเกินไป)
+Current Date: ${todayThai}
+
+Task:
+1. ช่วยเหลือผู้ใช้ในการหาเพื่อน (Matching) และหากิจกรรม (Event)
+2. แนะนำหัวข้อสนทนา (Ice Breaking) หากผู้ใช้ไม่รู้จะคุยอะไร โดยอิงจากบริบทของห้อง
+3. ให้ข้อมูลเกี่ยวกับกิจกรรมถ้ามีการระบุในบริบท
+4. ตอบคำถามทั่วไปเกี่ยวกับการใช้งานแอพ
+
+Constraints:
+- ห้ามตอบคำถามที่ผิดกฎหมาย หรือไม่เหมาะสม
+- หากไม่ทราบข้อมูล ให้ตอบตามตรงและแนะนำให้ผู้ใช้ค้นหาเพิ่มเติม
+- พยายามกระชับคำตอบ ไม่เยิ่นเย้อ`;
+
+    // Inject Real-time Event Data
+    systemContent += `\n\n[ข้อมูลกิจกรรมล่าสุดในระบบ (Real-time)]\n${eventsContext}\n\nคำแนะนำ: หากผู้ใช้ถามหากิจกรรมที่น่าสนใจ ให้ใช้ข้อมูลจากรายการด้านบนนี้ในการตอบ เพื่อให้ข้อมูลเป็นปัจจุบันที่สุด`;
 
     if (match) {
-      systemContent += `\n\nข้อมูลเพิ่มเติมเกี่ยวกับห้องแชทปัจจุบัน: ${JSON.stringify(
-        match
-      )}. ให้ใช้ข้อมูลนี้ในการตอบคำถามเพื่อให้สอดคล้องกับบริบทที่ผู้ใช้กำลังสนทนา`;
+      const eventInfo = match.detail || 'กิจกรรมทั่วไป';
+      const matchStatus = match.status || 'unknown';
+
+      systemContent += `
+
+[Current Context Data]
+- Room Context: สนทนาเกี่ยวกับ "${eventInfo}"
+- Match Status: ${matchStatus}
+- User Pair: ${match.email} และ ${match.usermatch}
+
+Instruction: ใช้ข้อมูล Context นี้ในการสนทนา เช่น ถ้าเป็นห้องที่ Match กันจากกิจกรรม "${eventInfo}" ให้ชวนคุยเรื่องเกี่ยวกับกิจกรรมนั้น หรือแนะนำสิ่งที่ต้องเตรียมตัวสำหรับการไปร่วมกิจกรรม`;
     }
+
+    // Limit history to last 10 messages to maintain focus and save tokens
+    const recentHistory = Array.isArray(history)
+      ? history.slice(-10).filter((msg) => msg && typeof msg.content === 'string' && msg.content.trim() !== '')
+      : [];
 
     const messagesToAI = [
       {
         role: 'system',
         content: systemContent,
       },
-      ...(history || []),
+      ...recentHistory,
       {
         role: 'user',
         content: content,
@@ -55,6 +227,8 @@ app.post('/:roomId', async (req, res) => {
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       messages: messagesToAI,
+      temperature: 0.7, // Balance between creativity and focus
+      max_tokens: 500,
     });
 
     const aiResponseContent = completion.choices[0].message.content;

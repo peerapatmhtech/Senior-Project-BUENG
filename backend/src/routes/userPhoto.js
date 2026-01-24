@@ -1,5 +1,6 @@
 import express from 'express';
 import { UserPhoto } from '../model/userPhoto.js';
+import { Gmail } from '../model/gmail.js';
 import multer from 'multer';
 import fs from 'fs';
 import path from 'path';
@@ -94,12 +95,37 @@ router.get('/user-photos/:email', async (req, res) => {
   try {
     if (!email) return res.status(400).json({ success: false, message: 'Email is required' });
 
-    const userPhotos = await UserPhoto.find({ email: req.params.email }).sort({
-      createdAt: -1,
-    });
+    // 1. ดึงรูปภาพและข้อมูล User (เพื่อเอาลำดับ) พร้อมกัน (Parallel Execution)
+    // ใช้ .lean() เพื่อลด overhead ของ Mongoose Document
+    const [userPhotos, user] = await Promise.all([
+      UserPhoto.find({ email }).lean(),
+      Gmail.findOne({ email }).select('photosOrder').lean(),
+    ]);
+
     if (!userPhotos || userPhotos.length === 0) {
       return res.status(404).json({ success: false, message: 'Empty Photo this user' });
     }
+
+    // 2. เรียงลำดับรูปภาพตาม photosOrder
+    if (user?.photosOrder?.length > 0) {
+      const orderMap = new Map(user.photosOrder.map((id, index) => [id.toString(), index]));
+      userPhotos.sort((a, b) => {
+        const idA = a._id.toString();
+        const idB = b._id.toString();
+        const indexA = orderMap.has(idA) ? orderMap.get(idA) : Infinity;
+        const indexB = orderMap.has(idB) ? orderMap.get(idB) : Infinity;
+
+        // ถ้าทั้งคู่ไม่อยู่ในรายการจัดลำดับ ให้เรียงตามเวลาล่าสุด (Newest first)
+        if (indexA === Infinity && indexB === Infinity) {
+          return new Date(b.createdAt) - new Date(a.createdAt);
+        }
+        return indexA - indexB;
+      });
+    } else {
+      // ถ้าไม่มีการจัดลำดับ ให้เรียงตามเวลาล่าสุด
+      userPhotos.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    }
+
     res.json({ success: true, data: userPhotos });
   } catch (error) {
     console.error('Error fetching user photos:', error);
@@ -108,7 +134,7 @@ router.get('/user-photos/:email', async (req, res) => {
 });
 router.get('/user-photo', async (req, res) => {
   try {
-    const userPhoto = await UserPhoto.find();
+    const userPhoto = await UserPhoto.find().lean();
     if (!userPhoto) {
       return res.status(404).json({ success: false, message: 'No photos found' });
     }
@@ -118,38 +144,21 @@ router.get('/user-photo', async (req, res) => {
     res.status(500).json({ success: false, message: 'Server error' });
   }
 });
-router.get('/user-photo/latest', async (req, res) => {
-  try {
-    // ใช้ Aggregation Framework เพื่อจัดกลุ่มตาม email และดึงเอกสารล่าสุดของแต่ละกลุ่ม
-    const latestPhotos = await UserPhoto.aggregate([
-      { $sort: { createdAt: -1 } }, // เรียงลำดับตามวันที่สร้างล่าสุด
-      {
-        $group: {
-          _id: '$email', // จัดกลุ่มด้วย email
-          latestPhoto: { $first: '$$ROOT' }, // เอาเอกสารแรก (ล่าสุด) ของแต่ละกลุ่ม
-        },
-      },
-      { $replaceRoot: { newRoot: '$latestPhoto' } }, // ทำให้ผลลัพธ์เป็นโครงสร้างเอกสารเดิม
-    ]);
-
-    res.json({ success: true, data: latestPhotos });
-  } catch (error) {
-    console.error('Error fetching latest user photos:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
-  }
-});
 
 router.delete('/user-photo/:photoId', async (req, res) => {
   try {
     const { email } = req.body;
     const { photoId } = req.params;
 
-    const user = await UserPhoto.findOne({ email: email });
-    if (!user) {
-      return res.status(404).json({ success: false, message: 'User not found' });
+    // ใช้ findOneAndDelete พร้อมเช็ค email เพื่อความปลอดภัย (Ownership check)
+    const deletedPhoto = await UserPhoto.findOneAndDelete({ _id: photoId, email });
+
+    if (!deletedPhoto) {
+      return res.status(404).json({ success: false, message: 'Photo not found or unauthorized' });
     }
 
-    await UserPhoto.findByIdAndDelete(photoId);
+    // ลบ ID ออกจาก photosOrder ใน Gmail Model ด้วย (ถ้ามี)
+    await Gmail.updateOne({ email }, { $pull: { photosOrder: photoId } });
 
     res.json({ success: true, message: 'Photo deleted successfully' });
   } catch (error) {
@@ -161,12 +170,13 @@ router.delete('/user-photo/:photoId', async (req, res) => {
 router.post('/user-photos/reorder', async (req, res) => {
   try {
     const { email, photoIds } = req.body;
-    const user = await UserPhoto.findOne({ email });
-    if (!user) {
+    // ใช้ updateOne เพื่อประสิทธิภาพที่ดีกว่า findOne + save
+    const result = await Gmail.updateOne({ email }, { photosOrder: photoIds });
+
+    if (result.matchedCount === 0) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
-    user.photos = photoIds;
-    await user.save();
+
     res.json({ success: true, message: 'Photo order updated' });
   } catch (error) {
     console.error('Error reordering user photos:', error);

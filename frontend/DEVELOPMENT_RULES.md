@@ -86,3 +86,15 @@ src/
 - [ ] Format Code ด้วย Prettier (`npm run format`)
 - [ ] ตรวจสอบ Lint errors (`npm run lint`)
 - [ ] ทดสอบการทำงานบนหน้าจอขนาดต่างๆ (Responsive)
+
+## 7. AI & Chatbot Guidelines
+
+### UX/UI Standards
+- **Loading State:** ต้องมี Feedback เสมอเมื่อ AI กำลังประมวลผล (เช่น Typing indicator หรือ Skeleton loader)
+- **Optimistic UI:** แสดงข้อความของผู้ใช้ทันทีโดยไม่ต้องรอ Server response
+- **Clear Actions:** ปุ่มหรือคำสั่งพิเศษ (เช่น "แนะนำกิจกรรม") ควรเด่นชัดและเข้าถึงง่าย
+
+### API Integration
+- **Backend-Driven Context:** หลีกเลี่ยงการส่ง Context ก้อนใหญ่จาก Frontend ให้ใช้ `roomId` เพื่อให้ Backend ดึงข้อมูลเอง
+- **Unified Endpoints:** ใช้ Endpoint กลาง (เช่น `/api/aichat/:roomId`) ที่จัดการทั้งการ Generate และ Save message ในครั้งเดียว
+- **Error Handling:** กรณี AI ตอบกลับไม่ได้ ต้องมีข้อความแจ้งเตือนที่สุภาพ ไม่แสดง Error code ดิบๆ

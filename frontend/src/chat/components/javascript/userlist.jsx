@@ -1,10 +1,12 @@
 import PropTypes from 'prop-types';
 import { FaChevronDown, FaChevronRight, FaUserFriends } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
+import { getFullImageUrl } from '../../../common/utils/image';
 import '../../chat.css';
 
 const ListUser = ({
   sortedFriends,
+  searchTerm,
   lastMessages,
   setActiveUser,
   setIsGroupChat,
@@ -50,6 +52,11 @@ const ListUser = ({
   const handleEnterRoom = (roomId) => {
     navigate(`/chat/${roomId}`);
   };
+
+  const filteredFriends = sortedFriends.filter((friend) =>
+    (friend.displayName || '').toLowerCase().includes(searchTerm || '')
+  );
+
   return (
     <div className="favorite-container">
       <div className="favorite-toggle" onClick={handleToggle}>
@@ -59,8 +66,8 @@ const ListUser = ({
       {isOpen && (
         <div className="favorite-container-open">
           <ul className="friend-list-chat">
-            {sortedFriends.length > 0 ? (
-              sortedFriends.map((friend, index) => (
+            {filteredFriends.length > 0 ? (
+              filteredFriends.map((friend, index) => (
                 <li
                   key={index}
                   className={`chat-friend-item ${selectedTab === friend.email ? 'selected' : ''}`}
@@ -77,14 +84,16 @@ const ListUser = ({
                   <div className="mobilelarge">
                     <img
                       src={
-                        friend.photoURL ||
+                        getFullImageUrl(friend.photoURL) ||
                         'https://cdn.pixabay.com/photo/2023/02/18/11/00/icon-7797704_640.png'
                       }
                       alt={friend.displayName}
                       className="friend-photo"
                     />
                     <div className="friend-details">
-                      <span className="friend-name">{friend.displayName}</span>
+                      <span className="friend-name">
+                        {friend.nickname ? friend.nickname : friend.displayName}
+                      </span>
                       <div className="row-last-time">
                         <span className="last-message">
                           {lastMessages[friend.email]?.content || 'ยังไม่มีข้อความ'}
@@ -137,6 +146,7 @@ const ListUser = ({
 
 ListUser.propTypes = {
   sortedFriends: PropTypes.array.isRequired,
+  searchTerm: PropTypes.string,
   lastMessages: PropTypes.object.isRequired,
   setActiveUser: PropTypes.func.isRequired,
   setIsGroupChat: PropTypes.func.isRequired,

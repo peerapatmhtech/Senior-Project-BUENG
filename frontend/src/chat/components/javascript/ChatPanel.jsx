@@ -4,6 +4,7 @@ import PropTypes from 'prop-types';
 import ProfileModal from './ProfileModal';
 import { useQuery } from '@tanstack/react-query';
 import { fetchFollowInfo, fetchInfos, fetchUsers } from '../../../lib/queries';
+import { getFullImageUrl } from '../../../common/utils/image';
 
 const ChatPanel = ({
   messages,
@@ -77,7 +78,8 @@ const ChatPanel = ({
             src={(() => {
               if (!userImage || !users) return defaultProfileImage;
               // For group chats/communities
-              if (userImage.image) return userImage.image;
+              if (userImage.photoURL || userImage.image)
+                return getFullImageUrl(userImage.photoURL) || userImage.image;
               // For 1-on-1 chats (friends or matches)
               const partnerEmail = userImage.usermatch
                 ? userImage.email === userEmail
@@ -85,9 +87,11 @@ const ChatPanel = ({
                   : userImage.email
                 : userImage.email;
               const partnerUser = users.find((u) => u.email === partnerEmail);
-              return partnerUser?.photoURL || defaultProfileImage;
+              return partnerUser?.photoURL
+                ? getFullImageUrl(partnerUser.photoURL)
+                : defaultProfileImage;
             })()}
-            alt="Profile"
+            alt="User"
             className={`chat-profile ${openchat ? 'mobile-layout-mode' : ''}`}
             onClick={() => {
               if (!userImage || !users) return;
@@ -162,7 +166,7 @@ const ChatPanel = ({
                 <div className={`chat-message ${isCurrentUser ? 'my-message' : 'other-message'}`}>
                   {!isCurrentUser && (
                     <img
-                      src={senderInfo?.photoURL || defaultProfileImage}
+                      src={getFullImageUrl(senderInfo?.photoURL) || defaultProfileImage}
                       alt="Sender"
                       className="message-avatar"
                       onClick={() => handleProfileClick(senderInfo)}
@@ -254,4 +258,3 @@ ChatPanel.propTypes = {
   setFriends: PropTypes.func.isRequired,
   disabled: PropTypes.bool,
 };
-
