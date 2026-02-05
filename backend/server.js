@@ -23,6 +23,7 @@ import mongoose from 'mongoose';
 // Import new routes (ES Modules style)
 import friendRequestRoutes from './src/routes/friendRequest.js';
 import aiRoute from './src/routes/ai.js';
+import authRoutes from './src/routes/auth.js';
 import friendApiRoutes from './src/routes/friendApi.js';
 import userPhotoRoutes from './src/routes/userPhoto.js';
 import MakeRoutes from './src/routes/make.js';
@@ -76,7 +77,11 @@ app.use(
     credentials: true,
   })
 );
+
+// ✅ Body Parsers (Must be before routes)
+app.use(express.json({ limit: '5mb' }));
 app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 
 ////////Protection Doss and DDos Attack////////
 // app.use(
@@ -261,21 +266,18 @@ app.get('/api/debug/routes', (req, res) => {
   });
   res.json(routes);
 });
-
 // ใช้งาน routes ที่แยกไว้
-app.use('/api', MakeRoutes(io));
-// ใช้ authMiddleware กับทุก request ที่เข้ามาที่ /api
+
+// Public / Semi-public Auth Routes (some bypass verification inside)
+app.use('/api/auth', authRoutes);
+
+// Global Auth Middleware for remaining /api routes
 app.use('/api', authMiddleware);
 
-// userPhotoRoutes must come before express.json() to handle multipart/form-data
+app.use('/api', MakeRoutes(io));
 app.use('/api', userPhotoRoutes);
-
-// All routes after this will have their body parsed as JSON
-app.use(express.json({ limit: '5mb' }));
-
-// Register friendRequestRoutes with high priority to prevent 404 issues.
 app.use('/api', infoMatchRoutes);
-app.use('/api', aiRoute); // ใช้ aiRoute ก่อน routes อื่นๆ เพื่อป้องกัน 404
+app.use('/api', aiRoute);
 app.use('/api', eventRoutes(io));
 app.use('/api', friendRequestRoutes);
 app.use('/api', userRoutes);
@@ -283,13 +285,8 @@ app.use('/api', friendRoutes);
 app.use('/api', roomRoutes);
 app.use('/api', infoRoutes);
 app.use('/api', likeRoutes);
-app.use('/api', roommatchRoutes(io)); // Correctly call roommatchRoutes as a function with `io`
+app.use('/api', roommatchRoutes(io));
 app.use('/api', friendApiRoutes);
-
-// Log API requests for debugging
-app.use((req, res, next) => {
-  next();
-});
 
 // เริ่มต้นเซิร์ฟเวอร์
 server.listen(port, () => console.info(`🚀 Server is running on port ${port}`));

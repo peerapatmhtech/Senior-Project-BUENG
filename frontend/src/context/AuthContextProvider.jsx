@@ -1,8 +1,13 @@
-import { createContext, useContext, useEffect, useState } from "react";
-import { auth } from "../firebase/firebase"; // import Firebase auth
-import { onAuthStateChanged, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile, sendPasswordResetEmail } from "firebase/auth";
+import { useContext, useEffect, useState } from 'react';
+import { auth } from '../firebase/firebase'; // import Firebase auth
+import {
+  onAuthStateChanged,
+  signOut,
+  signInWithEmailAndPassword,
+  sendPasswordResetEmail,
+} from 'firebase/auth';
 
-const AuthContext = createContext();
+import { AuthContext } from './AuthContextObject';
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -47,46 +52,47 @@ export const AuthProvider = ({ children }) => {
     return null;
   };
 
-  // ตั้งเวลารีเฟรช token ทุก 50 นาที (token หมดอายุใน 1 ชม.)
+  // ตั้งเวลารีเฟรช token ทุก 24 ชม. (token หมดอายุใน 1 วัน)
   useEffect(() => {
     if (user) {
-      const interval = setInterval(refreshToken, 50 * 60 * 1000);
+      const interval = setInterval(refreshToken, 24 * 60 * 60 * 1000);
       return () => clearInterval(interval);
     }
   }, [user]);
 
-  // ฟังก์ชัน register สำหรับ @bumail.net
+  // ฟังก์ชัน register สำหรับ @bumail.net (JWT-based)
   const registerWithEmail = async (email, password, displayName) => {
+    // ล้างข้อมูลเก่า
+    localStorage.removeItem('userName');
+    localStorage.removeItem('userEmail');
+    localStorage.removeItem('idToken');
+
     // ตรวจสอบว่าเป็น @bumail.net เท่านั้น
     if (!email.endsWith('@bumail.net')) {
       throw new Error('Only @bumail.net email addresses are allowed');
     }
 
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      
-      // อัปเดต display name
-      if (displayName) {
-        await updateProfile(userCredential.user, {
-          displayName: displayName
-        });
+      const API_BASE_URL = import.meta.env.VITE_APP_API_BASE_URL || 'http://localhost:8080';
+
+      const response = await fetch(`${API_BASE_URL}/api/auth/register-request`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password, displayName }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Registration request failed');
       }
-      
-      return userCredential.user;
+
+      console.info('✉️ Verification email request sent to backend');
+      return data;
     } catch (error) {
       console.error('❌ Registration failed:', error);
-      
-      // แปล Firebase error codes เป็นภาษาไทย
-      if (error.code === 'auth/email-already-in-use') {
-        throw new Error('อีเมลนี้มีผู้ใช้แล้ว กรุณาใช้อีเมลอื่น');
-      } else if (error.code === 'auth/weak-password') {
-        throw new Error('รหัสผ่านไม่แข็งแรงพอ กรุณาใช้รหัสผ่านที่มีอย่างน้อย 6 ตัวอักษร');
-      } else if (error.code === 'auth/invalid-email') {
-        throw new Error('รูปแบบอีเมลไม่ถูกต้อง');
-      } else if (error.code === 'auth/operation-not-allowed') {
-        throw new Error('ระบบยังไม่เปิดใช้งาน Email/Password authentication กรุณาติดต่อผู้ดูแลระบบ');
-      }
-      
       throw error;
     }
   };
@@ -103,7 +109,7 @@ export const AuthProvider = ({ children }) => {
       return userCredential.user;
     } catch (error) {
       console.error('❌ Login failed:', error);
-      
+
       // แปล Firebase error codes เป็นภาษาไทย
       if (error.code === 'auth/user-not-found') {
         throw new Error('ไม่พบผู้ใช้นี้ กรุณาสมัครสมาชิกก่อน');
@@ -114,9 +120,11 @@ export const AuthProvider = ({ children }) => {
       } else if (error.code === 'auth/too-many-requests') {
         throw new Error('มีการพยายามเข้าสู่ระบบมากเกินไป กรุณาลองใหม่ภายหลัง');
       } else if (error.code === 'auth/operation-not-allowed') {
-        throw new Error('ระบบยังไม่เปิดใช้งาน Email/Password authentication กรุณาติดต่อผู้ดูแลระบบ');
+        throw new Error(
+          'ระบบยังไม่เปิดใช้งาน Email/Password authentication กรุณาติดต่อผู้ดูแลระบบ'
+        );
       }
-      
+
       throw error;
     }
   };
@@ -131,12 +139,12 @@ export const AuthProvider = ({ children }) => {
     try {
       await sendPasswordResetEmail(auth, email, {
         url: window.location.origin + '/login', // URL ที่ผู้ใช้จะถูก redirect หลังจาก reset password
-        handleCodeInApp: false
+        handleCodeInApp: false,
       });
       return true;
     } catch (error) {
       console.error('❌ Password reset failed:', error);
-      
+
       // แปล Firebase error codes เป็นภาษาไทย
       if (error.code === 'auth/user-not-found') {
         throw new Error('ไม่พบอีเมลนี้ในระบบ กรุณาตรวจสอบอีเมลที่กรอก');
@@ -145,7 +153,7 @@ export const AuthProvider = ({ children }) => {
       } else if (error.code === 'auth/too-many-requests') {
         throw new Error('มีการขอรีเซ็ตรหัสผ่านมากเกินไป กรุณาลองใหม่ภายหลัง');
       }
-      
+
       throw error;
     }
   };
@@ -158,7 +166,18 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, idToken, loading, refreshToken, logout, registerWithEmail, loginWithEmail, resetPassword }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        idToken,
+        loading,
+        refreshToken,
+        logout,
+        registerWithEmail,
+        loginWithEmail,
+        resetPassword,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

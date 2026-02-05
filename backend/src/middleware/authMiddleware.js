@@ -2,6 +2,11 @@ import admin from '../firebase/firebaseAdmin.js';
 import { Gmail } from '../model/gmail.js';
 
 export const authMiddleware = async (req, res, next) => {
+  // Bypass middleware for email verification link (GET)
+  if (req.originalUrl.includes('/api/auth/verify-email')) {
+    return next();
+  }
+
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -13,21 +18,23 @@ export const authMiddleware = async (req, res, next) => {
   try {
     const decodedToken = await admin.auth().verifyIdToken(idToken);
 
-    // Find or create user in local MongoDB
-    let user = await Gmail.findOne({ email: decodedToken.email });
+    // Find user in local MongoDB
+    const user = await Gmail.findOne({ email: decodedToken.email });
 
     if (!user) {
-      user = new Gmail({
-        displayName: decodedToken.name,
-        email: decodedToken.email,
-        photoURL: decodedToken.picture,
-      });
-      await user.save();
+      return res.status(401).json({ message: 'User not found in database.' });
     }
 
-    // Attach user object to the request
-    req.user = user;
+    // Check if user is verified
+    if (!user.isVerified) {
+      return res.status(403).json({
+        message: 'Account not verified. Please check your email.',
+        requiresVerification: true,
+      });
+    }
 
+    // Attach real user object to the request
+    req.user = user;
     next();
   } catch (error) {
     console.error('Error verifying token:', error);

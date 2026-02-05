@@ -1,14 +1,14 @@
-import { useRef, useState, useEffect } from "react";
-import { useTheme } from "../context/themecontext";
-import { useNotifications } from "../context/notificationContext";
-import "./HeaderProfile.css";
-import { useAuth } from "../context/Authcontext";
-import { Bell, LogOut, Sun, Moon, X, Check, UserPlus } from "lucide-react";
-import { Info } from "lucide-react";
+import { useRef, useState, useEffect } from 'react';
+import { useTheme } from '../context/themecontext';
+import { useNotifications } from '../context/notificationContext';
+import './HeaderProfile.css';
+import { useAuth } from '../context/AuthContextProvider';
+import { Bell, LogOut, Sun, Moon, X, Check, UserPlus } from 'lucide-react';
+import { Info } from 'lucide-react';
 
 const HeaderProfile = ({
   showNotification = true,
-  className = "",
+  className = '',
   bellButtonRef: externalBellButtonRef,
   notificationDropdownRef: externalDropdownRef,
   isFriend,
@@ -26,9 +26,9 @@ const HeaderProfile = ({
     handleDeleteFriendRequest,
   } = useNotifications();
 
-  const userPhoto = localStorage.getItem("userPhoto");
-  const displayName = localStorage.getItem("userName");
-  const userEmail = localStorage.getItem("userEmail");
+  const userPhoto = localStorage.getItem('userPhoto');
+  const displayName = localStorage.getItem('userName');
+  const userEmail = localStorage.getItem('userEmail');
 
   const { isDarkMode, setIsDarkMode } = useTheme();
   const { user, logout } = useAuth();
@@ -40,8 +40,8 @@ const HeaderProfile = ({
   const notificationDropdownRef = externalDropdownRef || localDropdownRef;
 
   const getFullImageUrl = (url) => {
-    if (!url) return ""; // Or a default image
-    if (url.startsWith("http")) {
+    if (!url) return ''; // Or a default image
+    if (url.startsWith('http')) {
       return url; // It's already an absolute URL
     }
     return `${import.meta.env.VITE_APP_API_BASE_URL}${url}`;
@@ -53,7 +53,7 @@ const HeaderProfile = ({
 
   useEffect(() => {
     if (socket) {
-      socket.emit("user-online", {
+      socket.emit('user-online', {
         displayName,
         photoURL: userPhoto,
         email: userEmail,
@@ -64,44 +64,41 @@ const HeaderProfile = ({
       const handleFriendAccept = () => {
         fetchNotifications();
       };
-      socket.on("notify-friend-request", handleFriendRequest);
-      socket.on("notify-friend-accept", handleFriendAccept);
+      socket.on('notify-friend-request', handleFriendRequest);
+      socket.on('notify-friend-accept', handleFriendAccept);
 
       return () => {
-        socket.off("notify-friend-request", handleFriendRequest);
-        socket.off("notify-friend-accept", handleFriendAccept);
+        socket.off('notify-friend-request', handleFriendRequest);
+        socket.off('notify-friend-accept', handleFriendAccept);
       };
     }
   }, [socket, fetchNotifications, displayName, userPhoto, userEmail]);
 
   useEffect(() => {
     function handleClickOutside(event) {
-      if (
-        containerRef.current &&
-        !containerRef.current.contains(event.target)
-      ) {
+      if (containerRef.current && !containerRef.current.contains(event.target)) {
         setProfileModalOpen(false);
         toggleNotificationDropdown(false);
       }
     }
 
     if (profileModal || showNotificationDropdown) {
-      document.addEventListener("mousedown", handleClickOutside);
+      document.addEventListener('mousedown', handleClickOutside);
     }
 
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [profileModal, showNotificationDropdown, toggleNotificationDropdown]);
 
   const handleLogout = async () => {
     if (user && user.email) {
       try {
-        localStorage.removeItem("userName");
-        localStorage.removeItem("userPhoto");
+        localStorage.removeItem('userName');
+        localStorage.removeItem('userPhoto');
         logout();
       } catch (error) {
-        console.error("❌ Logout failed:", error);
+        console.error('❌ Logout failed:', error);
       }
     }
   };
@@ -119,9 +116,7 @@ const HeaderProfile = ({
                     onStartTour();
                     setProfileModalOpen(false);
                   }} // เมื่อกดปุ่ม ให้เริ่มทัวร์และปิดเมนูโปรไฟล์
-                  className={`list-profile-menu-item ${
-                    isDarkMode ? "dark-mode" : ""
-                  }`}
+                  className={`list-profile-menu-item ${isDarkMode ? 'dark-mode' : ''}`}
                 >
                   <Info size={20} className="info-icon" /> {/* ใช้ไอคอน Info */}
                 </button>
@@ -135,7 +130,7 @@ const HeaderProfile = ({
                   setProfileModalOpen(false);
                 }}
               >
-                <Bell className={`bell-icon ${isDarkMode ? "dark" : ""}`} />
+                <Bell className={`bell-icon ${isDarkMode ? 'dark' : ''}`} />
                 {notifications.filter((n) => !n.read).length > 0 && (
                   <span className="notifications-badge">
                     {notifications.filter((n) => !n.read).length}
@@ -145,9 +140,7 @@ const HeaderProfile = ({
             </div>
             {showNotificationDropdown && (
               <div
-                className={`notification-dropdown ${
-                  isDarkMode ? "dark-mode" : ""
-                }`}
+                className={`notification-dropdown ${isDarkMode ? 'dark-mode' : ''}`}
                 ref={notificationDropdownRef}
               >
                 <div className="notification-header">
@@ -166,15 +159,9 @@ const HeaderProfile = ({
                   <span>
                     {/* {notifications.length}{" "} */}
 
-                    {
-                      notifications.filter((n) => n.type === "friend-request")
-                        .length
-                    }
+                    {notifications.filter((n) => n.type === 'friend-request').length}
                   </span>
-                  <button
-                    onClick={clearReadNotifications}
-                    className="notification-clear-btn"
-                  >
+                  <button onClick={clearReadNotifications} className="notification-clear-btn">
                     Clear Read
                   </button>
                 </div>
@@ -185,9 +172,7 @@ const HeaderProfile = ({
                       <div
                         key={notif.id}
                         data-notification-id={notif.id}
-                        className={`notification-item ${
-                          notif.read ? "read" : "unread"
-                        }`}
+                        className={`notification-item ${notif.read ? 'read' : 'unread'}`}
                         onClick={() => markNotificationAsRead(notif.id)}
                       >
                         <div className="notification-item-content">
@@ -199,46 +184,37 @@ const HeaderProfile = ({
                               }
                               alt={notif.from?.displayName || "User"}
                             /> */}
-                            {!notif.read && (
-                              <div className="notification-unread-dot"></div>
-                            )}
+                            {!notif.read && <div className="notification-unread-dot"></div>}
                           </div>
 
                           <div className="notification-item-details">
                             <div className="notification-item-header">
                               <p className="notification-item-user">
-                                {notif.from?.displayName || "User"}
+                                {notif.from?.displayName || 'User'}
                               </p>
                               <span
                                 className={`notification-item-tag ${
-                                  isFriend && isFriend(notif.from?.email)
-                                    ? "friend"
-                                    : "request"
+                                  isFriend && isFriend(notif.from?.email) ? 'friend' : 'request'
                                 }`}
                               >
-                                {isFriend && isFriend(notif.from?.email)
-                                  ? "Friend"
-                                  : "Request"}
+                                {isFriend && isFriend(notif.from?.email) ? 'Friend' : 'Request'}
                               </span>
                             </div>
 
                             <p className="notification-item-message">
                               {isFriend && isFriend(notif.from?.email)
-                                ? "youAreNowFriends"
-                                : "sentYouAFriendRequest"}
+                                ? 'youAreNowFriends'
+                                : 'sentYouAFriendRequest'}
                             </p>
 
                             <p className="notification-item-time">
-                              {new Date(notif.timestamp).toLocaleString(
-                                undefined,
-                                {
-                                  year: "numeric",
-                                  month: "short",
-                                  day: "numeric",
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                }
-                              )}
+                              {new Date(notif.timestamp).toLocaleString(undefined, {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
                             </p>
 
                             {(!isFriend || !isFriend(notif.from?.email)) && (
@@ -246,10 +222,7 @@ const HeaderProfile = ({
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    handleFriendRequestResponse(
-                                      notif.id,
-                                      "accept"
-                                    );
+                                    handleFriendRequestResponse(notif.id, 'accept');
                                   }}
                                   className="btn-accept"
                                 >
@@ -305,7 +278,7 @@ const HeaderProfile = ({
         <img
           src={
             getFullImageUrl(userPhoto) ||
-            "https://cdn.pixabay.com/photo/2023/02/18/11/00/icon-7797704_640.png"
+            'https://cdn.pixabay.com/photo/2023/02/18/11/00/icon-7797704_640.png'
           }
           alt="Profile"
           className="profile-image-header"
@@ -313,15 +286,13 @@ const HeaderProfile = ({
       </div>
 
       <div
-        className={`list-profile ${profileModal ? "active" : ""} ${
-          isDarkMode ? "dark-mode" : ""
-        }`}
+        className={`list-profile ${profileModal ? 'active' : ''} ${isDarkMode ? 'dark-mode' : ''}`}
       >
         <div className="list-profile-header">
           <img
             src={
               getFullImageUrl(userPhoto) ||
-              "https://cdn.pixabay.com/photo/2023/02/18/11/00/icon-7797704_640.png"
+              'https://cdn.pixabay.com/photo/2023/02/18/11/00/icon-7797704_640.png'
             }
             alt="Profile"
             className="list-profile-image"
@@ -333,20 +304,14 @@ const HeaderProfile = ({
         </div>
 
         <div className="list-profile-menu">
-          <button
-            onClick={() => setIsDarkMode((prev) => !prev)}
-            className="list-profile-menu-item"
-          >
+          <button onClick={() => setIsDarkMode((prev) => !prev)} className="list-profile-menu-item">
             {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
-            <span>{isDarkMode ? "lightMode" : "DarkMode"}</span>
+            <span>{isDarkMode ? 'lightMode' : 'DarkMode'}</span>
           </button>
 
-          <button
-            onClick={handleLogout}
-            className="list-profile-menu-item danger"
-          >
+          <button onClick={handleLogout} className="list-profile-menu-item danger">
             <LogOut size={20} />
-            <span>{"logout"}</span>
+            <span>{'logout'}</span>
           </button>
         </div>
 
@@ -360,7 +325,7 @@ const HeaderProfile = ({
             className="list-profile-menu-item"
           >
             <Info size={20} /> {/* ใช้ไอคอน Info */}
-            <span>{"เริ่มคู่มือแนะนำ"}</span>
+            <span>{'เริ่มคู่มือแนะนำ'}</span>
           </button>
         )}
       </div>

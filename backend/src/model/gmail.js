@@ -6,6 +6,8 @@ const userSchema = new mongoose.Schema(
     email: { type: String, unique: true },
     photoURL: String,
     photosOrder: { type: [String], default: [] },
+    isVerified: { type: Boolean, default: false },
+    emailVerificationToken: { type: String, default: null },
   },
   { timestamps: true }
 );

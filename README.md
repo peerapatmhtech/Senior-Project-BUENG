@@ -4,16 +4,53 @@
 ---
 
 ## 📑 Table of Contents
-1. [Project Structure Overview](#project-structure-overview)
-2. [Frontend Architecture](#frontend-architecture)
-3. [Backend Architecture](#backend-architecture)
-4. [Design Patterns](#design-patterns)
-5. [Configuration & Tools](#configuration--tools)
-6. [Security & Middleware](#security--middleware)
-7. [State Management](#state-management)
-8. [Testing Framework](#testing-framework)
-9. [Deployment Strategy](#deployment-strategy)
-10. [Best Practices & Recommendations](#best-practices--recommendations)
+1. [🚀 Quick Start & Installation](#-quick-start--installation)
+2. [Project Structure Overview](#project-structure-overview)
+3. [🔐 Authentication Flow (Production Ready)](#-authentication-flow-production-ready)
+4. [Frontend Architecture](#frontend-architecture)
+5. [Backend Architecture](#backend-architecture)
+6. [Design Patterns](#design-patterns)
+7. [Configuration & Tools](#configuration--tools)
+8. [Security & Middleware](#security--middleware)
+9. [State Management](#state-management)
+10. [Testing Framework](#testing-framework)
+11. [Deployment Strategy](#deployment-strategy)
+
+---
+
+## 🚀 Quick Start & Installation
+
+### 1. Prerequisites
+- Node.js (v18 or later)
+- MongoDB (Local or Atlas)
+- Firebase Project (with Admin SDK Service Account)
+- Gmail Account (for OAuth2 Emailing)
+
+### 2. Environment Setup
+Both `frontend` and `backend` require `.env` files. Use the template provided:
+```bash
+cp .env.example .env
+```
+Fill in the following keys:
+- **Firebase**: API Keys, Project ID, and Admin Service Account JSON fields.
+- **Gmail**: Client ID, Client Secret, and Refresh Token.
+- **MongoDB**: Connection URI.
+
+### 3. Running the Project
+
+#### Backend
+```bash
+cd backend
+npm install
+npm run dev
+```
+
+#### Frontend
+```bash
+cd frontend
+npm install
+npm run dev
+```
 
 ---
 
@@ -35,6 +72,24 @@ Senior-Project-BUENG/
 - **Type**: Monorepo setup (shared node_modules)
 - **Package Manager**: npm
 - **Module System**: ES Modules (ESM)
+
+---
+
+## 🔐 Authentication Flow (Production Ready)
+
+The system uses a custom **JWT + Firebase Auth + Email Verification** flow to ensure security and valid university email usage.
+
+### 🔄 The Registration Sequence:
+1.  **Register Request**: User submits form (`/register-request`).
+2.  **Creation**: Backend creates user in **Firebase Auth** (unverified) and **MongoDB** (unverified).
+3.  **Token**: A short-lived (1h) JWT is generated and sent via Gmail API.
+4.  **Verification**: User clicks the link. Backend verifies JWT, then marks user as `isVerified: true` in MongoDB and `emailVerified: true` in Firebase.
+5.  **Access**: Only verified users can bypass the `authMiddleware`.
+
+### 🛡️ Why this flow?
+- **Domain Restricted**: Only `@bumail.net` can register.
+- **No Race Conditions**: User data is saved immediately, preventing loss during verification delay.
+- **Security**: ID tokens are verified on every request using Firebase Admin SDK.
 
 ---
 
@@ -806,9 +861,8 @@ MongoDB
 ## 📌 Recommendations for Improvement
 
 ### 1. **Configuration Management**
-- [ ] Use `.env.example` for template environment variables
-- [ ] Create separate `.env` files for dev/prod/test
-- [ ] Implement configuration validation on startup
+✅ **Implemented**: Using `.env.example` and structured `.env` keys.
+- [ ] Implement configuration validation on startup (zod/joi)
 
 ### 2. **Error Handling**
 - [ ] Create global error handler middleware

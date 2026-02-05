@@ -15,12 +15,24 @@ app.post('/login', async (req, res) => {
     let user = await Gmail.findOne({ email });
 
     if (!user) {
-      user = new Gmail({ displayName, email, photoURL });
+      user = new Gmail({
+        displayName,
+        email,
+        photoURL,
+        isVerified: false, // Default for new users
+      });
     } else {
       user.displayName = displayName;
       user.photoURL = photoURL;
     }
-    // req.session.userId = user._id;
+
+    // Check if user is verified
+    if (!user.isVerified) {
+      return res.status(403).json({
+        message: 'โปรดยืนยันอีเมลของคุณก่อนเข้าสู่ระบบ',
+        requiresVerification: true,
+      });
+    }
 
     await user.save();
     const userId = await Gmail.findOne({ email });

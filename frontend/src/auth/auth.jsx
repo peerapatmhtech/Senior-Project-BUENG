@@ -1,64 +1,64 @@
-import { useState, useEffect } from "react";
-import { auth, provider, signInWithPopup } from "../firebase/firebase";
-import { useAuth } from "../context/Authcontext";
-import { useNavigate } from "react-router-dom";
-import "./auth.css";
+import { useState, useEffect } from 'react';
+import { auth, provider, signInWithPopup } from '../firebase/firebase';
+import { useAuth } from '../context/AuthContextProvider';
+import { useNavigate } from 'react-router-dom';
+import './auth.css';
 
 const NewLogin = () => {
   const navigate = useNavigate();
-  const [error, setError] = useState("");
+  const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isActive, setIsActive] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
-  const [resetEmail, setResetEmail] = useState("");
-  const [resetMessage, setResetMessage] = useState("");
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetMessage, setResetMessage] = useState('');
   const { loginWithEmail, registerWithEmail, resetPassword } = useAuth();
 
   // Form states สำหรับ Email/Password
   const [signInForm, setSignInForm] = useState({
-    email: "",
-    password: "",
+    email: '',
+    password: '',
   });
 
   const [signUpForm, setSignUpForm] = useState({
-    name: "",
-    email: "",
-    password: "",
+    name: '',
+    email: '',
+    password: '',
   });
 
   // Enhanced animation handling
   useEffect(() => {
-    const container = document.getElementById("container");
-    const registerButton = document.getElementById("register");
-    const loginButton = document.getElementById("login");
+    const container = document.getElementById('container');
+    const registerButton = document.getElementById('register');
+    const loginButton = document.getElementById('login');
 
     const handleRegisterClick = () => {
       setIsActive(true);
-      setError(""); // Clear errors when switching
-      container?.classList.add("active");
+      setError(''); // Clear errors when switching
+      container?.classList.add('active');
     };
 
     const handleLoginClick = () => {
       setIsActive(false);
-      setError(""); // Clear errors when switching
-      container?.classList.remove("active");
+      setError(''); // Clear errors when switching
+      container?.classList.remove('active');
     };
 
     if (registerButton && loginButton && container) {
-      registerButton.addEventListener("click", handleRegisterClick);
-      loginButton.addEventListener("click", handleLoginClick);
+      registerButton.addEventListener('click', handleRegisterClick);
+      loginButton.addEventListener('click', handleLoginClick);
     }
 
     // Entrance animation
     const timer = setTimeout(() => {
-      container?.classList.add("entrance-complete");
+      container?.classList.add('entrance-complete');
     }, 100);
 
     return () => {
       clearTimeout(timer);
       if (registerButton && loginButton) {
-        registerButton.removeEventListener("click", handleRegisterClick);
-        loginButton.removeEventListener("click", handleLoginClick);
+        registerButton.removeEventListener('click', handleRegisterClick);
+        loginButton.removeEventListener('click', handleLoginClick);
       }
     };
   }, []);
@@ -71,14 +71,14 @@ const NewLogin = () => {
       setIsMobile(window.innerWidth <= 768);
     };
 
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   // Enhanced form validation
   const validateEmail = (email) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email) && email.endsWith("@bumail.net");
+    return emailRegex.test(email) && email.endsWith('@bumail.net');
   };
 
   const validatePassword = (password) => {
@@ -87,38 +87,35 @@ const NewLogin = () => {
 
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
-    setError("");
+    setError('');
 
     try {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
 
       // Check if the email is from @bumail.net
-      if (!user.email.endsWith("@bumail.net")) {
-        setError("โปรดใช้บัญชี @bumail.net เท่านั้น");
+      if (!user.email.endsWith('@bumail.net')) {
+        setError('โปรดใช้บัญชี @bumail.net เท่านั้น');
         await auth.signOut(); // Sign out the user
         setIsLoading(false);
         return; // Stop the function
       }
 
       //////เก็บข้อมูล User ใน localStorage//////
-      localStorage.setItem(
-        "userName",
-        user.displayName || user.email.split("@")[0]
-      );
-      localStorage.setItem("userPhoto", user.photoURL || "");
-      localStorage.setItem("userEmail", user.email);
+      localStorage.setItem('userName', user.displayName || user.email.split('@')[0]);
+      localStorage.setItem('userPhoto', user.photoURL || '');
+      localStorage.setItem('userEmail', user.email);
 
       // Success animation
-      const container = document.getElementById("container");
-      container?.classList.add("success-animation");
+      const container = document.getElementById('container');
+      container?.classList.add('success-animation');
 
       // Smooth transition to home
       setTimeout(() => {
-        navigate("/home");
+        navigate('/home');
       }, 500);
     } catch (error) {
-      setError("เกิดข้อผิดพลาดในการล็อกอิน");
+      setError('เกิดข้อผิดพลาดในการล็อกอิน');
       console.error(error);
     } finally {
       setIsLoading(false);
@@ -129,17 +126,17 @@ const NewLogin = () => {
   const handleEmailSignIn = async (e) => {
     e.preventDefault();
     setIsLoading(true);
-    setError("");
+    setError('');
 
     // Real-time validation
     if (!validateEmail(signInForm.email)) {
-      setError("กรุณาใช้อีเมล @bumail.net ที่ถูกต้อง");
+      setError('กรุณาใช้อีเมล @bumail.net ที่ถูกต้อง');
       setIsLoading(false);
       return;
     }
 
     if (!validatePassword(signInForm.password)) {
-      setError("รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร");
+      setError('รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร');
       setIsLoading(false);
       return;
     }
@@ -147,22 +144,19 @@ const NewLogin = () => {
     try {
       const user = await loginWithEmail(signInForm.email, signInForm.password);
       // Success animation
-      const container = document.getElementById("container");
-      container?.classList.add("success-animation");
+      const container = document.getElementById('container');
+      container?.classList.add('success-animation');
 
       // เก็บข้อมูลลง localStorage
-      localStorage.setItem(
-        "userName",
-        user.displayName || signInForm.email.split("@")[0]
-      );
-      localStorage.setItem("userPhoto", user.photoURL || "");
-      localStorage.setItem("userEmail", user.email);
+      localStorage.setItem('userName', user.displayName || signInForm.email.split('@')[0]);
+      localStorage.setItem('userPhoto', user.photoURL || '');
+      localStorage.setItem('userEmail', user.email);
 
       setTimeout(() => {
-        navigate("/home");
+        navigate('/home');
       }, 500);
     } catch (error) {
-      console.error("Email sign in error:", error);
+      console.error('Email sign in error:', error);
       setError(error.message);
     } finally {
       setIsLoading(false);
@@ -173,48 +167,48 @@ const NewLogin = () => {
   const handleEmailSignUp = async (e) => {
     e.preventDefault();
     setIsLoading(true);
-    setError("");
+    setError('');
 
     // Real-time validation
     if (!signUpForm.name.trim()) {
-      setError("กรุณากรอกชื่อของคุณ");
+      setError('กรุณากรอกชื่อของคุณ');
       setIsLoading(false);
       return;
     }
 
     if (!validateEmail(signUpForm.email)) {
-      setError("กรุณาใช้อีเมล @bumail.net ที่ถูกต้อง");
+      setError('กรุณาใช้อีเมล @bumail.net ที่ถูกต้อง');
       setIsLoading(false);
       return;
     }
 
     if (!validatePassword(signUpForm.password)) {
-      setError("รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร");
+      setError('รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร');
       setIsLoading(false);
       return;
     }
 
     try {
-      const user = await registerWithEmail(
-        signUpForm.email,
-        signUpForm.password,
-        signUpForm.name
-      );
+      await registerWithEmail(signUpForm.email, signUpForm.password, signUpForm.name);
 
-      // Success animation
-      const container = document.getElementById("container");
-      container?.classList.add("success-animation");
+      // บันทึกลง localStorage (เอาออกเพราะยังไม่ได้ยืนยัน)
+      // localStorage.setItem("userName", user.displayName);
+      // localStorage.setItem("userPhoto", user.photoURL || "");
+      // localStorage.setItem("userEmail", user.email);
 
-      // เก็บข้อมูลลง localStorage
-      localStorage.setItem("userName", user.displayName);
-      localStorage.setItem("userPhoto", user.photoURL || "");
-      localStorage.setItem("userEmail", user.email);
+      // แสดงข้อความแจ้งเตือน
+      setIsActive(false); // สลับกลับไปหน้า Login
+      const container = document.getElementById('container');
+      container?.classList.remove('active');
 
-      setTimeout(() => {
-        navigate("/home");
-      }, 500);
+      setSignInForm({ ...signInForm, email: signUpForm.email });
+      setResetMessage('ลงทะเบียนสำเร็จ! กรุณาตรวจสอบอีเมลของคุณเพื่อยืนยันตัวตนก่อนเข้าสู่ระบบ');
+      setShowResetModal(false);
+
+      // เลื่อนไปแสดง Error หรือ Message (ถ้ามี)
+      window.scrollTo(0, 0);
     } catch (error) {
-      console.error("Email sign up error:", error);
+      console.error('Email sign up error:', error);
       setError(error.message);
     } finally {
       setIsLoading(false);
@@ -224,23 +218,21 @@ const NewLogin = () => {
   // Handle password reset
   const handleForgotPassword = async (e) => {
     e.preventDefault();
-    setError("");
-    setResetMessage("");
+    setError('');
+    setResetMessage('');
     setIsLoading(true);
 
     try {
       if (!resetEmail) {
-        throw new Error("กรุณากรอกอีเมล");
+        throw new Error('กรุณากรอกอีเมล');
       }
 
       await resetPassword(resetEmail);
-      setResetMessage(
-        "ส่งลิงก์รีเซ็ตรหัสผ่านไปยังอีเมลของคุณแล้ว กรุณาตรวจสอบอีเมล"
-      );
-      setResetEmail("");
+      setResetMessage('ส่งลิงก์รีเซ็ตรหัสผ่านไปยังอีเมลของคุณแล้ว กรุณาตรวจสอบอีเมล');
+      setResetEmail('');
       setTimeout(() => {
         setShowResetModal(false);
-        setResetMessage("");
+        setResetMessage('');
       }, 3000);
     } catch (error) {
       setError(error.message);
@@ -252,21 +244,21 @@ const NewLogin = () => {
   // Real-time input validation
   const handleEmailChange = (e, formType) => {
     const email = e.target.value;
-    if (formType === "signIn") {
+    if (formType === 'signIn') {
       setSignInForm({ ...signInForm, email });
     } else {
       setSignUpForm({ ...signUpForm, email });
     }
 
     // Clear error if email becomes valid
-    if (validateEmail(email) || email === "") {
-      setError("");
+    if (validateEmail(email) || email === '') {
+      setError('');
     }
   };
 
   return (
     <div className="page-wrapper">
-      <div className={`container ${isLoading ? "loading" : ""}`} id="container">
+      <div className={`container ${isLoading ? 'loading' : ''}`} id="container">
         {/* Sign In Form */}
         <div className="form-container sign-in">
           <form onSubmit={handleEmailSignIn}>
@@ -288,7 +280,7 @@ const NewLogin = () => {
               type="email"
               placeholder="yourname@bumail.net"
               value={signInForm.email}
-              onChange={(e) => handleEmailChange(e, "signIn")}
+              onChange={(e) => handleEmailChange(e, 'signIn')}
               required
               disabled={isLoading}
               autoComplete="email"
@@ -298,9 +290,7 @@ const NewLogin = () => {
               type="password"
               placeholder="รหัสผ่าน"
               value={signInForm.password}
-              onChange={(e) =>
-                setSignInForm({ ...signInForm, password: e.target.value })
-              }
+              onChange={(e) => setSignInForm({ ...signInForm, password: e.target.value })}
               required
               disabled={isLoading}
               autoComplete="current-password"
@@ -314,12 +304,8 @@ const NewLogin = () => {
               ลืมรหัสผ่าน?
             </button>
 
-            <button
-              type="submit"
-              disabled={isLoading}
-              aria-label="Sign in to your account"
-            >
-              {isLoading ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบ"}
+            <button type="submit" disabled={isLoading} aria-label="Sign in to your account">
+              {isLoading ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ'}
             </button>
 
             {/* Link to signup */}
@@ -330,14 +316,23 @@ const NewLogin = () => {
                 className="link-button"
                 onClick={() => {
                   setIsActive(true);
-                  const container = document.getElementById("container");
-                  container?.classList.add("active");
-                  setError("");
+                  const container = document.getElementById('container');
+                  container?.classList.add('active');
+                  setError('');
                 }}
               >
                 สมัครสมาชิกที่นี่
               </button>
             </div>
+
+            {resetMessage && (
+              <div
+                className="success-message"
+                style={{ color: '#4CAF50', marginBottom: '10px', textAlign: 'center' }}
+              >
+                {resetMessage}
+              </div>
+            )}
 
             {error && (
               <div className="error-message" role="alert">
@@ -368,9 +363,7 @@ const NewLogin = () => {
               type="text"
               placeholder="ชื่อ-นามสกุล"
               value={signUpForm.name}
-              onChange={(e) =>
-                setSignUpForm({ ...signUpForm, name: e.target.value })
-              }
+              onChange={(e) => setSignUpForm({ ...signUpForm, name: e.target.value })}
               required
               disabled={isLoading}
               autoComplete="name"
@@ -380,7 +373,7 @@ const NewLogin = () => {
               type="email"
               placeholder="yourname@bumail.net"
               value={signUpForm.email}
-              onChange={(e) => handleEmailChange(e, "signUp")}
+              onChange={(e) => handleEmailChange(e, 'signUp')}
               required
               disabled={isLoading}
               autoComplete="email"
@@ -390,21 +383,15 @@ const NewLogin = () => {
               type="password"
               placeholder="รหัสผ่าน (อย่างน้อย 6 ตัวอักษร)"
               value={signUpForm.password}
-              onChange={(e) =>
-                setSignUpForm({ ...signUpForm, password: e.target.value })
-              }
+              onChange={(e) => setSignUpForm({ ...signUpForm, password: e.target.value })}
               required
               minLength={6}
               disabled={isLoading}
               autoComplete="new-password"
             />
 
-            <button
-              type="submit"
-              disabled={isLoading}
-              aria-label="Create new account"
-            >
-              {isLoading ? "กำลังสร้างบัญชี..." : "สมัครสมาชิก"}
+            <button type="submit" disabled={isLoading} aria-label="Create new account">
+              {isLoading ? 'กำลังสร้างบัญชี...' : 'สมัครสมาชิก'}
             </button>
 
             {/* Link to signin */}
@@ -415,9 +402,9 @@ const NewLogin = () => {
                 className="link-button"
                 onClick={() => {
                   setIsActive(false);
-                  const container = document.getElementById("container");
-                  container?.classList.remove("active");
-                  setError("");
+                  const container = document.getElementById('container');
+                  container?.classList.remove('active');
+                  setError('');
                 }}
               >
                 เข้าสู่ระบบที่นี่
@@ -466,10 +453,7 @@ const NewLogin = () => {
 
         {/* Reset Password Modal */}
         {showResetModal && (
-          <div
-            className="modal-overlay"
-            onClick={() => setShowResetModal(false)}
-          >
+          <div className="modal-overlay" onClick={() => setShowResetModal(false)}>
             <div className="reset-modal" onClick={(e) => e.stopPropagation()}>
               <div className="modal-header">
                 <h2>รีเซ็ตรหัสผ่าน</h2>
@@ -483,9 +467,7 @@ const NewLogin = () => {
               </div>
 
               <form onSubmit={handleForgotPassword}>
-                <p>
-                  กรอกอีเมล @bumail.net ของคุณ เราจะส่งลิงก์รีเซ็ตรหัสผ่านให้คุณ
-                </p>
+                <p>กรอกอีเมล @bumail.net ของคุณ เราจะส่งลิงก์รีเซ็ตรหัสผ่านให้คุณ</p>
 
                 <input
                   type="email"
@@ -506,19 +488,13 @@ const NewLogin = () => {
                   >
                     ยกเลิก
                   </button>
-                  <button
-                    type="submit"
-                    className="reset-btn"
-                    disabled={isLoading}
-                  >
-                    {isLoading ? "กำลังส่ง..." : "ส่งลิงก์รีเซ็ต"}
+                  <button type="submit" className="reset-btn" disabled={isLoading}>
+                    {isLoading ? 'กำลังส่ง...' : 'ส่งลิงก์รีเซ็ต'}
                   </button>
                 </div>
 
                 {error && <div className="error-message">{error}</div>}
-                {resetMessage && (
-                  <div className="success-message">{resetMessage}</div>
-                )}
+                {resetMessage && <div className="success-message">{resetMessage}</div>}
               </form>
             </div>
           </div>
@@ -528,23 +504,23 @@ const NewLogin = () => {
         {isMobile && (
           <div className="mobile-toggle">
             <button
-              className={`mobile-btn ${!isActive ? "active" : ""}`}
+              className={`mobile-btn ${!isActive ? 'active' : ''}`}
               onClick={() => {
                 setIsActive(false);
-                const container = document.getElementById("container");
-                container?.classList.remove("active");
-                setError("");
+                const container = document.getElementById('container');
+                container?.classList.remove('active');
+                setError('');
               }}
             >
               เข้าสู่ระบบ
             </button>
             <button
-              className={`mobile-btn ${isActive ? "active" : ""}`}
+              className={`mobile-btn ${isActive ? 'active' : ''}`}
               onClick={() => {
                 setIsActive(true);
-                const container = document.getElementById("container");
-                container?.classList.add("active");
-                setError("");
+                const container = document.getElementById('container');
+                container?.classList.add('active');
+                setError('');
               }}
             >
               สมัครสมาชิก
@@ -559,9 +535,9 @@ const NewLogin = () => {
               className="floating-btn signup-fab"
               onClick={() => {
                 setIsActive(true);
-                const container = document.getElementById("container");
-                container?.classList.add("active");
-                setError("");
+                const container = document.getElementById('container');
+                container?.classList.add('active');
+                setError('');
               }}
               title="สมัครสมาชิกใหม่"
               aria-label="Switch to signup form"

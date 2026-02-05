@@ -10,7 +10,7 @@ import ChatContainerAI from './chat/components/javascript/ChatContainerAI';
 import { Route, Routes, useLocation } from 'react-router-dom';
 import { NotificationProvider } from './context/notificationContext';
 import { SocketProvider } from './context/make.com';
-import { useAuth } from './context/Authcontext';
+import { useAuth } from './context/AuthContextProvider';
 
 function App() {
   const location = useLocation(); // ใช้เพื่อดึงข้อมูล path ปัจจุบัน
