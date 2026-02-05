@@ -17,11 +17,7 @@
   --accordion-chip-remove-bg: #c7d2fe;
   --accordion-chip-remove-hover-bg: #a5b4fc;
   --accordion-button-bg: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-  --accordion-button-hover-bg: linear-gradient(
-    135deg,
-    #4f46e5 0%,
-    #7c3aed 100%
-  );
+  --accordion-button-hover-bg: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
   --accordion-button-text: #ffffff;
   --accordion-button-clear-bg: #f1f5f9;
   --accordion-button-clear-text: #64748b;
@@ -136,19 +132,25 @@
   position: absolute;
   max-height: calc(100vh - 300px);
   opacity: 0;
-  transition: min-height 1s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.5s ease,
+  transition:
+    min-height 1s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.5s ease,
     padding 0.5s ease;
 }
 .accordion-content.open {
-  z-index: 10;
   display: block;
+  height: fit-content;
+  z-index: 10;
   padding: 1rem 1.5rem;
-  transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.5s ease,
+  opacity: 1;
+  transition:
+    max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.5s ease,
     padding 0.5s ease;
 }
 
 .accordion-header.open + .accordion-content {
-  height: calc(100vh - 300px);
+  height: calc(100vh - 850px);
   position: absolute;
   background-color: var(--accordion-card-bg);
   max-width: max-content;
@@ -266,7 +268,9 @@
   overflow: hidden;
   max-height: 0;
   opacity: 0;
-  transition: max-height 0.4s ease-out, opacity 0.4s ease-out,
+  transition:
+    max-height 0.4s ease-out,
+    opacity 0.4s ease-out,
     padding 0.4s ease-out;
 }
 
@@ -306,6 +310,13 @@
   border-color: var(--accordion-primary-color);
   font-weight: 600;
   box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+}
+
+.accordion-tab .tab-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
 }
 
 /* --- Submit Buttons --- */

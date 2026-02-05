@@ -1,12 +1,44 @@
-import "./Home.css";
-import EventList from "./event/Eventlist";
-import RequireLogin from "../components/RequireLogin";
-import { useTheme } from "../context/themecontext";
-import RoomMatch from "../community/roommatch";
-import { useState, useEffect } from "react";
-import AccordionList from "./cardmatch/AccordionList";
-import HeaderProfile from "../components/HeaderProfile";
-import Joyride, { STATUS } from "react-joyride";
+import './Home.css';
+import EventList from './event/Eventlist';
+import RequireLogin from '../components/RequireLogin';
+import { useTheme } from '../context/themecontext';
+import RoomMatch from '../community/roommatch';
+import { useState, useEffect } from 'react';
+import AccordionList from './cardmatch/AccordionList';
+import HeaderProfile from '../components/HeaderProfile';
+import Joyride, { STATUS } from 'react-joyride';
+import {
+  Shirt,
+  Diamond,
+  Palette,
+  Trophy,
+  Sparkles,
+  Book,
+  Coffee,
+  Cake,
+  Utensils,
+  Monitor,
+  Drum,
+  GlassWater,
+  Zap,
+  Users,
+  Gamepad2,
+  Sprout,
+  Music,
+  Dumbbell,
+  Wine,
+  Pizza,
+  Store,
+  CodeXml,
+  Camera,
+  ShoppingCart,
+  Waves,
+  Plane,
+  Cpu,
+  HeartHandshake,
+  Wrench,
+  Accessibility,
+} from 'lucide-react';
 
 const Newcommu = () => {
   const { isDarkMode } = useTheme();
@@ -16,37 +48,35 @@ const Newcommu = () => {
 
   const [tourSteps] = useState([
     {
-      target: "body",
+      target: 'body',
+      content: 'ยินดีต้อนรับสู่ Find Friend เราจะพาคุณไปชมส่วนต่างๆ ที่น่าสนใจ',
+      placement: 'center',
+    },
+    {
+      target: '.header-home',
       content:
-        "ยินดีต้อนรับสู่ Find Friend เราจะพาคุณไปชมส่วนต่างๆ ที่น่าสนใจ",
-      placement: "center",
+        'ตรงนี้คือส่วนโปรไฟล์ของคุณ คุณสามารถจัดการโปรไฟล์, ดูการแจ้งเตือน, และตั้งค่าต่างๆ ได้ที่นี่',
     },
     {
-      target: ".header-home",
-      content:
-        "ตรงนี้คือส่วนโปรไฟล์ของคุณ คุณสามารถจัดการโปรไฟล์, ดูการแจ้งเตือน, และตั้งค่าต่างๆ ได้ที่นี่",
+      target: '.accordion-list',
+      content: 'คุณสามารถค้นหากิจกรรมหรือห้องที่น่าสนใจได้จากหมวดหมู่ต่างๆ ที่นี่',
     },
     {
-      target: ".accordion-list",
-      content:
-        "คุณสามารถค้นหากิจกรรมหรือห้องที่น่าสนใจได้จากหมวดหมู่ต่างๆ ที่นี่",
+      target: '.event-container',
+      content: 'ในแต่ละกิจกรรมคุณสามารถกดปุ่มหัวใจได้ทันที แนะนำให้กดเยอะจะได้คู่แมทช์เยอะๆ',
     },
     {
-      target: ".event-container",
-      content: "ในแต่ละกิจกรรมคุณสามารถกดปุ่มหัวใจได้ทันที แนะนำให้กดเยอะจะได้คู่แมทช์เยอะๆ",
+      target: '.card-stack',
+      content: 'และนี่คือคือคนผู้ใช้งานอื่นที่ชื่นชอบกิจกรรมเดียวกับคุณ',
     },
     {
-      target: ".card-stack",
-      content: "และนี่คือคือคนผู้ใช้งานอื่นที่ชื่นชอบกิจกรรมเดียวกับคุณ",
-    },
-    {
-      target: ".button-group",
-      content: "จากนั้น ปัดซ้ายย!! ปัดขวา!! ที่การ์ดหรือกดปุ่มตรงนี้ได้เล้ยย",
+      target: '.button-group',
+      content: 'จากนั้น ปัดซ้ายย!! ปัดขวา!! ที่การ์ดหรือกดปุ่มตรงนี้ได้เล้ยย',
     },
   ]);
 
   useEffect(() => {
-    const hasSeenTour = localStorage.getItem("hasSeenTour");
+    const hasSeenTour = localStorage.getItem('hasSeenTour');
     if (!hasSeenTour) {
       setRunTour(true);
     }
@@ -56,18 +86,18 @@ const Newcommu = () => {
     const { status } = data;
     if ([STATUS.FINISHED, STATUS.SKIPPED].includes(status)) {
       setRunTour(false);
-      localStorage.setItem("hasSeenTour", "true");
+      localStorage.setItem('hasSeenTour', 'true');
     }
   };
 
   const handleStartTour = () => {
-    localStorage.removeItem("hasSeenTour"); // ลบสถานะที่เคยดูแล้ว เพื่อให้ทัวร์เริ่มใหม่
+    localStorage.removeItem('hasSeenTour'); // ลบสถานะที่เคยดูแล้ว เพื่อให้ทัวร์เริ่มใหม่
     setRunTour(true); // เริ่มทัวร์
   };
 
   return (
     <RequireLogin>
-      <div className={`main-con-home ${isDarkMode ? "dark-mode" : ""}`}>
+      <div className={`main-con-home ${isDarkMode ? 'dark-mode' : ''}`}>
         <Joyride
           steps={tourSteps}
           run={runTour}
@@ -93,200 +123,44 @@ const Newcommu = () => {
               <AccordionList
                 items={[
                   {
-                    title: "กีฬา",
+                    title: 'เลือกความสนใจของคุณ',
                     genres: [
                       {
-                        title: "Educational and self-development",
+                        title: 'All Categories',
                         tabs: [
-                          "Art/Craft Workshops",
-                          "Seminars / Short Courses",
-                          "Talk show/Lecture",
-                        ],
-                      },
-                      {
-                        title: "Entertainment and cultural",
-                        tabs: [
-                          "Art exhibition/Gallery",
-                          "Cosplay Event",
-                          "Anime Convention",
-                          "Comic Con",
-                          "Board Game Cafe",
-                          "Escape Room",
-                          "Interactive Theater",
-                          "Stand-up Comedy",
-                          "Improv Show",
-                          "Film festival/Musical",
-                        ],
-                      },
-                      {
-                        title: "Families and children",
-                        tabs: ["Camp", "Kids Fair", "Theme park"],
-                      },
-                      {
-                        title: "Group/Specialized",
-                        tabs: ["Carnival/Event", "Volunteer"],
-                      },
-                      {
-                        title: "Sports and health",
-                        tabs: [
-                          "Skateboarding",
-                          "BMX",
-                          "Parkour",
-                          "Rock Climbing",
-                          "Badminton",
-                          "Table Tennis",
-                          "E-sports",
-                          "Dance Sport",
-                          "Pilates",
-                          "Crossfit",
-                          "Martial Arts",
-                          "Gymnastics",
-                          "Marathon",
-                          "Audox Tour",
-                          "Yoga",
-                          "Swimming",
-                          "Cycling",
-                          "Walking",
-                          "Running",
-                          "Fitness",
-                          "Gym",
-                        ],
-                      },
-                      {
-                        title: "Social and community",
-                        tabs: [
-                          "Speed Dating",
-                          "Singles Mixer",
-                          "Board Game Night",
-                          "Karaoke Party",
-                          "Language Exchange",
-                          "Book Club",
-                          "Movie Night",
-                          "Trivia Night",
-                          "Annual festival",
-                          "Temple fair",
-                          "Red Cross fair",
-                        ],
-                      },
-                      {
-                        title: "Travel and adventure",
-                        tabs: [
-                          "Camping",
-                          "Trip",
-                          "School trip",
-                          "Scuba diving",
-                          "Photo trip",
-                          "Trekking",
-                          "Adventure",
-                          "Cafe",
-                          "Tour",
-                        ],
-                      },
-                      {
-                        title: "Music",
-                        tabs: [
-                          "Concert",
-                          "Festival",
-                          "Live Performance",
-                          "DJ Night",
-                          "Karaoke",
-                          "K-pop",
-                          "Indie",
-                          "Hip-hop",
-                          "R&B",
-                          "Trap",
-                          "Lo-fi",
-                          "Chill",
-                          "Acoustic",
-                          "Cover Band",
-                          "Busking",
-                        ],
-                      },
-                      {
-                        title: "Concert",
-                        tabs: [
-                          "EDM",
-                          "Jazz",
-                          "Pop",
-                          "Rock",
-                          "Obera",
-                          "Classical",
-                          "Dance",
-                          "Mhorum",
-                          "Rukthung",
-                          "Thai",
-                          "Rekgea",
-                          "Electronic",
-                        ],
-                      },
-                      {
-                        title: "Technology and Digital",
-                        tabs: [
-                          "Gaming Tournament",
-                          "Tech Conference",
-                          "Hackathon",
-                          "AI Workshop",
-                          "Coding Bootcamp",
-                          "Startup Pitch",
-                          "NFT Exhibition",
-                          "VR/AR Experience",
-                          "Drone Racing",
-                          "Robot Competition",
-                          "E-sport Championship",
-                        ],
-                      },
-                      {
-                        title: "Social Media and Content",
-                        tabs: [
-                          "Influencer Meetup",
-                          "Content Creator Workshop",
-                          "TikTok Challenge",
-                          "YouTube Convention",
-                          "Podcast Live Recording",
-                          "Live Streaming Event",
-                          "Photo Contest",
-                          "Meme Contest",
-                          "Brand Collaboration",
-                        ],
-                      },
-                      {
-                        title: "Lifestyle and Trends",
-                        tabs: [
-                          "Pop-up Store",
-                          "Street Food Festival",
-                          "Night Market",
-                          "Fashion Show",
-                          "Beauty Workshop",
-                          "Skincare Class",
-                          "Sustainable Living",
-                          "Thrift Market",
-                          "Vintage Fair",
-                          "Plant Market",
-                        ],
-                      },
-                      {
-                        title: "Food and Beverages",
-                        tabs: [
-                          "Food Truck Festival",
-                          "Coffee Festival",
-                          "Bubble Tea Fair",
-                          "Cooking Class",
-                          "Wine Tasting",
-                          "Craft Beer Festival",
-                          "Dessert Making",
-                          "Street Food Tour",
-                          "Michelin Guide Event",
-                        ],
-                      },
-                      {
-                        title: "Nightlife and Party",
-                        tabs: [
-                          "Club Night",
-                          "Bar Crawl",
-                          "Pool Party",
-                          "Silent Disco",
-                          "Rooftop Party",
-                          "Glow Party",
+                          { label: 'Apparel', icon: <Shirt size={18} /> },
+                          { label: 'Accessories', icon: <Diamond size={18} /> },
+                          { label: 'Art', icon: <Palette size={18} /> },
+                          { label: 'Badminton', icon: <Trophy size={18} /> },
+                          { label: 'Beauty', icon: <Sparkles size={18} /> },
+                          { label: 'Books', icon: <Book size={18} /> },
+                          { label: 'Cafe', icon: <Coffee size={18} /> },
+                          { label: 'Cake', icon: <Cake size={18} /> },
+                          { label: 'Coffee', icon: <Coffee size={18} /> },
+                          { label: 'Cooking', icon: <Utensils size={18} /> },
+                          { label: 'Computers', icon: <Monitor size={18} /> },
+                          { label: 'Drum', icon: <Drum size={18} /> },
+                          { label: 'Dinner', icon: <GlassWater size={18} /> },
+                          { label: 'Electronic', icon: <Zap size={18} /> },
+                          { label: 'Family', icon: <Users size={18} /> },
+                          { label: 'Football', icon: <Trophy size={18} /> },
+                          { label: 'Game', icon: <Gamepad2 size={18} /> },
+                          { label: 'Growth', icon: <Sprout size={18} /> },
+                          { label: 'Guitar', icon: <Music size={18} /> },
+                          { label: 'Gym', icon: <Dumbbell size={18} /> },
+                          { label: 'Hangout', icon: <Wine size={18} /> },
+                          { label: 'Junk Food', icon: <Pizza size={18} /> },
+                          { label: 'Market', icon: <Store size={18} /> },
+                          { label: 'Music', icon: <Music size={18} /> },
+                          { label: 'Programming', icon: <CodeXml size={18} /> },
+                          { label: 'Photo', icon: <Camera size={18} /> },
+                          { label: 'Shopping', icon: <ShoppingCart size={18} /> },
+                          { label: 'Swimming', icon: <Waves size={18} /> },
+                          { label: 'Travel', icon: <Plane size={18} /> },
+                          { label: 'Technology', icon: <Cpu size={18} /> },
+                          { label: 'Volunteer', icon: <HeartHandshake size={18} /> },
+                          { label: 'Workshop', icon: <Wrench size={18} /> },
+                          { label: 'Yoga', icon: <Accessibility size={18} /> },
                         ],
                       },
                     ],
@@ -295,7 +169,7 @@ const Newcommu = () => {
                 setWaiting={setWaiting}
               />
 
-              <EventList setWaiting={setWaiting} waiting={waiting} />
+              <EventList waiting={waiting} />
             </div>
 
             <RoomMatch

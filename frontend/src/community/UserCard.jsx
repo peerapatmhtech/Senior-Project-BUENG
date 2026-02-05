@@ -1,28 +1,24 @@
-import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
-import api from "../server/api";
+import { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import api from '../server/api';
 
-import PropTypes from "prop-types";
+import PropTypes from 'prop-types';
 // Helper function to fetch photos for a user
 const fetchUserPhotos = async (userEmail, mainPhotoUrl) => {
   if (!userEmail) return [];
 
-  const mainPhoto = mainPhotoUrl
-    ? { url: mainPhotoUrl, _id: "main_photo" }
-    : null;
+  const mainPhoto = mainPhotoUrl ? { url: mainPhotoUrl, _id: 'main_photo' } : null;
   let allPhotos = mainPhoto ? [mainPhoto] : [];
 
   try {
     const response = await api.get(`/api/user-photos/${userEmail}`);
     if (response.data.success && Array.isArray(response.data.data)) {
-      const additionalPhotos = response.data.data.filter(
-        (p) => p.url !== mainPhotoUrl
-      );
+      const additionalPhotos = response.data.data.filter((p) => p.url !== mainPhotoUrl);
       allPhotos = [...allPhotos, ...additionalPhotos];
     }
     return allPhotos;
   } catch (error) {
-    console.error("Failed to fetch user photos for", userEmail, error);
+    console.error('Failed to fetch user photos for', userEmail, error);
     // If fetching additional photos fails, just return the main photo
     return allPhotos;
   }
@@ -45,7 +41,7 @@ const UserCard = ({ room, userEmail, users }) => {
 
   // 1. Replaced useEffect with useQuery to fetch photos
   const { data: photos = [], isLoading: isLoadingPhotos } = useQuery({
-    queryKey: ["userPhotos", userToDisplayEmail], // Unique key for each user's photos
+    queryKey: ['userPhotos', userToDisplayEmail], // Unique key for each user's photos
     queryFn: () => fetchUserPhotos(userToDisplayEmail, userToDisplay?.photoURL),
     enabled: !!userToDisplayEmail && !!userToDisplay, // Only fetch if we have the user's email and profile
     staleTime: 1000 * 60 * 5, // Cache photos for 5 minutes
@@ -53,12 +49,12 @@ const UserCard = ({ room, userEmail, users }) => {
 
   const getHighResPhoto = (url) => {
     if (!url) return url;
-    return url.replace(/=s\d+-c(?=[&?]|$)/, "=s400-c");
+    return url.replace(/=s\d+-c(?=[&?]|$)/, '=s400-c');
   };
 
   const getFullImageUrl = (url) => {
     if (!url) return url;
-    if (url.startsWith("http://") || url.startsWith("https://")) return url;
+    if (url.startsWith('http://') || url.startsWith('https://')) return url;
     return `${api.defaults.baseURL}${url}`;
   };
 
@@ -67,7 +63,7 @@ const UserCard = ({ room, userEmail, users }) => {
     if (!photos || photos.length <= 1) return;
 
     setActivePhotoIndex((prevIndex) => {
-      if (direction === "next") return (prevIndex + 1) % photos.length;
+      if (direction === 'next') return (prevIndex + 1) % photos.length;
       return (prevIndex - 1 + photos.length) % photos.length;
     });
   };
@@ -95,19 +91,17 @@ const UserCard = ({ room, userEmail, users }) => {
             <>
               <div
                 className="photo-nav-overlay-left"
-                onClick={(e) => handlePhotoNav(e, "prev")}
+                onClick={(e) => handlePhotoNav(e, 'prev')}
               ></div>
               <div
                 className="photo-nav-overlay-right"
-                onClick={(e) => handlePhotoNav(e, "next")}
+                onClick={(e) => handlePhotoNav(e, 'next')}
               ></div>
               <div className="photo-dots">
                 {photos.map((_, index) => (
                   <span
                     key={index}
-                    className={`dot ${
-                      index === activePhotoIndex ? "active" : ""
-                    }`}
+                    className={`dot ${index === activePhotoIndex ? 'active' : ''}`}
                   ></span>
                 ))}
               </div>
@@ -117,17 +111,11 @@ const UserCard = ({ room, userEmail, users }) => {
       ) : (
         // Fallback if no photos are found at all
         // <div className="tinder-card-inner-loading">
-          <img
-            src="https://via.placeholder.com/400"
-            alt="placeholder"
-            className="room-image-match"
-          />
+        <img src="https://via.placeholder.com/400" alt="placeholder" className="room-image-match" />
         // </div>
       )}
       <div className="room-match-info">
-        <h5>
-          {userToDisplay ? userToDisplay.displayName : userToDisplayEmail}
-        </h5>
+        <h5>{userToDisplay ? userToDisplay.displayName : userToDisplayEmail}</h5>
         <p>มีความสนใจในเรื่อง {room.title || room.detail} เหมือนคุณ</p>
       </div>
     </div>

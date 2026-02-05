@@ -15,10 +15,10 @@ import eventRoutes from './src/routes/event.js';
 import likeRoutes from './src/routes/like.js'; // Routes from "./routes/like.js";
 import roommatchRoutes from './src/routes/eventmatch.js'; // Routes from "./routes/room.js";
 import mongoose from 'mongoose';
-import { Filter } from './src/model/filter.js';
-import { Event } from './src/model/event.js';
-import { InfoMatch } from './src/model/infomatch.js';
-import axios from 'axios';
+// import { Filter } from './src/model/filter.js';
+// import { Event } from './src/model/event.js';
+// import { InfoMatch } from './src/model/infomatch.js';
+// import axios from 'axios';
 
 // Import new routes (ES Modules style)
 import friendRequestRoutes from './src/routes/friendRequest.js';
@@ -28,11 +28,11 @@ import userPhotoRoutes from './src/routes/userPhoto.js';
 import MakeRoutes from './src/routes/make.js';
 import infoMatchRoutes from './src/routes/infomatch.js'; // Import info match routes
 import { authMiddleware } from './src/middleware/authMiddleware.js';
-import { saveEventsFromSource } from './src/services/eventService.js';
+// import { saveEventsFromSource } from './src/services/eventService.js';
 
 /////////Midleware for owner and admin/////////
 import { limiter } from './src/middleware/ratelimit.js'; // Strings must use singlequote.
-import { Gmail } from './src/model/gmail.js';
+// import { Gmail } from './src/model/gmail.js';
 
 dotenv.config();
 const allowedOrigins = process.env.VITE_APP_WEB_BASE_URL;
@@ -52,7 +52,7 @@ const io = new Server(server, {
 
 const port = process.env.PORT || 8080;
 const MONGO_URI = process.env.MONGO_URI;
-const MAKE_WEBHOOK_URL = process.env.MAKE_WEBHOOK_URL;
+// const MAKE_WEBHOOK_URL = process.env.MAKE_WEBHOOK_URL; // Moved to GenreService
 
 // ✅ Middleware
 // app.use(
@@ -230,212 +230,8 @@ io.on('connection', (socket) => {
   });
 });
 // 📌 API บันทึกหมวดหมู่เพลงที่ผู้ใช้เลือก
-app.post(
-  '/api/update-genres',
-  limiter, // ใช้ rate limiter เพื่อลดความเสี่ยงจาก DDoS
-  async (req, res) => {
-    const { email, genres, subGenres, updatedAt } = req.body;
-    if (!email || !genres || !subGenres) {
-      return res.status(400).json({ message: 'Missing email, genres, or subGenres' });
-    }
-    const emailValid = await Gmail.findOne({ email });
-
-    if (!emailValid) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-    try {
-      /////////////Find user and update genres and subgenres////////////
-      const user = await Filter.findOneAndUpdate(
-        { email },
-        { genres, subGenres: subGenres || {} },
-        { new: true, upsert: true } // เพิ่ม upsert เผื่อ user ยังไม่มีใน Filter
-      );
-
-      const filter = {};
-
-      ////////////Filter out events from the provided userEmail////////
-      // Exclude events created by the current user
-      if (user.email) {
-        filter.email = { $ne: user.email };
-      }
-
-      // Validate subgenres structure - it should be an object
-      if (
-        !user.subGenres ||
-        (typeof user.subGenres !== 'object' && !(user.subGenres instanceof Map)) ||
-        user.subGenres === null
-      ) {
-        return res.status(400).json({
-          message: 'A \'subgenres\' object with category filters is required in the request body.',
-        });
-      }
-
-      // Handle both Map (from Mongoose) and Object (potential raw data)
-      const subgenresEntries =
-        user.subGenres instanceof Map
-          ? Array.from(user.subGenres.entries())
-          : Object.entries(user.subGenres);
-
-      // Find events that the user has already matched to exclude them
-      const matchedInfos = await InfoMatch.find({
-        $or: [{ email: user.email }, { usermatch: user.email }],
-      }).select('eventId');
-      const matchedEventIds = matchedInfos.map((info) => info.eventId);
-
-      const allFoundEvents = [];
-      const missingSubGenres = {};
-
-      // Iterate through each filter to check if events exist
-      // OPTIMIZATION: Use Promise.all to query all categories in parallel
-      const searchPromises = subgenresEntries.map(async ([category, subgenreList]) => {
-        const trimmedCategory = category.trim();
-        if (!trimmedCategory) return null;
-
-        const query = {
-          email: { $ne: user.email }, // Exclude own events
-          _id: { $nin: matchedEventIds }, // Exclude matched events
-        };
-
-        // Build specific query for this category
-        if (Array.isArray(subgenreList) && subgenreList.length > 0) {
-          const cleanSubgenres = subgenreList
-            .map((s) => String(s).trim())
-            .filter((s) => s.length > 0);
-
-          if (cleanSubgenres.length > 0) {
-            query[`genre.${trimmedCategory}`] = { $in: cleanSubgenres };
-          } else {
-            query[`genre.${trimmedCategory}`] = { $exists: true };
-          }
-        } else {
-          query[`genre.${trimmedCategory}`] = { $exists: true };
-        }
-
-        // Search for events matching this specific filter
-        const events = await Event.find(query)
-          .sort({ date: 1 })
-          .limit(50) // Limit per category to avoid overload
-          .lean();
-
-        return { category, subgenreList, events };
-      });
-
-      const results = await Promise.all(searchPromises);
-
-      results.forEach((result) => {
-        if (!result) return;
-        if (result.events.length > 0) {
-          allFoundEvents.push(...result.events);
-        } else {
-          // If no events found for this filter, add to missing list
-          missingSubGenres[result.category] = result.subgenreList;
-        }
-      });
-
-      // Deduplicate found events by _id
-      const uniqueFoundEventsMap = new Map();
-      allFoundEvents.forEach((e) => uniqueFoundEventsMap.set(e._id.toString(), e));
-      const uniqueFoundEvents = Array.from(uniqueFoundEventsMap.values());
-
-      // Filter out duplicates based on Title or Link (Global check)
-      let finalEvents = [];
-      if (uniqueFoundEvents.length > 0) {
-        const duplicateCheck = await Event.find({
-          $and: [
-            { _id: { $nin: uniqueFoundEvents.map((e) => e._id) } }, // ไม่ใช่ตัวมันเอง
-            {
-              $or: [
-                { title: { $in: uniqueFoundEvents.map((e) => e.title) } },
-                { link: { $in: uniqueFoundEvents.map((e) => e.link) } },
-              ],
-            },
-          ],
-        })
-          .select('title link')
-          .lean();
-
-        const duplicateTitles = new Set(duplicateCheck.map((e) => e.title));
-        const duplicateLinks = new Set(duplicateCheck.map((e) => e.link));
-
-        finalEvents = uniqueFoundEvents.filter(
-          (e) => !duplicateTitles.has(e.title) && !duplicateLinks.has(e.link)
-        );
-      }
-
-      // Trigger a webhook to an external service like Make.com if there are missing filters
-      if (Object.keys(missingSubGenres).length > 0) {
-        // ✅ OPTIMIZATION: Send each missing subgenre as a separate webhook request
-        // ส่งแยกทีละ subgenre เพื่อให้ Make.com ได้รับข้อมูลทีละอัน (ตาม requirement "ส่งอันเดียวเท่านั้นต่อ request")
-        const webhookPromises = [];
-
-        for (const [category, subList] of Object.entries(missingSubGenres)) {
-          // Ensure subList is an array and limit to 5 to prevent spamming
-          const items = Array.isArray(subList) ? subList : [subList];
-          const limitedItems = items.slice(0, 5);
-
-          for (const item of limitedItems) {
-            const subGenreStr = String(item).trim();
-            if (!subGenreStr) continue;
-
-            webhookPromises.push(
-              (async () => {
-                try {
-                  await axios.post(MAKE_WEBHOOK_URL, {
-                    type: 'update-genres',
-                    filter_info: {
-                      email: user.email,
-                      genres: user.genres,
-                      subGenres: { [category]: [subGenreStr] }, // ส่งไปแค่ 1 subgenre ใน array
-                      updatedAt: updatedAt || new Date().toISOString(),
-                    },
-                  });
-                } catch (webhookError) {
-                  console.error(
-                    `⚠️ Webhook failed for category '${category}' item '${subGenreStr}' but continuing:`,
-                    webhookError.message
-                  );
-                }
-              })()
-            );
-          }
-        }
-
-        await Promise.all(webhookPromises);
-      }
-
-      // Prepare the found unique events to be saved for the user
-      if (finalEvents.length > 0) {
-        const data = finalEvents.map((e) => ({
-          title: e.title,
-          snippet: e.description,
-          link: e.link,
-          image: e.image,
-          date: e.date,
-          address: e.address,
-          thumbnail: e.thumbnail,
-          venue: e.venue,
-          ticket_info: e.ticket_info,
-          event_location_map: e.event_location_map,
-        }));
-
-        // Automatically save the recommended events for the user by calling the service
-        await saveEventsFromSource({
-          data,
-          email,
-          subGenres,
-          updatedAt, // This is no longer used in the service but kept for compatibility
-        });
-      }
-
-      // Return the unique events to the frontend
-      res.json(finalEvents);
-    } catch (error) {
-      console.error('Update failed:', error);
-      res.status(500).json({ message: 'Server error' });
-    }
-  }
-);
+import * as genreController from './src/controllers/genreController.js';
+app.post('/api/update-genres', limiter, genreController.updateGenres);
 
 // เก็บ socket instance ไว้ใช้ใน middleware
 app.set('io', io);

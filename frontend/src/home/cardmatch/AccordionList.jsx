@@ -32,18 +32,23 @@ const GenreItem = ({ genre, itemIdx, genreIdx, selectedLabels, onTabSelect, onTo
     <div className={`accordion-tabs-wrapper ${isOpen ? 'open' : ''}`}>
       <div className="accordion-tabs">
         {(genre.tabs || []).map((tab) => {
+          const label = typeof tab === 'string' ? tab : tab.label;
+          const icon = typeof tab === 'string' ? null : tab.icon;
           const isSelected = selectedLabels.some(
-            (sel) => sel.key === `${itemIdx}-${genreIdx}` && sel.label === tab
+            (sel) => sel.key === `${itemIdx}-${genreIdx}` && sel.label === label
           );
           return (
             <button
-              key={tab}
+              key={label}
               className={`accordion-tab ${isSelected ? 'selected' : ''}`}
-              onClick={() => onTabSelect(itemIdx, genreIdx, tab)}
+              onClick={() => onTabSelect(itemIdx, genreIdx, label)}
               type="button"
             >
-              {isSelected && <FaPlus style={{ marginRight: '8px', fontSize: '10px' }} />}
-              {tab}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {icon && <span className="tab-icon">{icon}</span>}
+                {isSelected && <FaPlus style={{ fontSize: '10px' }} />}
+                <span>{label}</span>
+              </div>
             </button>
           );
         })}
@@ -88,10 +93,18 @@ const AccordionList = ({ items, setWaiting }) => {
   // 2. Mutation for saving genres
   const saveMutation = useMutation({
     mutationFn: (variables) => api.post(`/api/update-genres`, variables),
-    onSuccess: () => {
+    onSuccess: (res) => {
+      const finalEvents = res.data;
       toast.success('บันทึกความสนใจของคุณแล้ว');
-      // When genres change, invalidate events to refetch them
+
+      // Update cache directly with the newly found events
+      queryClient.setQueryData(['events', email], finalEvents);
+
+      // Invalidate to be sure, but UI will update immediately because of setQueryData
       queryClient.invalidateQueries({ queryKey: ['events', email] });
+
+      // Reset waiting state immediately
+      setWaiting(false);
     },
     onError: (error) => {
       const errorMessage = error.response?.data || 'บันทึกข้อมูลล้มเหลว';
@@ -100,8 +113,8 @@ const AccordionList = ({ items, setWaiting }) => {
           ? errorMessage
           : errorMessage?.message || 'บันทึกข้อมูลล้มเหลว'
       );
+      setWaiting(false);
     },
-    onSettled: () => setWaiting(true),
   });
 
   // 3. Mutation for clearing genres
@@ -222,7 +235,7 @@ const AccordionList = ({ items, setWaiting }) => {
           <FaChevronDown className="arrow" />
         </button>
 
-        <div className={`accordion-content ${isAccordionOpen ? "open" : ""}`}>
+        <div className={`accordion-content ${isAccordionOpen ? 'open' : ''}`}>
           {selectedLabels.length > 0 && (
             <div className="accordion-selected-chips-container">
               {selectedLabels.map((sel) => (
@@ -278,11 +291,7 @@ const AccordionList = ({ items, setWaiting }) => {
         >
           ล้างทั้งหมด
         </button>
-        <button
-          className="submit-genres-button"
-          onClick={handleSave}
-          disabled={isLoading}
-        >
+        <button className="submit-genres-button" onClick={handleSave} disabled={isLoading}>
           {isLoading ? 'กำลังบันทึก...' : 'ค้นหากิจกรรม'}
         </button>
       </div>

@@ -1,0 +1,156 @@
+.genre-grid-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem;
+  background: white;
+  border-radius: 20px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  height: 450px; /* Fixed height for scrollable content */
+  width: 100%;
+}
+
+.dark-mode .genre-grid-container {
+  background: #1e1e1e;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+.search-bar-wrapper {
+  display: flex;
+  align-items: center;
+  background-color: #f1f5f9;
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  gap: 0.75rem;
+}
+
+.dark-mode .search-bar-wrapper {
+  background-color: #2d2d2d;
+}
+
+.search-icon {
+  color: #64748b;
+}
+
+.genre-search-input {
+  border: none;
+  background: transparent;
+  width: 100%;
+  outline: none;
+  font-size: 1rem;
+  color: #1e293b;
+}
+
+.dark-mode .genre-search-input {
+  color: #f1f5f9;
+}
+
+.genres-scroll-area {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 0.5rem;
+}
+
+.genres-scroll-area::-webkit-scrollbar {
+  width: 5px;
+}
+
+.genres-scroll-area::-webkit-scrollbar-thumb {
+  background: #e2e8f0;
+  border-radius: 10px;
+}
+
+.genres-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+}
+
+.genre-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.8rem;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+}
+
+.genre-item:hover {
+  background-color: #f8fafc;
+}
+
+.dark-mode .genre-item:hover {
+  background-color: #2d2d2d;
+}
+
+.genre-item.selected {
+  background-color: #e0e7ff;
+  border-color: #6366f1;
+}
+
+.dark-mode .genre-item.selected {
+  background-color: #312e81;
+  border-color: #818cf8;
+}
+
+.genre-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #475569;
+}
+
+.dark-mode .genre-icon {
+  color: #94a3b8;
+}
+
+.selected .genre-icon,
+.selected .genre-label {
+  color: #4f46e5;
+}
+
+.dark-mode .selected .genre-icon,
+.dark-mode .selected .genre-label {
+  color: #a5b4fc;
+}
+
+.genre-label {
+  font-size: 0.9rem;
+  color: #334155;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dark-mode .genre-label {
+  color: #cbd5e1;
+}
+
+.search-events-btn {
+  background-color: #6366f1;
+  color: white;
+  border: none;
+  padding: 0.8rem;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.search-events-btn:hover {
+  background-color: #4f46e5;
+}
+
+.search-events-btn:disabled {
+  background-color: #94a3b8;
+  cursor: not-allowed;
+}
+
+@media screen and (max-width: 640px) {
+  .genres-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

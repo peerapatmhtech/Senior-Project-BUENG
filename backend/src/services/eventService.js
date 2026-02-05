@@ -33,16 +33,9 @@ function processIndicesToExclude(rawIndicesToExclude) {
  * @param {string} params.email - The user's email.
  * @param {string|Array<number|string>} params.rawIndicesToExclude - Indices to exclude.
  * @param {object} params.subGenres - The sub-genres for the events.
- * @param {string} params.updatedAt - The update timestamp.
  * @returns {Promise<Array<object>>} A promise that resolves to an array of newly created events.
  */
-export const saveEventsFromSource = async ({
-  data,
-  email,
-  rawIndicesToExclude,
-  subGenres,
-  updatedAt,
-}) => {
+export const saveEventsFromSource = async ({ data, email, subGenres }) => {
   const session = await mongoose.startSession();
   session.startTransaction();
   try {
@@ -55,12 +48,9 @@ export const saveEventsFromSource = async ({
       throw new Error('Data must be a non-empty array');
     }
 
-    const indicesToExclude = processIndicesToExclude(rawIndicesToExclude);
     const newUserEvents = [];
 
     for (let i = 0; i < dataTranfer.length; i++) {
-      if (indicesToExclude.includes(i)) continue;
-
       const item = dataTranfer[i];
       const {
         title,

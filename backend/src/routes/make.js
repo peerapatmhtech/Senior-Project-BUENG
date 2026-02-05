@@ -1,4 +1,8 @@
 import express from 'express';
+import axios from 'axios';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 /////////-----Model-----/////////
 import { Like } from '../model/like.js'; // Import the Like model
@@ -6,7 +10,8 @@ import { saveEventsFromSource } from '../services/eventService.js';
 import { Info } from '../model/info.js';
 
 export default function (io) {
-  const app = express.Router();
+  const app = express.Router(); 
+
 
   app.post('/save-event', async (req, res) => {
     try {
@@ -48,6 +53,35 @@ export default function (io) {
       io.emit('events_updated');
     }
   });
+
+  // GET /search-events - Search events using SerpApi
+  app.get('/search-events', async (req, res) => {
+    const { q } = req.query;
+    if (!q) {
+      return res.status(400).json({ message: 'Query parameter "q" is required.' });
+    }
+
+    try {
+      const apiKey = process.env.SERPAPI_API_KEY;
+      if (!apiKey) {
+        return res.status(500).json({ message: 'SerpApi API key is not configured.' });
+      }
+
+      const response = await axios.get('https://serpapi.com/search.json', {
+        params: {
+          engine: 'google_events',
+          q,
+          api_key: apiKey,
+        },
+      });
+
+      res.json(response.data);
+    } catch (error) {
+      console.error('Error searching events via SerpApi:', error);
+      res.status(500).json({ message: 'Error searching events', error: error.message });
+    }
+  });
+
   // GET /likes/exclude/:email
   app.get('/likes/exclude/:email', async (req, res) => {
     const { email } = req.params;

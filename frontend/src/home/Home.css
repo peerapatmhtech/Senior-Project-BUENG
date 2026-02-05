@@ -100,7 +100,6 @@
   background-color: #2a2a2a;
 }
 
-
 .content-area {
   display: grid;
   grid-template-columns: 2fr 1fr;
@@ -234,7 +233,7 @@
   object-fit: cover;
   background: #fff;
 }
-@media screen and (min-width: 760px){
+@media screen and (min-width: 760px) {
   .show-commu {
     width: 70%; /* ปรับขนาดเป็น 70% */
   }
@@ -245,13 +244,13 @@
     padding: 0;
   }
 }
-@media screen and (max-width: 760px){
+@media screen and (max-width: 760px) {
   .show-commu {
     width: 70%; /* ปรับขนาดเป็น 70% */
   }
   .bg-event-con {
     flex-direction: column;
-     justify-content: center;
+    justify-content: center;
     align-items: center;
     padding: 0;
   }

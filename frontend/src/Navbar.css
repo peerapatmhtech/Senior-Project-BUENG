@@ -54,8 +54,8 @@
     border-radius: 0;
   }
   .menu-link:hover {
-  width: 61.6px;
-  height: 62px;
+    width: 61.6px;
+    height: 62px;
   }
 
   .menu-link svg {
@@ -149,7 +149,9 @@
   text-decoration: none;
   color: var(--text-secondary-light);
   border-radius: 12px;
-  transition: background-color 0.2s ease, color 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
   font-weight: 500;
 }
 
@@ -193,7 +195,9 @@
   color: var(--text-secondary-light);
   font-weight: 500;
   border-radius: 12px;
-  transition: background-color 0.2s ease, color 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
 }
 
 .navbar-container.dark-mode .logout-link {
