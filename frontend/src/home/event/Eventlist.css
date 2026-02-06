@@ -1014,3 +1014,9 @@
 .dark-mode .favorite-button {
   background: linear-gradient(135deg, #232946 60%, #3a3a5d 100%);
 }
+@media screen and (max-width: 375px) {
+  .event-card {
+    max-width: 350px;
+  }
+}
+  
