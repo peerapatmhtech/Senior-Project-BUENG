@@ -144,13 +144,13 @@
   padding: 1rem 1.5rem;
   opacity: 1;
   transition:
-    max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+    /* max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1), */
     opacity 0.5s ease,
     padding 0.5s ease;
 }
 
 .accordion-header.open + .accordion-content {
-  height: calc(100vh - 850px);
+  /* height: calc(100vh - 850px); */
   position: absolute;
   background-color: var(--accordion-card-bg);
   max-width: max-content;
@@ -446,18 +446,19 @@
 }
 @media screen and (min-width: 375px) {
   .accordion-title {
-    font-size: 14px;
+    font-size: 12px;
   }
   .accordion-selection-count {
-    font-size: 12px;
+    font-size: 10px;
   }
   .accordion-list {
     padding: 0 24px;
     width: 100%;
   }
   .accordion-header {
-    padding: 12px 16px;
+    padding: 10px 16px;
     width: 100%;
+    height: 65px;
   }
   .submit-genres {
     padding: 8px 24px;
@@ -474,5 +475,26 @@
   }
   .accordion-tab .selected {
     font-size: 12px;
+  }
+  .accordion-tab {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+  /* .accordion-content.open {
+    height: calc(100vh - 270px);
+  } */
+  /* .accordion-genre-header.open {
+    padding: 12px 16px;
+    width: 100%;
+  } */
+  .accordion-genre-header {
+    padding: 12px 16px;
+    width: 100%;
+  }
+  .accordion-header .arrow {
+    font-size: 10px;
+  }
+  .accordion-content {
+    padding: 0 24px;
   }
 }

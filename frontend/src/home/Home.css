@@ -300,3 +300,9 @@
     padding: 40px 0 0 0;
   }
 }
+@media screen and (min-width: 375px) {
+  .header-home{
+    height: 70px;
+  }
+  
+}
