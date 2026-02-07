@@ -1,13 +1,17 @@
 import express from 'express';
-import { OpenAI } from 'openai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import dotenv from 'dotenv';
+import {
+  GEMINI_MODEL,
+  DEFAULT_TEMPERATURE,
+  DEFAULT_MAX_OUTPUT_TOKENS_LONG,
+} from '../constants/index.js';
+import { MessageSender, GeminiRole } from '../enums/index.js';
 
 dotenv.config();
 
-// Initialize OpenAI with your API key from environment variables
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Initialize Gemini AI with your API key from environment variables
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const router = express.Router();
 
 // Define the POST route for the AI chat
@@ -31,34 +35,41 @@ router.post('/ai/chat', async (req, res) => {
   }
 
   try {
-    // Construct the conversation messages array for the AI
-    const messages = [
-      {
-        role: 'system',
-        content: systemContent,
-      },
-      // Spread the existing conversation history
-      ...history,
-      // Add the new user message
-      {
-        role: 'user',
-        content: message,
-      },
-    ];
+    // Convert history to Gemini format
+    const geminiHistory = history.map((msg) => ({
+      role:
+        msg.role === MessageSender.ASSISTANT || msg.role === MessageSender.AI
+          ? GeminiRole.MODEL
+          : GeminiRole.USER,
+      parts: [{ text: msg.content }],
+    }));
 
-    // Call the OpenAI API to get a chat completion
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini', // Use the cost-effective and capable gpt-4o-mini model
-      messages: messages,
-      temperature: 0.7, // Adjust for creativity
-      max_tokens: 1000, // Limit the response length
+    // Initialize Gemini model
+    const model = genAI.getGenerativeModel({
+      model: GEMINI_MODEL,
+      systemInstruction: systemContent,
+    });
+
+    // Call the Gemini API to get a chat completion
+    const result = await model.generateContent({
+      contents: [
+        ...geminiHistory,
+        {
+          role: 'user',
+          parts: [{ text: message }],
+        },
+      ],
+      generationConfig: {
+        temperature: DEFAULT_TEMPERATURE, // Adjust for creativity
+        maxOutputTokens: DEFAULT_MAX_OUTPUT_TOKENS_LONG, // Limit the response length
+      },
     });
 
     // Extract the AI's response content
-    const aiResponse = completion.choices[0].message.content;
+    const aiResponse = result.response.text();
     res.json({ response: aiResponse });
   } catch (error) {
-    console.error('Error calling OpenAI API:', error);
+    console.error('Error calling Gemini API:', error);
     res.status(500).json({ error: 'Failed to get response from AI' });
   }
 });

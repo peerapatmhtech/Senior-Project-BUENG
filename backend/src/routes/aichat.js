@@ -1,16 +1,22 @@
 import express from 'express';
-import { OpenAI } from 'openai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import dotenv from 'dotenv';
 import { AiChatMessage } from '../model/AiChatMessage.js';
 import { InfoMatch } from '../model/infomatch.js';
 import { Event } from '../model/event.js';
+import {
+  GEMINI_MODEL,
+  DEFAULT_TEMPERATURE,
+  DEFAULT_MAX_OUTPUT_TOKENS,
+  DEFAULT_MAX_OUTPUT_TOKENS_SHORT,
+  MAX_RECENT_EVENTS,
+} from '../constants/index.js';
+import { MessageSender, GeminiRole } from '../enums/index.js';
 
 dotenv.config();
 
-// Initialize OpenAI
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Initialize Gemini AI
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const app = express.Router();
 
 // POST /api/aichat/daily-recommendation - Generate daily event recommendations
@@ -19,7 +25,7 @@ app.post('/daily-recommendation', async (req, res) => {
     // 1. Fetch recent events (limit 20 to provide variety but save tokens)
     const events = await Event.find()
       .sort({ createdAt: -1 })
-      .limit(20)
+      .limit(MAX_RECENT_EVENTS)
       .select('title description date location address venue');
 
     if (!events || events.length === 0) {
@@ -54,22 +60,31 @@ Constraint: เหตุผล (reason) ต้องเป็นภาษาไ�
 JSON Structure:
 { "recommendations": [{ "id": "...", "title": "...", "reason": "..." }] }`;
 
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: `รายการกิจกรรม:\n${eventList}` },
-      ],
-      response_format: { type: 'json_object' },
+    const model = genAI.getGenerativeModel({
+      model: GEMINI_MODEL,
+      systemInstruction: systemPrompt,
     });
 
-    const content = completion.choices[0].message.content;
+    const result = await model.generateContent({
+      contents: [
+        {
+          role: 'user',
+          parts: [{ text: `รายการกิจกรรม:\n${eventList}\n\nกรุณาตอบกลับในรูปแบบ JSON เท่านั้น` }],
+        },
+      ],
+      generationConfig: {
+        temperature: DEFAULT_TEMPERATURE,
+        responseMimeType: 'application/json',
+      },
+    });
+
+    const content = result.response.text();
     if (!content) {
       throw new Error('AI returned empty content');
     }
 
-    const result = JSON.parse(content);
-    res.status(200).json({ success: true, data: result });
+    const parsedResult = JSON.parse(content);
+    res.status(200).json({ success: true, data: parsedResult });
   } catch (error) {
     console.error('Error generating daily recommendation:', error);
     res.status(500).json({ success: false, message: 'Error generating recommendations.' });
@@ -105,13 +120,25 @@ Task: สร้างประโยคทักทายสั้นๆ หร�
 Tone: สนุก, เป็นกันเอง, สั้นกระชับ (ไม่เกิน 1 ประโยค)
 Language: Thai`;
 
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [{ role: 'system', content: systemPrompt }],
-      max_tokens: 100,
+    const model = genAI.getGenerativeModel({
+      model: GEMINI_MODEL,
+      systemInstruction: systemPrompt,
     });
 
-    const insight = completion.choices[0].message.content;
+    const result = await model.generateContent({
+      contents: [
+        {
+          role: 'user',
+          parts: [{ text: 'สร้างประโยคทักทายหรือ Fun Fact' }],
+        },
+      ],
+      generationConfig: {
+        maxOutputTokens: DEFAULT_MAX_OUTPUT_TOKENS_SHORT,
+        temperature: 0.8,
+      },
+    });
+
+    const insight = result.response.text();
     res.status(200).json({ success: true, data: insight });
   } catch (error) {
     console.error('AI Insight Error:', error);
@@ -209,37 +236,50 @@ Instruction: ใช้ข้อมูล Context นี้ในการสน�
 
     // Limit history to last 10 messages to maintain focus and save tokens
     const recentHistory = Array.isArray(history)
-      ? history.slice(-10).filter((msg) => msg && typeof msg.content === 'string' && msg.content.trim() !== '')
+      ? history
+          .slice(-10)
+          .filter((msg) => msg && typeof msg.content === 'string' && msg.content.trim() !== '')
       : [];
 
-    const messagesToAI = [
-      {
-        role: 'system',
-        content: systemContent,
-      },
-      ...recentHistory,
-      {
-        role: 'user',
-        content: content,
-      },
-    ];
+    // Convert history to Gemini format
+    const geminiHistory = recentHistory.map((msg) => ({
+      role:
+        msg.role === MessageSender.ASSISTANT || msg.role === MessageSender.AI
+          ? GeminiRole.MODEL
+          : GeminiRole.USER,
+      parts: [{ text: msg.content }],
+    }));
 
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: messagesToAI,
-      temperature: 0.7, // Balance between creativity and focus
-      max_tokens: 500,
+    // Initialize Gemini model with Google Search grounding
+    const model = genAI.getGenerativeModel({
+      model: GEMINI_MODEL,
+      systemInstruction: systemContent,
+      tools: [{ googleSearch: {} }], // Enable Google Search grounding for real-time data
     });
 
-    const aiResponseContent = completion.choices[0].message.content;
+    const result = await model.generateContent({
+      contents: [
+        ...geminiHistory,
+        {
+          role: 'user',
+          parts: [{ text: content }],
+        },
+      ],
+      generationConfig: {
+        temperature: DEFAULT_TEMPERATURE, // Balance between creativity and focus
+        maxOutputTokens: DEFAULT_MAX_OUTPUT_TOKENS,
+      },
+    });
+
+    const aiResponseContent = result.response.text();
     // 2. Save user's message
-    const userMessage = new AiChatMessage({ roomId, sender: 'user', content });
+    const userMessage = new AiChatMessage({ roomId, sender: MessageSender.USER, content });
     await userMessage.save();
 
     // 3. Save AI's response
     const aiMessage = new AiChatMessage({
       roomId,
-      sender: 'ai',
+      sender: MessageSender.AI,
       content: aiResponseContent,
     });
     await aiMessage.save();
@@ -259,11 +299,19 @@ app.post('/:roomId/save', async (req, res) => {
     const { userMessageContent, aiMessageContent } = req.body;
 
     // 1. Save user's message
-    const userMessage = new AiChatMessage({ roomId, sender: 'user', content: userMessageContent });
+    const userMessage = new AiChatMessage({
+      roomId,
+      sender: MessageSender.USER,
+      content: userMessageContent,
+    });
     await userMessage.save();
 
     // 2. Save AI's response
-    const aiMessage = new AiChatMessage({ roomId, sender: 'ai', content: aiMessageContent });
+    const aiMessage = new AiChatMessage({
+      roomId,
+      sender: MessageSender.AI,
+      content: aiMessageContent,
+    });
     await aiMessage.save();
 
     res.status(201).json({ success: true, message: 'Conversation saved.' });
