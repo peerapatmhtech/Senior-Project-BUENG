@@ -61,7 +61,7 @@ export const AuthProvider = ({ children }) => {
   }, [user]);
 
   // ฟังก์ชัน register สำหรับ @bumail.net (JWT-based)
-  const registerWithEmail = async (email, password, displayName) => {
+  const registerWithEmail = async (email, password, displayName, photo) => {
     // ล้างข้อมูลเก่า
     localStorage.removeItem('userName');
     localStorage.removeItem('userEmail');
@@ -75,12 +75,15 @@ export const AuthProvider = ({ children }) => {
     try {
       const API_BASE_URL = import.meta.env.VITE_APP_API_BASE_URL || 'http://localhost:8080';
 
+      const formData = new FormData();
+      formData.append('email', email);
+      formData.append('password', password);
+      formData.append('displayName', displayName);
+      formData.append('photo', photo);
+
       const response = await fetch(`${API_BASE_URL}/api/auth/register-request`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password, displayName }),
+        body: formData,
       });
 
       const data = await response.json();
