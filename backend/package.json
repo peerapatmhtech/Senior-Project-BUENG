@@ -9,7 +9,8 @@
     "dev": "nodemon server.js",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "migrate": "node src/migrations/migrate-users.js"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
