@@ -10,6 +10,7 @@ import './css/roommatch.css';
 import { useSocket } from '../context/make.com';
 import PropTypes from 'prop-types';
 import UserCard from './UserCard';
+import UserAvatar from '../components/UserAvatar';
 
 // --- API Helper Functions ---
 const fetchRoomsForUser = async (email) => {
@@ -143,14 +144,6 @@ const RoomMatch = ({ accordionComponent }) => {
     }
   };
 
-  const getHighResPhoto = (url) => (url ? url.replace(/=s\d+-c(?=[&?]|$)/, '=s400-c') : url);
-
-  const getFullImageUrl = (url) => {
-    if (!url) return url;
-    if (url.startsWith('http://') || url.startsWith('https://')) return url;
-    return `${api.defaults.baseURL}${url}`;
-  };
-
   const isLoading = isLoadingRooms || isLoadingUsers;
 
   return (
@@ -230,30 +223,28 @@ const RoomMatch = ({ accordionComponent }) => {
 
             <div className="activity-match-users">
               <div className="activity-match-user">
-                <img
-                  src={getFullImageUrl(
-                    getHighResPhoto(users.find((u) => u.email === userEmail)?.photoURL)
-                  )}
+                <UserAvatar
+                  src={users.find((u) => u.email === userEmail)?.photoURL}
                   alt="You"
+                  highRes={true}
                 />
                 <span>You</span>
               </div>
+
               <div className="activity-match-icon">+</div>
               <div className="activity-match-user">
-                <img
-                  src={getFullImageUrl(
-                    getHighResPhoto(
-                      users.find((u) => {
-                        const matchedUserEmail =
-                          matchedRoom.email !== userEmail
-                            ? matchedRoom.email
-                            : matchedRoom.usermatch;
-                        return u.email === matchedUserEmail;
-                      })?.photoURL
-                    )
-                  )}
+                <UserAvatar
+                  src={
+                    users.find((u) => {
+                      const matchedUserEmail =
+                        matchedRoom.email !== userEmail ? matchedRoom.email : matchedRoom.usermatch;
+                      return u.email === matchedUserEmail;
+                    })?.photoURL
+                  }
                   alt="Matched User"
+                  highRes={true}
                 />
+
                 <span>
                   {users.find(
                     (u) =>

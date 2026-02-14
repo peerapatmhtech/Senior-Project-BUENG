@@ -5,7 +5,7 @@ import PropTypes from 'prop-types'; // Import PropTypes
 import api from '../../../server/api';
 import { MdAutoAwesome, MdPeople } from 'react-icons/md';
 import '../css/showtitle.css';
-import { getFullImageUrl } from '../../../common/utils/image';
+import UserAvatar from '../../../components/UserAvatar';
 
 const ShowTitle = ({ userimage, openchat }) => {
   const { data: allEvents = [], isLoading } = useQuery({
@@ -222,14 +222,8 @@ const ShowTitle = ({ userimage, openchat }) => {
               }
             `}</style>
             <div className="community-header">
-              <img
-                src={
-                  userimage.image ||
-                  'https://images.squarespace-cdn.com/content/v1/557adc8ae4b05fe7bf13f9f0/1440602294667-276CNPQ99Q205NXV17BH/image-asset.jpeg'
-                }
-                alt={userimage.name}
-                className="community-image"
-              />
+              <UserAvatar src={userimage.image} alt={userimage.name} className="community-image" />
+
               <h2 className="community-title">{userimage.name}</h2>
               <div className="community-stats">
                 <MdPeople /> {communityMembers.length} Members
@@ -240,14 +234,12 @@ const ShowTitle = ({ userimage, openchat }) => {
               <div className="member-list">
                 {communityMembers.map((member) => (
                   <div key={member._id || member.email} className="member-item">
-                    <img
-                      src={
-                        getFullImageUrl(member.photoURL) ||
-                        'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png'
-                      }
+                    <UserAvatar
+                      src={member.photoURL}
                       alt={member.displayName}
                       className="member-avatar"
                     />
+
                     <span className="member-name">
                       {member.nickname
                         ? `${member.nickname} (${member.displayName || member.email})`

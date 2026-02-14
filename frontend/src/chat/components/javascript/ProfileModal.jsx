@@ -1,38 +1,23 @@
 // import React from "react";
-import "../../css/ProfileModal.css";
-import { toast, ToastContainer } from "react-toastify";
-import { useQueryClient, useQuery } from "@tanstack/react-query";
-import {
-  useFollowUser,
-  useDeleteFriend,
-  fetchUserPhotos,
-} from "../../../lib/queries";
-import ProfileModalBody from "./ProfileModalBody";
-import ProfileModalGallery from "./ProfileModalGallery";
-import { getFullImageUrl } from "../../../common/utils/image";
+import '../../css/ProfileModal.css';
+import { toast, ToastContainer } from 'react-toastify';
+import { useQueryClient, useQuery } from '@tanstack/react-query';
+import { useFollowUser, useDeleteFriend, fetchUserPhotos } from '../../../lib/queries';
+import ProfileModalBody from './ProfileModalBody';
+import ProfileModalGallery from './ProfileModalGallery';
 
-const ProfileModal = ({
-  isOpen,
-  onClose,
-  user,
-  userImage,
-  followers,
-  following,
-  isCom,
-  users,
-}) => {
-  const userEmail = localStorage.getItem("userEmail");
+const ProfileModal = ({ isOpen, onClose, user, userImage, followers, following, isCom, users }) => {
+  const userEmail = localStorage.getItem('userEmail');
   const queryClient = useQueryClient();
   const followMutation = useFollowUser();
   const deleteFriendMutation = useDeleteFriend();
-  const currentUser = queryClient.getQueryData(["currentUser", userEmail]);
+  const currentUser = queryClient.getQueryData(['currentUser', userEmail]);
   const isFollowing = currentUser?.following?.includes(userImage.email);
 
-  const profileUserEmail =
-    userImage.email === userEmail ? userImage.usermatch : userImage.email;
+  const profileUserEmail = userImage.email === userEmail ? userImage.usermatch : userImage.email;
 
   const { data: userPhotosData } = useQuery({
-    queryKey: ["userPhotos", profileUserEmail],
+    queryKey: ['userPhotos', profileUserEmail],
     queryFn: () => fetchUserPhotos(profileUserEmail),
     enabled: !!profileUserEmail && isOpen,
   });
@@ -41,8 +26,7 @@ const ProfileModal = ({
 
   const getMatchedUser = () => {
     if (!users || !userImage) return null;
-    const partnerEmail =
-      userImage.email === userEmail ? userImage.usermatch : userImage.email;
+    const partnerEmail = userImage.email === userEmail ? userImage.usermatch : userImage.email;
     return users.find((u) => u.email === partnerEmail);
   };
 
@@ -56,15 +40,14 @@ const ProfileModal = ({
     userImage.image;
 
   const getDeleteType = () => {
-    if (userImage?.usermatch) return "match";
-    if (isCom) return "room";
-    return "friend";
+    if (userImage?.usermatch) return 'match';
+    if (isCom) return 'room';
+    return 'friend';
   };
 
   const deleteType = getDeleteType();
 
   const handleDeleteClick = () => {
-
     deleteFriendMutation.mutate(
       {
         type: deleteType,
@@ -75,17 +58,17 @@ const ProfileModal = ({
       {
         onSuccess: () => {
           toast.success(
-            deleteType === "match"
-              ? "ยกเลิกแมตช์สำเร็จ"
-              : deleteType === "room"
-              ? "ออกจากกลุ่มสำเร็จ"
-              : "ลบเพื่อนสำเร็จ"
+            deleteType === 'match'
+              ? 'ยกเลิกแมตช์สำเร็จ'
+              : deleteType === 'room'
+                ? 'ออกจากกลุ่มสำเร็จ'
+                : 'ลบเพื่อนสำเร็จ'
           );
           onClose();
         },
         onError: (error) => {
-          console.error("Error deleting:", error);
-          toast.error("เกิดข้อผิดพลาดในการลบ");
+          console.error('Error deleting:', error);
+          toast.error('เกิดข้อผิดพลาดในการลบ');
         },
       }
     );
@@ -94,10 +77,10 @@ const ProfileModal = ({
   const handleFollowClick = () => {
     followMutation.mutate(userImage.email, {
       onSuccess: () => {
-        toast.success(isFollowing ? "เลิกติดตามสำเร็จ" : "ติดตามสำเร็จ!");
+        toast.success(isFollowing ? 'เลิกติดตามสำเร็จ' : 'ติดตามสำเร็จ!');
       },
       onError: () => {
-        toast.error("เกิดข้อผิดพลาด!");
+        toast.error('เกิดข้อผิดพลาด!');
       },
     });
   };
@@ -106,7 +89,6 @@ const ProfileModal = ({
     <div className="profile-modal-overlay" onClick={onClose}>
       <div className="profile-modal" onClick={(e) => e.stopPropagation()}>
         <ProfileModalBody
-          getFullImageUrl={getFullImageUrl}
           profilePhotoUrl={profilePhotoUrl}
           matchedUser={matchedUser}
           userImage={userImage}
@@ -121,10 +103,7 @@ const ProfileModal = ({
           isDeleteLoading={deleteFriendMutation.isPending}
           deleteType={deleteType}
         />
-        <ProfileModalGallery
-          userPhotosData={userPhotosData}
-          getFullImageUrl={getFullImageUrl}
-        />
+        <ProfileModalGallery userPhotosData={userPhotosData} />
       </div>
       <ToastContainer position="top-right" autoClose={3000} hideProgressBar />
     </div>

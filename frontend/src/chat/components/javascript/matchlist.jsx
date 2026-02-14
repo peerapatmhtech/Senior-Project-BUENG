@@ -5,7 +5,7 @@ import { FaHeartBroken } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { fetchInfoMatch, fetchUsers } from '../../../lib/queries';
-import { getFullImageUrl, getHighResPhoto } from '../../../common/utils/image';
+import UserAvatar from '../../../components/UserAvatar';
 
 const MatchList = ({
   setActiveUser,
@@ -137,20 +137,20 @@ const MatchList = ({
                       setActiveUser(partnerEmail);
 
                       const partnerUser = users.find((u) => u.email === partnerEmail);
-                      setRoombar(partnerUser?.photoURL || matchData.image, matchData.title, matchData._id);
+                      setRoombar(
+                        partnerUser?.photoURL || matchData.image,
+                        matchData.title,
+                        matchData._id
+                      );
                       setIsGroupChat(false);
                     }}
                   >
-                    <img
-                      src={(() => {
-                        const user = users.find((u) => u.email === partnerEmail);
-                        return user && user.photoURL
-                          ? getFullImageUrl(user.photoURL)
-                          : 'https://cdn.pixabay.com/photo/2023/02/18/11/00/icon-7797704_640.png';
-                      })()}
+                    <UserAvatar
+                      src={users.find((u) => u.email === partnerEmail)?.photoURL}
                       alt={matchData.detail}
                       className="friend-photo"
                     />
+
                     <div className="match-detail">
                       <span className="friend-name">
                         {(() => {
@@ -201,31 +201,27 @@ const MatchList = ({
 
             <div className="activity-match-users">
               <div className="activity-match-user">
-                <img
-                  src={getFullImageUrl(
-                    getHighResPhoto(users.find((u) => u.email === userEmail)?.photoURL)
-                  )}
+                <UserAvatar
+                  src={users.find((u) => u.email === userEmail)?.photoURL}
                   alt="You"
+                  highRes={true}
                 />
+
                 <span>You</span>
               </div>
               <div className="activity-match-icon">+</div>
               <div className="activity-match-user">
-                <img
-                  src={getFullImageUrl(
-                    getHighResPhoto(
-                      (() => {
-                        const partnerEmail =
-                          matchedData.email === userEmail
-                            ? matchedData.usermatch
-                            : matchedData.email;
-                        const partnerUser = users.find((u) => u.email === partnerEmail);
-                        return partnerUser?.photoURL;
-                      })()
-                    )
-                  )}
+                <UserAvatar
+                  src={(() => {
+                    const partnerEmail =
+                      matchedData.email === userEmail ? matchedData.usermatch : matchedData.email;
+                    const partnerUser = users.find((u) => u.email === partnerEmail);
+                    return partnerUser?.photoURL;
+                  })()}
                   alt="Matched User"
+                  highRes={true}
                 />
+
                 <span>
                   {(() => {
                     const partnerEmail =

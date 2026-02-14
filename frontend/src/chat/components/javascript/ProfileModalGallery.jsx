@@ -1,6 +1,7 @@
-import PropTypes from "prop-types";
+import PropTypes from 'prop-types';
+import UserAvatar from '../../../components/UserAvatar';
 
-const ProfileModalGallery = ({ userPhotosData, getFullImageUrl }) => {
+const ProfileModalGallery = ({ userPhotosData }) => {
   if (!userPhotosData || userPhotosData.length === 0) return null;
 
   return (
@@ -8,7 +9,7 @@ const ProfileModalGallery = ({ userPhotosData, getFullImageUrl }) => {
       <div className="photo-grid">
         {userPhotosData.map((photo) => (
           <div key={photo.url} className="photo-grid-item">
-            <img src={getFullImageUrl(photo.url)} alt="User upload" />
+            <UserAvatar src={photo.url} alt="User upload" />
           </div>
         ))}
       </div>
@@ -18,7 +19,6 @@ const ProfileModalGallery = ({ userPhotosData, getFullImageUrl }) => {
 
 ProfileModalGallery.propTypes = {
   userPhotosData: PropTypes.array,
-  getFullImageUrl: PropTypes.func.isRequired,
 };
 
 export default ProfileModalGallery;

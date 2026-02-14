@@ -1,7 +1,8 @@
 import PropTypes from 'prop-types';
 import { FaChevronDown, FaChevronRight, FaUserFriends } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
-import { getFullImageUrl } from '../../../common/utils/image';
+import UserAvatar from '../../../components/UserAvatar';
+
 import '../../chat.css';
 
 const ListUser = ({
@@ -82,14 +83,12 @@ const ListUser = ({
                   }}
                 >
                   <div className="mobilelarge">
-                    <img
-                      src={
-                        getFullImageUrl(friend.photoURL) ||
-                        'https://cdn.pixabay.com/photo/2023/02/18/11/00/icon-7797704_640.png'
-                      }
+                    <UserAvatar
+                      src={friend.photoURL}
                       alt={friend.displayName}
                       className="friend-photo"
                     />
+
                     <div className="friend-details">
                       <span className="friend-name">
                         {friend.nickname ? friend.nickname : friend.displayName}
