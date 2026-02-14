@@ -1,9 +1,11 @@
 # 📋 Project Architecture & Structure Review
+
 ## FindFriend Application - Full Stack Analysis
 
 ---
 
 ## 📑 Table of Contents
+
 1. [🚀 Quick Start & Installation](#-quick-start--installation)
 2. [Project Structure Overview](#project-structure-overview)
 3. [🔐 Authentication Flow (Production Ready)](#-authentication-flow-production-ready)
@@ -15,23 +17,29 @@
 9. [State Management](#state-management)
 10. [Testing Framework](#testing-framework)
 11. [Deployment Strategy](#deployment-strategy)
+12. [🤝 How to Contribute (Fork & PR)](#-how-to-contribute-fork--pr)
 
 ---
 
 ## 🚀 Quick Start & Installation
 
 ### 1. Prerequisites
+
 - Node.js (v18 or later)
 - MongoDB (Local or Atlas)
 - Firebase Project (with Admin SDK Service Account)
 - Gmail Account (for OAuth2 Emailing)
 
 ### 2. Environment Setup
+
 Both `frontend` and `backend` require `.env` files. Use the template provided:
+
 ```bash
 cp .env.example .env
 ```
+
 Fill in the following keys:
+
 - **Firebase**: API Keys, Project ID, and Admin Service Account JSON fields.
 - **Gmail**: Client ID, Client Secret, and Refresh Token.
 - **MongoDB**: Connection URI.
@@ -39,6 +47,7 @@ Fill in the following keys:
 ### 3. Running the Project
 
 #### Backend
+
 ```bash
 cd backend
 npm install
@@ -46,6 +55,7 @@ npm run dev
 ```
 
 #### Frontend
+
 ```bash
 cd frontend
 npm install
@@ -57,6 +67,7 @@ npm run dev
 ## 🏗️ Project Structure Overview
 
 ### Root Level
+
 ```
 Senior-Project-BUENG/
 ├── frontend/                 # React + Vite frontend
@@ -69,6 +80,7 @@ Senior-Project-BUENG/
 ```
 
 ### Monorepo Structure
+
 - **Type**: Monorepo setup (shared node_modules)
 - **Package Manager**: npm
 - **Module System**: ES Modules (ESM)
@@ -80,6 +92,7 @@ Senior-Project-BUENG/
 The system uses a custom **JWT + Firebase Auth + Email Verification** flow to ensure security and valid university email usage.
 
 ### 🔄 The Registration Sequence:
+
 1.  **Register Request**: User submits form (`/register-request`).
 2.  **Creation**: Backend creates user in **Firebase Auth** (unverified) and **MongoDB** (unverified).
 3.  **Token**: A short-lived (1h) JWT is generated and sent via Gmail API.
@@ -87,6 +100,7 @@ The system uses a custom **JWT + Firebase Auth + Email Verification** flow to en
 5.  **Access**: Only verified users can bypass the `authMiddleware`.
 
 ### 🛡️ Why this flow?
+
 - **Domain Restricted**: Only `@bumail.net` can register.
 - **No Race Conditions**: User data is saved immediately, preventing loss during verification delay.
 - **Security**: ID tokens are verified on every request using Firebase Admin SDK.
@@ -96,6 +110,7 @@ The system uses a custom **JWT + Firebase Auth + Email Verification** flow to en
 ## 🎨 Frontend Architecture
 
 ### Directory Structure
+
 ```
 frontend/
 ├── src/
@@ -196,12 +211,14 @@ frontend/
 ### Frontend Key Features
 
 #### 1. **Component Architecture**
+
 - **Page Components**: `Home`, `Profile`, `Friend`, `Community`, `Chat`, `Auth`
 - **Reusable Components**: `HeaderProfile`, `NotificationBell`, `RequireLogin`
 - **Sub-components**: Chat, Community modules with nested structures
 - **Pattern**: Functional components with React Hooks
 
 #### 2. **Routing**
+
 - **Library**: React Router DOM v6.30.1
 - **Routes**:
   - `/` → Home page
@@ -213,9 +230,10 @@ frontend/
   - `/ai-chat` → AI chat container
 
 #### 3. **Styling Approach**
+
 - **CSS Framework**: TailwindCSS v4.1.11
 - **PostCSS Processing**: Autoprefixer, TailwindCSS
-- **Styling Method**: 
+- **Styling Method**:
   - CSS Modules (component-level CSS)
   - Utility classes (TailwindCSS)
   - Styled Components (CSS-in-JS)
@@ -223,6 +241,7 @@ frontend/
 - **Responsive Design**: Mobile-first approach
 
 #### 4. **Build Tool**
+
 - **Vite v5.2.0**: Modern build tool (faster than webpack)
 - **Development Server**: HMR (Hot Module Replacement)
 - **Production Build**: Optimized bundle with tree shaking
@@ -232,6 +251,7 @@ frontend/
 ## 🔧 Backend Architecture
 
 ### Directory Structure
+
 ```
 backend/
 ├── src/
@@ -292,6 +312,7 @@ backend/
 ### Backend Key Components
 
 #### 1. **Server Setup (server.js)**
+
 ```javascript
 // Core Setup
 - Express.js application
@@ -302,23 +323,25 @@ backend/
 ```
 
 #### 2. **Database Models**
-| Model | Purpose |
-|-------|---------|
-| `Gmail.js` | User accounts with profile info |
-| `Friend.js` | Friend connections & relationships |
-| `friendRequest.js` | Friend request management |
-| `Event.js` | Event listings & details |
-| `eventmatch.js` | Event matching algorithms |
-| `Filter.js` | User preference filters |
-| `Info.js` | User biographical information |
-| `infomatch.js` | Info-based matching |
-| `Like.js` | Likes, reactions, interactions |
-| `Room.js` | Chat room definitions |
-| `userroom.js` | User-room memberships |
-| `userPhoto.js` | User profile photos |
-| `Image.js` | General image storage |
+
+| Model              | Purpose                            |
+| ------------------ | ---------------------------------- |
+| `Gmail.js`         | User accounts with profile info    |
+| `Friend.js`        | Friend connections & relationships |
+| `friendRequest.js` | Friend request management          |
+| `Event.js`         | Event listings & details           |
+| `eventmatch.js`    | Event matching algorithms          |
+| `Filter.js`        | User preference filters            |
+| `Info.js`          | User biographical information      |
+| `infomatch.js`     | Info-based matching                |
+| `Like.js`          | Likes, reactions, interactions     |
+| `Room.js`          | Chat room definitions              |
+| `userroom.js`      | User-room memberships              |
+| `userPhoto.js`     | User profile photos                |
+| `Image.js`         | General image storage              |
 
 #### 3. **API Routes**
+
 - **Authentication**: JWT via Firebase Admin SDK
 - **User Management**: Profile, photos, info endpoints
 - **Social Features**: Friends, friend requests, follows
@@ -328,6 +351,7 @@ backend/
 - **Webhooks**: Make.com integration
 
 #### 4. **Real-time Features (Socket.IO)**
+
 ```javascript
 Events:
 - user-online: User comes online
@@ -348,41 +372,49 @@ State Management:
 ## 🎯 Design Patterns
 
 ### 1. **MVC (Model-View-Controller)**
+
 - **Models**: Mongoose schemas in `backend/src/model/`
 - **Views**: React components in `frontend/src/`
 - **Controllers**: Route handlers in `backend/src/routes/`
 
 ### 2. **Repository Pattern**
+
 - Database access abstraction through Mongoose models
 - Static methods on schemas for data operations (e.g., `Friend.addFriend()`)
 
 ### 3. **Service Layer Pattern**
+
 - **API Service**: `frontend/src/server/api.js` (Axios client)
 - **AI Service**: `frontend/src/server/aiService.js`
 - Business logic separation from components
 
 ### 4. **Context API Pattern (State Management)**
+
 - **AuthContext**: User authentication state
 - **SocketContext**: WebSocket connections
 - **NotificationContext**: App notifications
 - **ThemeContext**: UI theme preferences
 
 ### 5. **Observer Pattern (Socket.IO)**
+
 - Real-time event emission and listening
 - Broadcast mechanisms for user status updates
 - Event-driven architecture
 
 ### 6. **Middleware Chain Pattern (Express)**
+
 - CORS middleware
 - Rate limiting middleware
 - Authentication middleware
 - Error handling middleware
 
 ### 7. **Factory Pattern**
+
 - Route creation functions (e.g., `eventRoutes(io)`)
 - Dynamic middleware attachment
 
 ### 8. **Singleton Pattern**
+
 - Firebase Admin SDK (single instance)
 - MongoDB connection (single instance)
 - Socket.IO server (single instance)
@@ -394,6 +426,7 @@ State Management:
 ### Frontend Configuration Files
 
 #### 1. **vite.config.js**
+
 ```javascript
 {
   plugins: [react()],
@@ -404,11 +437,13 @@ State Management:
   }
 }
 ```
+
 - Hot Module Replacement (HMR)
 - React plugin for JSX transformation
 - Fast development server
 
 #### 2. **tailwind.config.js**
+
 ```javascript
 {
   content: ["./index.html", "./src/**/*.{js,jsx,ts,tsx}"],
@@ -418,11 +453,13 @@ State Management:
   plugins: []
 }
 ```
+
 - Utility-first CSS framework
 - Responsive design utilities
 - Custom theme extensions
 
 #### 3. **postcss.config.js**
+
 ```javascript
 {
   plugins: {
@@ -431,11 +468,13 @@ State Management:
   }
 }
 ```
+
 - CSS processing pipeline
 - Vendor prefixes for browser compatibility
 - TailwindCSS JIT compiler
 
 #### 4. **Environment Variables (Frontend)**
+
 ```
 VITE_FIREBASE_API_KEY
 VITE_FIREBASE_AUTH_DOMAIN
@@ -451,6 +490,7 @@ VITE_APP_WEB_BASE_URL
 ### Backend Configuration
 
 #### 1. **Environment Variables (Backend)**
+
 ```
 PORT=8080
 MONGO_URI=mongodb://...
@@ -460,6 +500,7 @@ MAKE_WEBHOOK_URL=https://...
 ```
 
 #### 2. **Server Configuration (server.js)**
+
 ```javascript
 - CORS: Only allow configured origins
 - BodyParser: JSON limit (5mb)
@@ -468,13 +509,13 @@ MAKE_WEBHOOK_URL=https://...
 ```
 
 #### 3. **Vercel Configuration (vercel.json)**
+
 ```json
 {
-  "rewrites": [
-    { "source": "/(.*)", "destination": "/" }
-  ]
+  "rewrites": [{ "source": "/(.*)", "destination": "/" }]
 }
 ```
+
 - Single-page application (SPA) rewrite rules
 - Frontend deployment configuration
 
@@ -485,6 +526,7 @@ MAKE_WEBHOOK_URL=https://...
 ### Frontend Security
 
 #### 1. **Authentication Flow**
+
 ```
 User Input (Email/Password)
     ↓
@@ -498,6 +540,7 @@ Attach to API requests (Authorization header)
 ```
 
 #### 2. **AuthContext (frontend/src/context/Authcontext.jsx)**
+
 ```javascript
 Features:
 - Email domain validation (@bumail.net only)
@@ -509,6 +552,7 @@ Features:
 ```
 
 #### 3. **API Interceptors (frontend/src/server/api.js)**
+
 ```javascript
 Request Interceptor:
 - Attach Bearer token to headers
@@ -522,6 +566,7 @@ Response Interceptor:
 ### Backend Security
 
 #### 1. **Authentication Middleware (authMiddleware.js)**
+
 ```javascript
 - Firebase Admin SDK token verification
 - User synchronization with MongoDB
@@ -530,6 +575,7 @@ Response Interceptor:
 ```
 
 #### 2. **Rate Limiting (ratelimit.js)**
+
 ```javascript
 Configuration:
 - 15-minute window
@@ -538,6 +584,7 @@ Configuration:
 ```
 
 #### 3. **CORS Configuration**
+
 ```javascript
 - Origin whitelist: VITE_APP_WEB_BASE_URL
 - Credentials support: true
@@ -545,6 +592,7 @@ Configuration:
 ```
 
 #### 4. **Helmet.js** (Commented out in production)
+
 ```javascript
 - XSS protection headers
 - Content Security Policy
@@ -552,6 +600,7 @@ Configuration:
 ```
 
 #### 5. **Input Validation**
+
 ```javascript
 - Email format validation
 - Required field checks
@@ -567,6 +616,7 @@ Configuration:
 #### 1. **React Context API**
 
 **AuthContext** (`Authcontext.jsx`)
+
 ```javascript
 Provides:
 - user: Current authenticated user
@@ -584,6 +634,7 @@ Consumers:
 ```
 
 **SocketContext** (`socketcontext.jsx`)
+
 ```javascript
 Provides:
 - socket: Socket.IO instance
@@ -599,6 +650,7 @@ Listeners:
 ```
 
 **NotificationContext** (`notificationContext.jsx`)
+
 ```javascript
 Provides:
 - Notification state
@@ -607,6 +659,7 @@ Provides:
 ```
 
 **ThemeContext** (`themecontext.jsx`)
+
 ```javascript
 Provides:
 - Theme state
@@ -614,6 +667,7 @@ Provides:
 ```
 
 #### 2. **Zustand** (Optional state management)
+
 ```javascript
 - Lightweight alternative to Redux
 - Version: 5.0.3
@@ -621,6 +675,7 @@ Provides:
 ```
 
 #### 3. **Local Storage**
+
 ```javascript
 Stores:
 - idToken: Firebase authentication token
@@ -630,6 +685,7 @@ Stores:
 ```
 
 #### 4. **React Query** (`@tanstack/react-query` v5.90.2)
+
 ```javascript
 Features:
 - Server state management
@@ -641,6 +697,7 @@ Features:
 ### Backend State Management
 
 #### 1. **In-Memory Maps (Socket.IO)**
+
 ```javascript
 onlineUsers: Map<email, Set<socketId>>
 - Tracks multiple connections per user
@@ -660,6 +717,7 @@ userSockets: Object<email, socketId>
 ```
 
 #### 2. **MongoDB Database**
+
 ```javascript
 Persistence:
 - All models saved to MongoDB
@@ -674,6 +732,7 @@ Persistence:
 ### Test Configuration
 
 #### 1. **Jest Setup**
+
 ```javascript
 - Framework: Jest 30.0.4
 - Environment: jsdom (browser simulation)
@@ -681,11 +740,13 @@ Persistence:
 ```
 
 #### 2. **Testing Utilities**
+
 - `@testing-library/jest-dom`: Custom matchers
 - `supertest`: HTTP assertion library
 - `jest-environment-jsdom`: DOM testing environment
 
 #### 3. **Backend Tests** (Express routes)
+
 ```
 backend/src/routes/__tests__/
 ├── event.test.js
@@ -698,17 +759,20 @@ backend/src/routes/__tests__/
 ```
 
 #### 4. **Backend Model Tests**
+
 ```
 backend/src/model/__tests__/
 └── friendRequest.test.js
 ```
 
 #### 5. **Frontend Tests** (React components)
+
 - Component rendering tests
 - User interaction tests
 - API integration tests
 
 ### Test Coverage
+
 ```bash
 npm run test              # Run tests
 npm run test:watch       # Watch mode
@@ -723,6 +787,7 @@ npm run test:ci          # CI mode with coverage
 ### Frontend Deployment
 
 #### Vercel Hosting
+
 ```
 Domain: project-react-mocha-eta.vercel.app
 Configuration: vercel.json (SPA rewrite)
@@ -737,6 +802,7 @@ Optimization:
 ```
 
 #### Build Process
+
 ```bash
 npm run build           # Create production build
 npm run preview        # Preview production build locally
@@ -746,6 +812,7 @@ npm run lint           # ESLint code quality check
 ### Backend Deployment
 
 #### Local Development
+
 ```
 Port: 8080 (default)
 Protocol: HTTP + WebSocket (Socket.IO)
@@ -753,6 +820,7 @@ Database: Local MongoDB
 ```
 
 #### Production Considerations
+
 - Environment variable management
 - MongoDB Atlas (cloud database)
 - SSL/TLS for HTTPS
@@ -762,6 +830,7 @@ Database: Local MongoDB
 ### CI/CD Pipeline
 
 #### npm Scripts
+
 ```bash
 npm run dev              # Development server
 npm run build            # Production build
@@ -773,9 +842,60 @@ npm run ci               # Full CI: lint + test + build
 
 ---
 
+## 🤝 How to Contribute (Fork & PR)
+
+หากคุณต้องการส่งโค้ดเข้าร่วมโปรเจค (Pull Request) ให้ทำตามขั้นตอนดังนี้:
+
+### 1. Fork & Clone
+
+- กด **Fork** Repository นี้ไปที่บัญชีของคุณเอง
+- Clone ลงเครื่อง:
+  ```bash
+  git clone https://github.com/YOUR_USERNAME/Senior-Project-BUENG.git
+  cd Senior-Project-BUENG
+  ```
+
+### 2. Set Up Remotes
+
+เพิ่มต้นทาง (Upstream) เพื่อดึงงานล่าสุด:
+
+```bash
+git remote add upstream https://github.com/Evrp/Senior-Project-BUENG.git
+```
+
+### 3. Sync & Create Branch
+
+สร้าง branch ใหม่จากงานล่าสุดของต้นทาง:
+
+```bash
+git fetch upstream
+git checkout -b your-feature-branch upstream/backv2
+```
+
+### 4. Push & Create PR
+
+เมื่อแก้ไขงานเสร็จแล้ว ให้ดันขึ้น Fork ของตัวเองและสร้าง PR:
+
+```bash
+# Push to your fork
+git push origin your-feature-branch
+
+# Create PR via GitHub CLI
+gh repo set-default Evrp/Senior-Project-BUENG
+gh pr create --base backv2 --head YOUR_USERNAME:your-feature-branch
+```
+
+### ⚠️ Note on Deployment
+
+- เมื่อส่ง PR แล้ว **Vercel Bot** จะแจ้งเตือนว่าต้องการการอนุญาต (_"A member of the Team first needs to authorize it"_)
+- โปรดรอให้สมาชิกในทีมกด **Authorize** เพื่อให้ระบบทำการ Build และแสดงตัวอย่าง (Preview) ครับ
+
+---
+
 ## 🏗️ Architecture Patterns Summary
 
 ### Layered Architecture
+
 ```
 ┌─────────────────────────────┐
 │   Presentation Layer        │ React Components, Context
@@ -791,17 +911,19 @@ npm run ci               # Full CI: lint + test + build
 ```
 
 ### Real-time Communication
+
 ```
 Frontend → Socket.IO ← Backend
     ↓
     └─→ MongoDB (Persistence)
-    
+
 Event Flow:
 user-online → update-users broadcast → onlineUsers state
 user-offline → update-users broadcast → lastSeenTimes update
 ```
 
 ### API Communication
+
 ```
 React Component
     ↓
@@ -825,11 +947,13 @@ MongoDB
 ## ✅ Best Practices Observed
 
 ### ✓ Code Organization
+
 - Clear separation of concerns (models, routes, middleware)
 - Feature-based folder structure (chat, community, friend)
 - Reusable component architecture
 
 ### ✓ Security Implementation
+
 - Firebase authentication with token verification
 - Email domain validation (@bumail.net)
 - Rate limiting on sensitive endpoints
@@ -837,6 +961,7 @@ MongoDB
 - Token refresh mechanism
 
 ### ✓ Performance Optimization
+
 - Vite for fast development & build
 - Socket.IO for real-time updates
 - MongoDB indexing capability
@@ -844,6 +969,7 @@ MongoDB
 - CSS preprocessing (PostCSS)
 
 ### ✓ Developer Experience
+
 - ES Modules for modern JavaScript
 - Path aliases in Vite config
 - Environment variable configuration
@@ -851,6 +977,7 @@ MongoDB
 - Comprehensive middleware setup
 
 ### ✓ Testing & Quality
+
 - Jest setup with multiple test suites
 - ESLint for code quality
 - Integration tests for API routes
@@ -861,56 +988,67 @@ MongoDB
 ## 📌 Recommendations for Improvement
 
 ### 1. **Configuration Management**
+
 ✅ **Implemented**: Using `.env.example` and structured `.env` keys.
+
 - [ ] Implement configuration validation on startup (zod/joi)
 
 ### 2. **Error Handling**
+
 - [ ] Create global error handler middleware
 - [ ] Implement structured error logging (Winston/Morgan)
 - [ ] Standardize API error responses
 
 ### 3. **Type Safety**
+
 - [ ] Add TypeScript for better type checking
 - [ ] Implement PropTypes or TypeScript in React
 - [ ] Add JSDoc comments for better IDE support
 
 ### 4. **Documentation**
+
 - [ ] Add API documentation (Swagger/OpenAPI)
 - [ ] Create component storybook
 - [ ] Document database schema
 - [ ] Add architecture decision records (ADRs)
 
 ### 5. **Testing Improvements**
+
 - [ ] Increase test coverage (aim for 80%+)
 - [ ] Add E2E tests with Cypress/Playwright
 - [ ] Implement performance testing
 - [ ] Add visual regression testing
 
 ### 6. **Monitoring & Logging**
+
 - [ ] Implement structured logging
 - [ ] Add error tracking (Sentry)
 - [ ] Performance monitoring (New Relic)
 - [ ] Application insights
 
 ### 7. **Code Quality**
+
 - [ ] Setup pre-commit hooks (husky + lint-staged)
 - [ ] Implement code formatting (Prettier)
 - [ ] Add complexity analysis tools
 - [ ] Setup code coverage requirements
 
 ### 8. **Database Optimization**
+
 - [ ] Add proper indexing strategy
 - [ ] Implement database migrations
 - [ ] Add connection pooling configuration
 - [ ] Query optimization and monitoring
 
 ### 9. **API Improvements**
+
 - [ ] Implement API versioning
 - [ ] Add request/response validation (joi/zod)
 - [ ] Implement pagination for list endpoints
 - [ ] Add caching strategies
 
 ### 10. **Scalability**
+
 - [ ] Containerization (Docker)
 - [ ] Container orchestration (Kubernetes)
 - [ ] Horizontal scaling preparation
@@ -921,6 +1059,7 @@ MongoDB
 ## 📊 Technology Stack Summary
 
 ### Frontend Stack
+
 ```
 Runtime: Node.js + React 18.2.0
 Build: Vite 5.2.0
@@ -937,6 +1076,7 @@ i18n: i18next 25.5.3
 ```
 
 ### Backend Stack
+
 ```
 Runtime: Node.js + Express 4.21.2
 Database: MongoDB + Mongoose 8.16.2
@@ -952,6 +1092,7 @@ Development: Nodemon
 ```
 
 ### Development Tools
+
 ```
 Package Manager: npm
 Module System: ES Modules (ESM)
@@ -965,16 +1106,16 @@ Version Control: Git
 
 ## 🎯 Project Maturity Assessment
 
-| Aspect | Level | Notes |
-|--------|-------|-------|
-| Architecture | ⭐⭐⭐⭐ | Clear separation of concerns, scalable structure |
-| Security | ⭐⭐⭐ | Good fundamentals, needs monitoring/logging |
-| Testing | ⭐⭐⭐ | Test suite exists, could expand coverage |
-| Documentation | ⭐⭐ | Basic docs, needs API/architecture docs |
-| Performance | ⭐⭐⭐ | Good setup, could benefit from caching layer |
-| Error Handling | ⭐⭐ | Basic handling, needs structured approach |
-| Scalability | ⭐⭐⭐ | Ready for moderate scaling |
-| DevOps/Deployment | ⭐⭐⭐ | Vercel setup good, backend needs infrastructure |
+| Aspect            | Level    | Notes                                            |
+| ----------------- | -------- | ------------------------------------------------ |
+| Architecture      | ⭐⭐⭐⭐ | Clear separation of concerns, scalable structure |
+| Security          | ⭐⭐⭐   | Good fundamentals, needs monitoring/logging      |
+| Testing           | ⭐⭐⭐   | Test suite exists, could expand coverage         |
+| Documentation     | ⭐⭐     | Basic docs, needs API/architecture docs          |
+| Performance       | ⭐⭐⭐   | Good setup, could benefit from caching layer     |
+| Error Handling    | ⭐⭐     | Basic handling, needs structured approach        |
+| Scalability       | ⭐⭐⭐   | Ready for moderate scaling                       |
+| DevOps/Deployment | ⭐⭐⭐   | Vercel setup good, backend needs infrastructure  |
 
 ---
 
@@ -983,6 +1124,7 @@ Version Control: Git
 The **FindFriend** project demonstrates a solid full-stack architecture with:
 
 ✅ **Strengths**:
+
 - Modern tech stack (React 18, Express, MongoDB, Firebase)
 - Real-time capabilities with Socket.IO
 - Clear component and route organization
@@ -990,6 +1132,7 @@ The **FindFriend** project demonstrates a solid full-stack architecture with:
 - Responsive UI design with TailwindCSS
 
 ⚠️ **Areas for Enhancement**:
+
 - Comprehensive logging and monitoring
 - Expanded test coverage
 - Enhanced error handling
