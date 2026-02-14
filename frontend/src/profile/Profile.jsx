@@ -9,7 +9,7 @@ import HeaderProfile from '../components/HeaderProfile';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import PropTypes from 'prop-types';
 import { fetchUserPhotos, fetchCurrentUser, fetchUserInfo } from '../lib/queries';
-import { getFullImageUrl, getHighResPhoto } from '../common/utils/image';
+import UserAvatar from '../components/UserAvatar';
 
 const MAX_CHARS = 400;
 const MAX_NICKNAME = 30;
@@ -228,10 +228,11 @@ const Profile = () => {
         <div className="profile-card-new">
           <div className="profile-header-new">
             <div className="profile-image-container">
-              <img
-                src={getFullImageUrl(getHighResPhoto(mainProfilePhoto))}
+              <UserAvatar
+                src={mainProfilePhoto}
                 alt="Profile"
                 className="profile-image-new"
+                highRes={true}
               />
             </div>
             <div className="profile-info-new">
@@ -311,7 +312,8 @@ const Profile = () => {
           <div className="photo-grid">
             {photoUsers.map((photo) => (
               <div key={photo._id} className="photo-wrapper">
-                <img src={getFullImageUrl(photo.url)} alt="User photo" />
+                <UserAvatar src={photo.url} alt="User photo" />
+
                 <div className="photo-overlay">
                   {photoUsers[0]?._id !== photo._id ? (
                     <button

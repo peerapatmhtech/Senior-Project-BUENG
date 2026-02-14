@@ -4,7 +4,7 @@ import PropTypes from 'prop-types';
 import ProfileModal from './ProfileModal';
 import { useQuery } from '@tanstack/react-query';
 import { fetchFollowInfo, fetchInfos, fetchUsers } from '../../../lib/queries';
-import { getFullImageUrl } from '../../../common/utils/image';
+import UserAvatar from '../../../components/UserAvatar';
 
 const ChatPanel = ({
   messages,
@@ -18,8 +18,8 @@ const ChatPanel = ({
   userImage,
   setOpenchat,
   endOfMessagesRef,
-  defaultProfileImage,
   setFriends,
+
   formatChatDate,
   disabled,
 }) => {
@@ -74,12 +74,13 @@ const ChatPanel = ({
           <IoIosArrowBack />
         </button>
         <div className="center-mobile">
-          <img
+          <UserAvatar
             src={(() => {
-              if (!userImage || !users) return defaultProfileImage;
+              if (!userImage || !users) return null;
               // For group chats/communities
               if (userImage.photoURL || userImage.image)
-                return getFullImageUrl(userImage.photoURL) || userImage.image;
+                return userImage.photoURL || userImage.image;
+
               // For 1-on-1 chats (friends or matches)
               const partnerEmail = userImage.usermatch
                 ? userImage.email === userEmail
@@ -87,9 +88,7 @@ const ChatPanel = ({
                   : userImage.email
                 : userImage.email;
               const partnerUser = users.find((u) => u.email === partnerEmail);
-              return partnerUser?.photoURL
-                ? getFullImageUrl(partnerUser.photoURL)
-                : defaultProfileImage;
+              return partnerUser?.photoURL;
             })()}
             alt="User"
             className={`chat-profile ${openchat ? 'mobile-layout-mode' : ''}`}
@@ -165,8 +164,8 @@ const ChatPanel = ({
                 )}
                 <div className={`chat-message ${isCurrentUser ? 'my-message' : 'other-message'}`}>
                   {!isCurrentUser && (
-                    <img
-                      src={getFullImageUrl(senderInfo?.photoURL) || defaultProfileImage}
+                    <UserAvatar
+                      src={senderInfo?.photoURL}
                       alt="Sender"
                       className="message-avatar"
                       onClick={() => handleProfileClick(senderInfo)}

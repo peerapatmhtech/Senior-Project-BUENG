@@ -22,6 +22,7 @@ import '../components/NotificationBell.css';
 import HeaderProfile from '../components/HeaderProfile';
 import { useQuery } from '@tanstack/react-query';
 import { fetchPhoto } from '../lib/queries';
+import UserAvatar from '../components/UserAvatar';
 
 // แสดงข้อมูลสถานะการเชื่อมต่อ socket อย่างละเอียด
 // socket.on("connect", () => {
@@ -67,14 +68,6 @@ const Friend = () => {
   const [showOnlineUsersList, setShowOnlineUsersList] = useState(false);
   const [photo, setPhoto] = useState(null);
 
-  const getFullImageUrl = (url) => {
-    if (!url) return ''; // Or a default image
-    if (url.startsWith('http')) {
-      return url; // It's already an absolute URL
-    }
-    // It's a relative URL from our backend, so prepend the API base URL
-    return `${import.meta.env.VITE_APP_API_BASE_URL}${url}`;
-  };
   useEffect(() => {
     if (userPhotos && userPhotos.length > 0) {
       setPhoto(userPhotos);
@@ -210,8 +203,8 @@ const Friend = () => {
           // แสดง toast notification
           toast.success(
             <div className="friend-request-toast">
-              <img
-                src={getFullImageUrl(acceptInfo.photoURL)}
+              <UserAvatar
+                src={acceptInfo.photoURL}
                 alt={acceptInfo.displayName}
                 className="toast-profile-img"
               />
@@ -219,6 +212,7 @@ const Friend = () => {
                 <strong>{acceptInfo.displayName}</strong> ได้ตอบรับคำขอเป็นเพื่อนของคุณแล้ว
               </div>
             </div>,
+
             {
               autoClose: 5000,
               position: 'bottom-right',
@@ -556,14 +550,12 @@ const Friend = () => {
                         }`}
                       >
                         <div className="mobile-small">
-                          <img
-                            src={
-                              getFullImageUrl(friend.photoURL) ||
-                              'https://cdn.pixabay.com/photo/2023/02/18/11/00/icon-7797704_640.png'
-                            }
+                          <UserAvatar
+                            src={friend.photoURL}
                             className="friend-photo"
                             alt={friend.displayName}
                           />
+
                           <div className="friend-detail-friend">
                             <span className="friend-name-friend">
                               {(Array.isArray(getnickName) &&
@@ -719,14 +711,12 @@ const Friend = () => {
                           }`}
                         >
                           <div className="mobile-small">
-                            <img
-                              src={
-                                getFullImageUrl(user.photoURL) ||
-                                'https://cdn.pixabay.com/photo/2023/02/18/11/00/icon-7797704_640.png'
-                              }
+                            <UserAvatar
+                              src={user.photoURL}
                               alt={user.displayName}
                               className="friend-photo"
                             />
+
                             <div className="friend-detail-friend">
                               <span className="friend-name-friend">
                                 {getnickName.find((n) => n.email === user.email)?.nickname ||
@@ -826,11 +816,12 @@ const Friend = () => {
           <div className="friend-profile-modal">
             <div className="friend-modal-content" ref={modalRef}>
               <div className="profile-info">
-                <img
-                  src={getFullImageUrl(selectedUser.photoURL)}
+                <UserAvatar
+                  src={selectedUser.photoURL}
                   alt={selectedUser.displayName}
                   className="profile-photo"
                 />
+
                 <h2>
                   {getnickName.find((n) => n.email === selectedUser.email)?.nickname ||
                     selectedUser.displayName}
@@ -860,7 +851,7 @@ const Friend = () => {
                         .filter((u) => u.email === selectedUser.email)
                         .map((photoItem) => (
                           <div key={photoItem._id} className="photo-modal-warpper">
-                            <img src={getFullImageUrl(photoItem.url)} alt={`User Photo`} />
+                            <UserAvatar src={photoItem.url} alt="User Photo" />
                           </div>
                         ))
                     : null}

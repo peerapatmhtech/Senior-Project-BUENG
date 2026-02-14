@@ -1,12 +1,13 @@
-import { useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
-import api from "../server/api";
-import { useNavigate } from "react-router-dom";
-import "./css/roomlist.css";
-import { toast } from "react-toastify";
-import { useTheme } from "../context/themecontext";
-import PropTypes from "prop-types";
-import { FaUsers } from "react-icons/fa";
+import { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import api from '../server/api';
+import { useNavigate } from 'react-router-dom';
+import './css/roomlist.css';
+import { toast } from 'react-toastify';
+import { useTheme } from '../context/themecontext';
+import PropTypes from 'prop-types';
+import { FaUsers } from 'react-icons/fa';
+import UserAvatar from '../components/UserAvatar';
 
 const RoomList = ({
   rooms = [],
@@ -16,25 +17,23 @@ const RoomList = ({
   selectedRooms,
   setSelectedRooms,
 }) => {
-  const userEmail = localStorage.getItem("userEmail");
+  const userEmail = localStorage.getItem('userEmail');
   const { isDarkMode } = useTheme();
   const navigate = useNavigate();
 
   const handleRoomSelect = (roomId) => {
     setSelectedRooms((prev) =>
-      prev.includes(roomId)
-        ? prev.filter((id) => id !== roomId)
-        : [...prev, roomId]
+      prev.includes(roomId) ? prev.filter((id) => id !== roomId) : [...prev, roomId]
     );
   };
 
   const { data: joinedRoomIds = [], isLoading: isLoadingJoined } = useQuery({
-    queryKey: ["userJoinedRooms", userEmail],
+    queryKey: ['userJoinedRooms', userEmail],
     queryFn: async () => {
-        const filterjoinedRooms = await api.get(`/api/user-rooms/${userEmail}`);
-        return Array.isArray(filterjoinedRooms.data.roomIds)
-          ? filterjoinedRooms.data.roomIds.filter((id) => !!id)
-          : [];
+      const filterjoinedRooms = await api.get(`/api/user-rooms/${userEmail}`);
+      return Array.isArray(filterjoinedRooms.data.roomIds)
+        ? filterjoinedRooms.data.roomIds.filter((id) => !!id)
+        : [];
     },
     enabled: !!userEmail,
   });
@@ -57,17 +56,17 @@ const RoomList = ({
         roomName,
       });
       if (res.status !== 200) {
-        toast.error("ไม่สามารถเข้าร่วมห้องได้");
+        toast.error('ไม่สามารถเข้าร่วมห้องได้');
         return;
       }
       if (res.status === 200) {
         navigate(`/chat/${roomId}`);
-        toast.success("เข้าร่วมห้องสําเร็จ!");
+        toast.success('เข้าร่วมห้องสําเร็จ!');
       }
-      toast.success("เข้าร่วมห้องสําเร็จ!");
+      toast.success('เข้าร่วมห้องสําเร็จ!');
     } catch (error) {
-      console.error("Error adding friend:", error);
-      toast.error("ไม่สามารถเพิ่มเพื่อนได้");
+      console.error('Error adding friend:', error);
+      toast.error('ไม่สามารถเพิ่มเพื่อนได้');
     }
   };
 
@@ -81,16 +80,10 @@ const RoomList = ({
     }
   };
 
-  const getFullImageUrl = (url) => {
-    if (!url) return url;
-    if (url.startsWith("http://") || url.startsWith("https://")) return url;
-    return `${api.defaults.baseURL}${url}`;
-  };
-
   const isLoading = isLoadingRooms || isLoadingJoined;
-  
+
   return (
-    <section className={`roomlist-section ${isDarkMode ? "dark-mode" : ""}`}>
+    <section className={`roomlist-section ${isDarkMode ? 'dark-mode' : ''}`}>
       <header className="roomlist-header"></header>
       <div className="room-list">
         {isLoading ? (
@@ -112,32 +105,13 @@ const RoomList = ({
             <div
               key={room._id}
               className={`room-container card-room ${
-                selectedRooms.includes(room._id) ? "selected" : ""
+                selectedRooms.includes(room._id) ? 'selected' : ''
               }`}
               onClick={() => handleRoomClick(room)}
             >
               <div className="room-image-wrap">
-                {room.image ? (
-                  <img
-                    src={getFullImageUrl(room.image)}
-                    alt="room"
-                    className="room-image"
-                  />
-                ) : (
-                  <div className="room-image-placeholder">
-                    <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-                      <rect width="48" height="48" rx="12" fill="#ecebfa" />
-                      <path
-                        d="M12 36l8-10 6 8 6-6 4 8"
-                        stroke="#b3b0f7"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                      <circle cx="18" cy="18" r="3" fill="#b3b0f7" />
-                    </svg>
-                  </div>
-                )}
+                <UserAvatar src={room.image} alt="room" className="room-image" />
+
                 {isDeleteMode && (
                   <div className="room-checkbox">
                     <input
@@ -159,15 +133,13 @@ const RoomList = ({
                   </div>
                   {!showOnlyMyRooms && (
                     <button
-                      className={`join-button ${
-                        isJoined(room._id) ? "joined" : ""
-                      }`}
+                      className={`join-button ${isJoined(room._id) ? 'joined' : ''}`}
                       onClick={(e) => {
                         e.stopPropagation(); // Prevent card click
                         handleRoomClick(room);
                       }}
                     >
-                      {isJoined(room._id) ? "Joined" : "Join"}
+                      {isJoined(room._id) ? 'Joined' : 'Join'}
                     </button>
                   )}
                 </div>

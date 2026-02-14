@@ -1,5 +1,5 @@
 import PropTypes from 'prop-types';
-import { getFullImageUrl, getHighResPhoto } from '../../../common/utils/image';
+import UserAvatar from '../../../components/UserAvatar';
 
 const ProfileModalBody = ({
   profilePhotoUrl,
@@ -26,11 +26,13 @@ const ProfileModalBody = ({
   return (
     <div className="profile-modal-body">
       <div className="profile-modal-user">
-        <img
-          src={getFullImageUrl(getHighResPhoto(profilePhotoUrl))}
+        <UserAvatar
+          src={profilePhotoUrl}
           alt={displayName}
           className="profile-modal-avatar"
+          highRes={true}
         />
+
         <div className="profile-modal-name">{displayName}</div>
         {displayEmail && <div className="profile-modal-email">{displayEmail}</div>}
       </div>
@@ -81,7 +83,6 @@ const ProfileModalBody = ({
 };
 
 ProfileModalBody.propTypes = {
-  getFullImageUrl: PropTypes.func.isRequired,
   profilePhotoUrl: PropTypes.string,
   matchedUser: PropTypes.object,
   userImage: PropTypes.object.isRequired,

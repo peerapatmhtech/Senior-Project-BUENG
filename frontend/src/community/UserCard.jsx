@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '../server/api';
+import UserAvatar from '../components/UserAvatar';
 
 import PropTypes from 'prop-types';
 // Helper function to fetch photos for a user
@@ -47,17 +48,6 @@ const UserCard = ({ room, userEmail, users }) => {
     staleTime: 1000 * 60 * 5, // Cache photos for 5 minutes
   });
 
-  const getHighResPhoto = (url) => {
-    if (!url) return url;
-    return url.replace(/=s\d+-c(?=[&?]|$)/, '=s400-c');
-  };
-
-  const getFullImageUrl = (url) => {
-    if (!url) return url;
-    if (url.startsWith('http://') || url.startsWith('https://')) return url;
-    return `${api.defaults.baseURL}${url}`;
-  };
-
   const handlePhotoNav = (e, direction) => {
     e.stopPropagation();
     if (!photos || photos.length <= 1) return;
@@ -82,11 +72,13 @@ const UserCard = ({ room, userEmail, users }) => {
         </div>
       ) : photos.length > 0 ? (
         <>
-          <img
-            src={getFullImageUrl(getHighResPhoto(photos[activePhotoIndex]?.url))}
+          <UserAvatar
+            src={photos[activePhotoIndex]?.url}
             alt="room"
             className="room-image-match"
+            highRes={true}
           />
+
           {photos.length > 1 && (
             <>
               <div
@@ -111,7 +103,7 @@ const UserCard = ({ room, userEmail, users }) => {
       ) : (
         // Fallback if no photos are found at all
         // <div className="tinder-card-inner-loading">
-        <img src="https://via.placeholder.com/400" alt="placeholder" className="room-image-match" />
+        <UserAvatar src={null} alt="placeholder" className="room-image-match" />
         // </div>
       )}
       <div className="room-match-info">

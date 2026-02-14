@@ -5,6 +5,7 @@ import './HeaderProfile.css';
 import { useAuth } from '../context/AuthContextProvider';
 import { Bell, LogOut, Sun, Moon, X, Check, UserPlus } from 'lucide-react';
 import { Info } from 'lucide-react';
+import UserAvatar from './UserAvatar';
 
 const HeaderProfile = ({
   showNotification = true,
@@ -38,14 +39,6 @@ const HeaderProfile = ({
   const localDropdownRef = useRef(null);
   const bellButtonRef = externalBellButtonRef || localBellButtonRef;
   const notificationDropdownRef = externalDropdownRef || localDropdownRef;
-
-  const getFullImageUrl = (url) => {
-    if (!url) return ''; // Or a default image
-    if (url.startsWith('http')) {
-      return url; // It's already an absolute URL
-    }
-    return `${import.meta.env.VITE_APP_API_BASE_URL}${url}`;
-  };
 
   useEffect(() => {
     fetchNotifications();
@@ -177,13 +170,10 @@ const HeaderProfile = ({
                       >
                         <div className="notification-item-content">
                           <div className="notification-item-avatar">
-                            {/* <img
-                              src={
-                                getFullImageUrl(notif.from?.photoURL) ||
-                                "https://via.placeholder.com/40"
-                              }
-                              alt={notif.from?.displayName || "User"}
-                            /> */}
+                            <UserAvatar
+                              src={notif.from?.photoURL}
+                              alt={notif.from?.displayName || 'User'}
+                            />
                             {!notif.read && <div className="notification-unread-dot"></div>}
                           </div>
 
@@ -275,28 +265,15 @@ const HeaderProfile = ({
           setProfileModalOpen(!profileModal);
         }}
       >
-        <img
-          src={
-            getFullImageUrl(userPhoto) ||
-            'https://cdn.pixabay.com/photo/2023/02/18/11/00/icon-7797704_640.png'
-          }
-          alt="Profile"
-          className="profile-image-header"
-        />
+        <UserAvatar src={userPhoto} alt="Profile" className="profile-image-header" />
       </div>
 
       <div
         className={`list-profile ${profileModal ? 'active' : ''} ${isDarkMode ? 'dark-mode' : ''}`}
       >
         <div className="list-profile-header">
-          <img
-            src={
-              getFullImageUrl(userPhoto) ||
-              'https://cdn.pixabay.com/photo/2023/02/18/11/00/icon-7797704_640.png'
-            }
-            alt="Profile"
-            className="list-profile-image"
-          />
+          <UserAvatar src={userPhoto} alt="Profile" className="list-profile-image" />
+
           <div>
             <p className="list-profile-name">{displayName}</p>
             <p className="list-profile-email">{userEmail}</p>
