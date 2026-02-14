@@ -24,7 +24,10 @@ const NewLogin = () => {
     name: '',
     email: '',
     password: '',
+    photo: null,
   });
+
+  const [photoPreview, setPhotoPreview] = useState(null);
 
   // Enhanced animation handling
   useEffect(() => {
@@ -65,6 +68,29 @@ const NewLogin = () => {
 
   // Check if mobile using useState and resize listener
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+  // Handle Photo Selection
+  const handlePhotoChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (!file.type.startsWith('image/')) {
+        setError('กรุณาเลือกไฟล์รูปภาพเท่านั้น');
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        setError('ขนาดรูปภาพต้องไม่เกิน 5MB');
+        return;
+      }
+
+      setSignUpForm({ ...signUpForm, photo: file });
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPhotoPreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+      setError('');
+    }
+  };
 
   useEffect(() => {
     const handleResize = () => {
@@ -188,8 +214,19 @@ const NewLogin = () => {
       return;
     }
 
+    if (!signUpForm.photo) {
+      setError('กรุณาอัปโหลดรูปภาพโปรไฟล์');
+      setIsLoading(false);
+      return;
+    }
+
     try {
-      await registerWithEmail(signUpForm.email, signUpForm.password, signUpForm.name);
+      await registerWithEmail(
+        signUpForm.email,
+        signUpForm.password,
+        signUpForm.name,
+        signUpForm.photo
+      );
 
       // บันทึกลง localStorage (เอาออกเพราะยังไม่ได้ยืนยัน)
       // localStorage.setItem("userName", user.displayName);
@@ -346,18 +383,37 @@ const NewLogin = () => {
         <div className="form-container sign-up">
           <form onSubmit={handleEmailSignUp}>
             <h1>สร้างบัญชีใหม่</h1>
-            <div className="social-icons" onClick={handleGoogleSignIn}>
-              <a
-                href="#"
-                className="icon"
-                // onClick={handleGoogleSignIn}
-                aria-label="Sign up with Google"
+
+            {/* Photo Upload Section */}
+            <div className="photo-upload-container">
+              <input
+                type="file"
+                id="photo-upload"
+                accept="image/*"
+                onChange={handlePhotoChange}
+                style={{ display: 'none' }}
+                disabled={isLoading}
+              />
+              <div
+                className="photo-preview-wrapper"
+                onClick={() => document.getElementById('photo-upload').click()}
               >
-                <i className="fa-brands fa-google"></i>
-              </a>
-              <p className="text-google">สร้างบัญชีใหม่ด้วย Google</p>
+                {photoPreview ? (
+                  <>
+                    <img src={photoPreview} alt="Preview" className="photo-preview" />
+                    <div className="photo-overlay">
+                      <i className="fas fa-camera"></i>
+                    </div>
+                  </>
+                ) : (
+                  <div className="photo-placeholder">
+                    <i className="fas fa-user-circle"></i>
+                    <span>เลือกรูปโปรไฟล์</span>
+                  </div>
+                )}
+              </div>
+              <p className="photo-label">รูปภาพโปรไฟล์ (จำเป็น)</p>
             </div>
-            {/* <span>หรือใช้อีเมล @bumail.net สำหรับการสมัครสมาชิก</span> */}
 
             <input
               type="text"

@@ -3,9 +3,46 @@ import jwt from 'jsonwebtoken';
 import { Gmail } from '../model/gmail.js';
 import { sendVerificationEmail } from '../services/emailService.js';
 import admin from '../firebase/firebaseAdmin.js';
+import multer from 'multer';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+
+// Multer Storage Configuration (Recycling logic from userPhoto.js)
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const uploadDir = path.resolve(__dirname, '..', '..', 'uploads', 'user-photos');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    const ext = path.extname(file.originalname);
+    cb(null, file.fieldname + '-' + uniqueSuffix + ext);
+  },
+});
+
+const fileFilter = (req, file, cb) => {
+  if (file.mimetype.startsWith('image/')) {
+    cb(null, true);
+  } else {
+    cb(new Error('กรุณาอัปโหลดไฟล์รูปภาพเท่านั้น'), false);
+  }
+};
+
+const upload = multer({
+  storage: storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  fileFilter: fileFilter,
+});
 
 // 📌 API สำหรับยืนยัน Token (เมื่อผู้ใช้คลิกลิงก์)
 router.get('/verify-email', async (req, res) => {
@@ -65,7 +102,7 @@ router.get('/verify-email', async (req, res) => {
 });
 
 // 📌 API สำหรับขอสมัครสมาชิก (สร้าง User ใน Firebase ทันทีแบบ unverified และส่งอีเมล)
-router.post('/register-request', async (req, res) => {
+router.post('/register-request', upload.single('photo'), async (req, res) => {
   try {
     const { email, password, displayName } = req.body;
 
@@ -77,12 +114,20 @@ router.post('/register-request', async (req, res) => {
       return res.status(400).json({ message: 'Only @bumail.net emails are allowed.' });
     }
 
+    if (!req.file) {
+      return res.status(400).json({ message: 'กรุณาอัปโหลดรูปภาพโปรไฟล์' });
+    }
+
+    // Generate Photo URL
+    const photoURL = `/uploads/user-photos/${req.file.filename}`;
+
     // 1. Create user in Firebase Auth (emailVerified: false)
     try {
       await admin.auth().createUser({
         email,
         password,
         displayName,
+        photoURL,
         emailVerified: false,
       });
     } catch (firebaseError) {
@@ -97,6 +142,7 @@ router.post('/register-request', async (req, res) => {
       { email },
       {
         displayName,
+        photoURL,
         isVerified: false,
       },
       { upsert: true, new: true }
@@ -111,12 +157,10 @@ router.post('/register-request', async (req, res) => {
     res.status(200).json({ message: 'สมัครสมาชิกสำเร็จ! กรุณาตรวจสอบอีเมลของคุณเพื่อยืนยันบัญชี' });
   } catch (error) {
     console.error('Error in register-request:', error);
-    res
-      .status(500)
-      .json({
-        message: 'ไม่สามารถส่งอีเมลยืนยันได้ หรือเกิดข้อผิดพลาดในการสมัคร',
-        error: error.message,
-      });
+    res.status(500).json({
+      message: 'ไม่สามารถส่งอีเมลยืนยันได้ หรือเกิดข้อผิดพลาดในการสมัคร',
+      error: error.message,
+    });
   }
 });
 
