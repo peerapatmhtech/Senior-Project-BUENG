@@ -61,7 +61,7 @@ const Profile = () => {
     queryFn: () => fetchCurrentUser(userEmail),
     enabled: !!userEmail,
   });
-
+  console.log(infoUser);
   const loading = isLoadingPhotos || isLoadingInfo || isLoadingUser;
 
   // Derived Data
@@ -89,7 +89,7 @@ const Profile = () => {
   };
 
   const handleSaveAbout = async () => {
-    if (tempInfo.detail.length > MAX_CHARS) {
+    if ((tempInfo.detail || '').length > MAX_CHARS) {
       toast.error('aboutMeTooLong', { max: MAX_CHARS });
       return;
     }
@@ -295,12 +295,12 @@ const Profile = () => {
             ) : (
               <p
                 onClick={() => {
-                  setTempInfo(infoUser || { detail: '' });
+                  setTempInfo({ detail: infoUser?.detail || '' });
                   setIsEditingAbout(true);
                 }}
                 className="about-text"
               >
-                {infoUser.detail || 'tellUsAboutYourself'}
+                {infoUser.userInfo.detail || 'tellUsAboutYourself'}
                 <FaEdit className="edit-icon-new" />
               </p>
             )}
