@@ -1,8 +1,15 @@
-// import React from "react";
+import { useMemo } from 'react';
 import '../../css/ProfileModal.css';
 import { toast, ToastContainer } from 'react-toastify';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
-import { useFollowUser, useDeleteFriend, fetchUserPhotos } from '../../../lib/queries';
+import {
+  useFollowUser,
+  useDeleteFriend,
+  fetchUserPhotos,
+  fetchAllEvents,
+  fetchUserInfo,
+} from '../../../lib/queries';
+import api from '../../../server/api';
 import ProfileModalBody from './ProfileModalBody';
 import ProfileModalGallery from './ProfileModalGallery';
 
@@ -21,6 +28,44 @@ const ProfileModal = ({ isOpen, onClose, user, userImage, followers, following, 
     queryFn: () => fetchUserPhotos(profileUserEmail),
     enabled: !!profileUserEmail && isOpen,
   });
+
+  const { data: infoUser } = useQuery({
+    queryKey: ['userInfos', profileUserEmail],
+    queryFn: () => fetchUserInfo(profileUserEmail),
+    enabled: !!profileUserEmail && isOpen,
+  });
+
+  const { data: allEvents = [] } = useQuery({
+    queryKey: ['allEvents'],
+    queryFn: fetchAllEvents,
+    enabled: isOpen,
+  });
+
+  const { data: roomDetails } = useQuery({
+    queryKey: ['roomDetails', userImage?._id],
+    queryFn: async () => {
+      if (!userImage?._id) return null;
+      const { data } = await api.get(`/api/room/${userImage._id}`);
+      return data;
+    },
+    enabled: !!isCom && !!userImage?._id && isOpen,
+  });
+
+  const matchedEvent = useMemo(() => {
+    if (!allEvents || !userImage) return null;
+    let event = allEvents.find((e) => e._id === userImage._id);
+    if (event) return event;
+    if (userImage.eventId) {
+      return allEvents.find((e) => e._id === userImage.eventId);
+    }
+    return null;
+  }, [allEvents, userImage]);
+
+  const communityMembers = useMemo(() => {
+    if (!isCom || !users || !users.length) return [];
+    const memberEmails = roomDetails?.members || userImage?.members || [];
+    return users.filter((u) => memberEmails.includes(u.email));
+  }, [isCom, userImage, users, roomDetails]);
 
   if (!isOpen || !user) return null;
 
@@ -102,6 +147,9 @@ const ProfileModal = ({ isOpen, onClose, user, userImage, followers, following, 
           handleDeleteClick={handleDeleteClick}
           isDeleteLoading={deleteFriendMutation.isPending}
           deleteType={deleteType}
+          aboutMe={infoUser?.userInfo?.detail}
+          matchedEvent={matchedEvent}
+          communityMembers={communityMembers}
         />
         <ProfileModalGallery userPhotosData={userPhotosData} />
       </div>
