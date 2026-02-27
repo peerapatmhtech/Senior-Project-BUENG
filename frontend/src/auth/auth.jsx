@@ -12,7 +12,15 @@ const NewLogin = () => {
   const [showResetModal, setShowResetModal] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
   const [resetMessage, setResetMessage] = useState('');
-  const { loginWithEmail, registerWithEmail, resetPassword } = useAuth();
+  const { user, loginWithEmail, registerWithEmail, resetPassword } = useAuth();
+
+  // ✅ Redirect to /home reactively after onAuthStateChanged confirms the user
+  // This avoids the race condition where navigate('/home') fires before user is set in context
+  useEffect(() => {
+    if (user) {
+      navigate('/home');
+    }
+  }, [user, navigate]);
 
   // Form states สำหรับ Email/Password
   const [signInForm, setSignInForm] = useState({
@@ -132,14 +140,9 @@ const NewLogin = () => {
       localStorage.setItem('userPhoto', user.photoURL || '');
       localStorage.setItem('userEmail', user.email);
 
-      // Success animation
+      // Success animation (navigation handled by useEffect watching user state)
       const container = document.getElementById('container');
       container?.classList.add('success-animation');
-
-      // Smooth transition to home
-      setTimeout(() => {
-        navigate('/home');
-      }, 500);
     } catch (error) {
       setError('เกิดข้อผิดพลาดในการล็อกอิน');
       console.error(error);
@@ -169,7 +172,7 @@ const NewLogin = () => {
 
     try {
       const user = await loginWithEmail(signInForm.email, signInForm.password);
-      // Success animation
+      // Success animation (navigation handled by useEffect watching user state)
       const container = document.getElementById('container');
       container?.classList.add('success-animation');
 
@@ -177,10 +180,6 @@ const NewLogin = () => {
       localStorage.setItem('userName', user.displayName || signInForm.email.split('@')[0]);
       localStorage.setItem('userPhoto', user.photoURL || '');
       localStorage.setItem('userEmail', user.email);
-
-      setTimeout(() => {
-        navigate('/home');
-      }, 500);
     } catch (error) {
       console.error('Email sign in error:', error);
       setError(error.message);

@@ -118,8 +118,9 @@ router.post('/register-request', upload.single('photo'), async (req, res) => {
       return res.status(400).json({ message: 'กรุณาอัปโหลดรูปภาพโปรไฟล์' });
     }
 
-    // Generate Photo URL
-    const photoURL = `/uploads/user-photos/${req.file.filename}`;
+    // Generate Photo URL — must be an absolute URL for Firebase Auth
+    const serverBaseUrl = process.env.VITE_APP_API_BASE_URL || 'http://localhost:3000';
+    const photoURL = `${serverBaseUrl}/uploads/user-photos/${req.file.filename}`;
 
     // 1. Create user in Firebase Auth (emailVerified: false)
     try {
