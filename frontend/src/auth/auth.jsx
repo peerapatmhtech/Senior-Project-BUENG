@@ -177,6 +177,11 @@ const NewLogin = () => {
       localStorage.setItem('userName', user.displayName || signInForm.email.split('@')[0]);
       localStorage.setItem('userPhoto', user.photoURL || '');
       localStorage.setItem('userEmail', user.email);
+      if (user.email.endsWith('@bumail.net')) {
+        navigate('/home');
+      } else {
+        setError('กรุณาใช้อีเมล @bumail.net');
+      }
     } catch (error) {
       console.error('Email sign in error:', error);
       setError(error.message);
