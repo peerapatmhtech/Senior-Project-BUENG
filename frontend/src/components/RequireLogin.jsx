@@ -9,9 +9,21 @@ const RequireLogin = ({ children }) => {
   const userName = localStorage.getItem('userName');
   const userEmail = localStorage.getItem('userEmail');
 
+  console.log('🛡️ [DEBUG] RequireLogin check:', {
+    loading,
+    user: user?.email || 'null',
+    userName,
+    userEmail,
+  });
+
   if (loading) return null;
 
   if (!user || !userName || !userEmail) {
+    console.log('🛡️ [DEBUG] RequireLogin BLOCKED — missing:', {
+      user: !user,
+      userName: !userName,
+      userEmail: !userEmail,
+    });
     return (
       <div className="require-login-container">
         <div className="require-login-content">

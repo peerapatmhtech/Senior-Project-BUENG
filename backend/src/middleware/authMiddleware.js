@@ -19,10 +19,27 @@ export const authMiddleware = async (req, res, next) => {
     const decodedToken = await admin.auth().verifyIdToken(idToken);
 
     // Find user in local MongoDB
-    const user = await Gmail.findOne({ email: decodedToken.email });
+    let user = await Gmail.findOne({ email: decodedToken.email });
 
     if (!user) {
-      return res.status(401).json({ message: 'User not found in database.' });
+      // Auto-create record for Google-authenticated users
+      const signInProvider = decodedToken.firebase?.sign_in_provider;
+      if (signInProvider === 'google.com') {
+        user = await Gmail.findOneAndUpdate(
+          { email: decodedToken.email },
+          {
+            $setOnInsert: {
+              displayName: decodedToken.name || decodedToken.email.split('@')[0],
+              photoURL: decodedToken.picture || '',
+            },
+            $set: { isVerified: true },
+          },
+          { upsert: true, new: true }
+        );
+        console.info('✅ Auto-created/found user record for Google login:', decodedToken.email);
+      } else {
+        return res.status(401).json({ message: 'User not found in database.' });
+      }
     }
 
     // Check if user is verified

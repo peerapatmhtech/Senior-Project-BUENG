@@ -139,10 +139,19 @@ const NewLogin = () => {
       localStorage.setItem('userName', user.displayName || user.email.split('@')[0]);
       localStorage.setItem('userPhoto', user.photoURL || '');
       localStorage.setItem('userEmail', user.email);
+      console.log(
+        '🔑 [DEBUG] Google login success, localStorage saved, scheduling navigate in 500ms'
+      );
 
       // Success animation (navigation handled by useEffect watching user state)
       const container = document.getElementById('container');
       container?.classList.add('success-animation');
+
+      // Smooth transition to home
+      setTimeout(() => {
+        console.log('🔑 [DEBUG] navigate("/home") called now');
+        navigate('/home');
+      }, 500);
     } catch (error) {
       setError('เกิดข้อผิดพลาดในการล็อกอิน');
       console.error(error);
