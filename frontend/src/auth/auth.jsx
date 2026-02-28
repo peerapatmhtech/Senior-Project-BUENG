@@ -14,14 +14,6 @@ const NewLogin = () => {
   const [resetMessage, setResetMessage] = useState('');
   const { user, loginWithEmail, registerWithEmail, resetPassword } = useAuth();
 
-  // ✅ Redirect to /home reactively after onAuthStateChanged confirms the user
-  // This avoids the race condition where navigate('/home') fires before user is set in context
-  useEffect(() => {
-    if (user) {
-      navigate('/home');
-    }
-  }, [user, navigate]);
-
   // Form states สำหรับ Email/Password
   const [signInForm, setSignInForm] = useState({
     email: '',
@@ -139,9 +131,6 @@ const NewLogin = () => {
       localStorage.setItem('userName', user.displayName || user.email.split('@')[0]);
       localStorage.setItem('userPhoto', user.photoURL || '');
       localStorage.setItem('userEmail', user.email);
-      console.log(
-        '🔑 [DEBUG] Google login success, localStorage saved, scheduling navigate in 500ms'
-      );
 
       // Success animation (navigation handled by useEffect watching user state)
       const container = document.getElementById('container');
@@ -149,7 +138,6 @@ const NewLogin = () => {
 
       // Smooth transition to home
       setTimeout(() => {
-        console.log('🔑 [DEBUG] navigate("/home") called now');
         navigate('/home');
       }, 500);
     } catch (error) {

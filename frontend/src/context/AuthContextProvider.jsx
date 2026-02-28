@@ -16,12 +16,6 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      console.log(
-        '🔑 [DEBUG] onAuthStateChanged fired:',
-        currentUser?.email || 'null',
-        'loading was:',
-        loading
-      );
       setUser(currentUser);
       if (currentUser) {
         try {
@@ -38,7 +32,6 @@ export const AuthProvider = ({ children }) => {
         localStorage.removeItem('idToken');
       }
       setLoading(false);
-      console.log('🔑 [DEBUG] onAuthStateChanged done, loading set to false');
     });
     return () => unsubscribe();
   }, []);

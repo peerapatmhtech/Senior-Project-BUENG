@@ -61,7 +61,6 @@ const Profile = () => {
     queryFn: () => fetchCurrentUser(userEmail),
     enabled: !!userEmail,
   });
-  console.log(infoUser);
   const loading = isLoadingPhotos || isLoadingInfo || isLoadingUser;
 
   // Derived Data

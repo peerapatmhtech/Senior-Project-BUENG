@@ -78,7 +78,6 @@ export default function (io) {
       if (!match) {
         return res.status(404).json({ message: 'Match not found' });
       }
-      console.log('Deleting match with ID:', id);
       await InfoMatch.findByIdAndDelete(id);
       res.status(200).json({ message: 'Match deleted successfully', match });
     } catch (error) {
