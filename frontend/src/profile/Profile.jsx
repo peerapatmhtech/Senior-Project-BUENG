@@ -294,12 +294,12 @@ const Profile = () => {
             ) : (
               <p
                 onClick={() => {
-                  setTempInfo({ detail: infoUser?.detail || '' });
+                  setTempInfo({ detail: infoUser?.userInfo?.detail || infoUser?.detail || '' });
                   setIsEditingAbout(true);
                 }}
                 className="about-text"
               >
-                {infoUser.userInfo.detail || 'tellUsAboutYourself'}
+                {infoUser?.userInfo?.detail || infoUser?.detail || 'tellUsAboutYourself'}
                 <FaEdit className="edit-icon-new" />
               </p>
             )}
