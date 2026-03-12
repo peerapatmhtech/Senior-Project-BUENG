@@ -571,6 +571,7 @@ s .search-friend-con::after {
   width: 600px;
   position: relative;
   overflow: visible;
+  padding-bottom: 200px;
   /* background-color: #fff;
   border-radius: 10px;
   box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1); */
@@ -579,12 +580,11 @@ s .search-friend-con::after {
 .friend-recommend {
   height: fit-content;
   list-style-type: none;
-  padding: 0;
   width: 600px;
   /* background-color: #fff;
   border-radius: 10px;
   box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1); */
-  padding: 20px 0 60px 0;
+  padding: 20px 0 200px 0;
 }
 
 .friend-email {

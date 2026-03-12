@@ -30,7 +30,7 @@ router.post('/join-community', requireOwner, async (req, res) => {
     const updatedUser = await Info.findOneAndUpdate(
       { email: userEmail },
       { $addToSet: { joinedRooms: { roomId, roomName } } },
-      { new: true, runValidators: true }
+      { new: true, runValidators: true, upsert: true }
     );
 
     if (!updatedUser) {
