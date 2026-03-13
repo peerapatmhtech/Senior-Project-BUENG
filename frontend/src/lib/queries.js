@@ -5,8 +5,10 @@ import api from '../server/api';
 export const fetchUserPhotos = async (userEmail) => {
   if (!userEmail) return [];
   const encodedEmail = encodeURIComponent(userEmail);
-  const { data } = await api.get(`/api/user-photos/${encodedEmail}`);
-  return data.data; // Note: response is nested under .data
+  const res = await api.get(`/api/user-photos/${encodedEmail}`);
+  // 204 No Content means user has no photos yet — return empty array
+  if (res.status === 204 || !res.data) return [];
+  return res.data?.data ?? [];
 };
 export const fetchUsers = async () => {
   const { data } = await api.get(`/api/users`);

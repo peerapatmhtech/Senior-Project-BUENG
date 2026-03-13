@@ -80,7 +80,13 @@ const Profile = () => {
     try {
       await api.post(`/api/save-user-name`, { userEmail, nickName });
       toast.success('nicknameUpdated');
+      
+      localStorage.setItem('userName', nickName);
+      
       queryClient.invalidateQueries(['currentUser', userEmail]); // Sync ข้อมูลใหม่จาก Server
+      queryClient.invalidateQueries(['userInfos', userEmail]); 
+      queryClient.invalidateQueries(['users']); 
+      
       setIsEditingName(false);
     } catch (err) {
       toast.error('failedToUpdateNickname');
@@ -147,7 +153,15 @@ const Profile = () => {
     try {
       const response = await api.post(`/api/upload-user-photo`, formData);
       if (response.data.success) {
-        await refetchPhotos();
+        const updated = await refetchPhotos();
+        // อัพเดท localStorage และ invalidate cache ของ HeaderProfile ให้วงกลมมุมบนขวาเปลี่ยนด้วย
+        // updated.data คือ array ของรูปภาพที่ fetchUserPhotos return กลับมา
+        const updatedPhotos = Array.isArray(updated?.data) ? updated.data : [];
+        if (updatedPhotos.length > 0) {
+          localStorage.setItem('userPhoto', updatedPhotos[0].url);
+        }
+        queryClient.invalidateQueries({ queryKey: ['userPhotos', userEmail] });
+        queryClient.invalidateQueries({ queryKey: ['users'] });
         toast.success('photoUploaded');
       } else {
         throw new Error(response.data.message || 'uploadFailed');
@@ -178,7 +192,10 @@ const Profile = () => {
 
     // Optimistic Update: อัปเดต Cache ทันทีเพื่อให้ UI เปลี่ยนโดยไม่ต้องรอ Refetch
     queryClient.setQueryData(['userPhotos', userEmail], newOrder);
+    // อัพเดท localStorage เพื่อให้วงกลมมุมบนขวา (HeaderProfile) เห็นรูปใหม่ทันที
     localStorage.setItem('userPhoto', selectedPhoto.url);
+    // Invalidate users cache เพื่อให้ RoomMatch / UserCard เห็นรูปใหม่ด้วย
+    queryClient.invalidateQueries({ queryKey: ['users'] });
 
     const photoIds = newOrder.map((p) => p._id);
     handleSavePhotoOrder(photoIds);

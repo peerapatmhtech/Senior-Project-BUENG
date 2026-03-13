@@ -103,7 +103,7 @@ router.get('/user-photos/:email', async (req, res) => {
     ]);
 
     if (!userPhotos || userPhotos.length === 0) {
-      return res.status(404).json({ success: false, message: 'Empty Photo this user' });
+      return res.status(204).send(); // No Content — user has no photos yet
     }
 
     // 2. เรียงลำดับรูปภาพตาม photosOrder

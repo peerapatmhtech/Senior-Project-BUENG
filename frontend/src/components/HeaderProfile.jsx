@@ -3,6 +3,8 @@ import { useTheme } from '../context/themecontext';
 import { useNotifications } from '../context/notificationContext';
 import './HeaderProfile.css';
 import { useAuth } from '../context/AuthContextProvider';
+import { useQuery } from '@tanstack/react-query';
+import { fetchCurrentUser, fetchUserInfo, fetchUserPhotos } from '../lib/queries';
 import { Bell, LogOut, Sun, Moon, X, Check, UserPlus } from 'lucide-react';
 import { Info } from 'lucide-react';
 import UserAvatar from './UserAvatar';
@@ -27,9 +29,28 @@ const HeaderProfile = ({
     handleDeleteFriendRequest,
   } = useNotifications();
 
-  const userPhoto = localStorage.getItem('userPhoto');
-  const displayName = localStorage.getItem('userName');
   const userEmail = localStorage.getItem('userEmail');
+
+  const { data: currentUser } = useQuery({
+    queryKey: ['currentUser', userEmail],
+    queryFn: () => fetchCurrentUser(userEmail),
+    enabled: !!userEmail,
+  });
+
+  const { data: infoUser } = useQuery({
+    queryKey: ['userInfos', userEmail],
+    queryFn: () => fetchUserInfo(userEmail),
+    enabled: !!userEmail,
+  });
+
+  const { data: photoUsers = [] } = useQuery({
+    queryKey: ['userPhotos', userEmail],
+    queryFn: () => fetchUserPhotos(userEmail),
+    enabled: !!userEmail,
+  });
+
+  const userPhoto = photoUsers.length > 0 ? photoUsers[0].url : (currentUser?.photoURL || localStorage.getItem('userPhoto'));
+  const displayName = infoUser?.nickname || currentUser?.displayName || localStorage.getItem('userName');
 
   const { isDarkMode, setIsDarkMode } = useTheme();
   const { user, logout } = useAuth();

@@ -13,6 +13,8 @@ const fetchUserPhotos = async (userEmail, mainPhotoUrl) => {
 
   try {
     const response = await api.get(`/api/user-photos/${userEmail}`);
+    // 204 No Content — user has no photos, just use the main photo fallback
+    if (response.status === 204 || !response.data) return allPhotos;
     if (response.data.success && Array.isArray(response.data.data)) {
       const additionalPhotos = response.data.data.filter((p) => p.url !== mainPhotoUrl);
       allPhotos = [...allPhotos, ...additionalPhotos];

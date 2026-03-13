@@ -1,5 +1,6 @@
 import express from 'express';
 import { Info } from '../model/info.js';
+import { Gmail } from '../model/gmail.js';
 import { requireOwner } from '../middleware/required.js';
 const app = express.Router();
 
@@ -81,6 +82,10 @@ app.post('/save-user-name', requireOwner, async (req, res) => {
       },
       { new: true }
     );
+    
+    // Update displayName in Gmail collection as well to ensure consistency across the app
+    await Gmail.findOneAndUpdate({ email: userEmail }, { displayName: nickName });
+
     if (!infoUpdate) {
       return res.status(404).json({ message: 'ไม่พบผู้ใช้นี้ในทั้งสอง collection' });
     }
