@@ -55,18 +55,17 @@ const RoomList = ({
         roomId,
         roomName,
       });
-      if (res.status !== 200) {
-        toast.error('ไม่สามารถเข้าร่วมห้องได้');
+      if (res.status === 200 || res.status === 201) {
+        toast.success('เข้าร่วมห้องสําเร็จ!');
+        navigate(`/chat/${roomId}`);
+      }
+    } catch (error) {
+      if (error.response && error.response.status === 409) {
+        navigate(`/chat/${roomId}`);
         return;
       }
-      if (res.status === 200) {
-        navigate(`/chat/${roomId}`);
-        toast.success('เข้าร่วมห้องสําเร็จ!');
-      }
-      toast.success('เข้าร่วมห้องสําเร็จ!');
-    } catch (error) {
-      console.error('Error adding friend:', error);
-      toast.error('ไม่สามารถเพิ่มเพื่อนได้');
+      console.error('Error adding community:', error);
+      toast.error(error.response?.data?.error || 'ไม่สามารถเข้าร่วมห้องได้');
     }
   };
 

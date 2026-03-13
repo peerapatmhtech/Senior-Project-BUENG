@@ -465,7 +465,7 @@ const Chat = () => {
     queryFn: fetchInfoMatch,
   });
 
-  const { isLoading: isLoadingAllRooms } = useQuery({
+  const { data: allRooms = [], isLoading: isLoadingAllRooms } = useQuery({
     queryKey: ['allRooms'],
     queryFn: fetchAllRooms,
   });
@@ -519,6 +519,28 @@ const Chat = () => {
       setFriends(processedFriends);
     }
   }, [processedFriends]);
+
+  // Handle direct navigation via URL /chat/:roomId (e.g. from join-community)
+  const communityInitRef = useRef(null);
+  useEffect(() => {
+    if (!roomId || isDefaultRoom || !allRooms || allRooms.length === 0) return;
+    // Only initialize once per roomId
+    if (communityInitRef.current === roomId) return;
+
+    // Check if the roomId belongs to a community room
+    const communityRoom = allRooms.find((r) => r._id === roomId);
+    if (communityRoom) {
+      communityInitRef.current = roomId;
+      setIsGroupChat(true);
+      setActiveUser(communityRoom.name);
+      setSelectedTab(communityRoom.name);
+      setRoomBar({ roomImage: communityRoom.image, roomName: communityRoom.name, roomId: communityRoom._id });
+      setUserImage(communityRoom);
+      setIsOpencom(true);
+      setOpenchat(true);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roomId, allRooms]);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const handleProfileClick = (user) => {
@@ -660,13 +682,19 @@ const Chat = () => {
     if (!roomId) return;
     setMessages([]); // Clear messages to prevent ghost content during switch
     isInitialLoad.current = true; // Reset initial load state
+
+    // Determine if this is a group chat by checking allRooms directly
+    // This avoids timing issues with isGroupChat state
+    const isCommunityRoom = allRooms?.some((r) => r._id === roomId);
+    const isGroup = isGroupChat || isCommunityRoom;
+
     const q = query(messagesRef, orderBy('timestamp'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const allMessages = snapshot.docs
         .map((doc) => ({ id: doc.id, ...doc.data() }))
         .filter((msg) => msg.roomId === roomId);
 
-      const filteredMessages = isGroupChat
+      const filteredMessages = isGroup
         ? allMessages.filter((msg) => msg.type === 'group' && msg.roomId === roomId)
         : allMessages.filter((msg) => {
             const isMyMsg = msg.sender === userEmail && msg.receiver === activeUser;
@@ -679,7 +707,7 @@ const Chat = () => {
     });
 
     return () => unsubscribe();
-  }, [roomId, userEmail, isGroupChat, activeUser, messagesRef]);
+  }, [roomId, userEmail, isGroupChat, activeUser, messagesRef, allRooms]);
 
   useEffect(() => {
     const markMessagesAsSeen = async () => {
