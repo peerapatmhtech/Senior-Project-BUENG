@@ -83,9 +83,11 @@ const Profile = () => {
       
       localStorage.setItem('userName', nickName);
       
-      queryClient.invalidateQueries(['currentUser', userEmail]); // Sync ข้อมูลใหม่จาก Server
-      queryClient.invalidateQueries(['userInfos', userEmail]); 
-      queryClient.invalidateQueries(['users']); 
+      // React Query v5 syntax: { queryKey: [...] }
+      queryClient.invalidateQueries({ queryKey: ['currentUser', userEmail] });
+      queryClient.invalidateQueries({ queryKey: ['userInfos', userEmail] });
+      // Invalidate users cache เพื่อให้ card ใน RoomMatch ใช้ displayName ใหม่
+      queryClient.invalidateQueries({ queryKey: ['users'] });
       
       setIsEditingName(false);
     } catch (err) {
@@ -105,7 +107,9 @@ const Profile = () => {
         userInfo: tempInfo,
       });
       if (res.status === 200) {
-        queryClient.invalidateQueries(['userInfos', userEmail]); // Sync ข้อมูลใหม่จาก Server
+        queryClient.invalidateQueries({ queryKey: ['userInfos', userEmail] }); // Sync ข้อมูลใหม่จาก Server
+        queryClient.invalidateQueries({ queryKey: ['currentUser', userEmail] }); 
+        queryClient.invalidateQueries({ queryKey: ['users'] }); 
         setIsEditingAbout(false);
         toast.success('profileUpdated');
       } else {

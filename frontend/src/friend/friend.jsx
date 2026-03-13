@@ -11,8 +11,8 @@ import { BsThreeDots } from 'react-icons/bs';
 import { useTheme } from '../context/themecontext';
 import { useNotifications } from '../context/notificationContext';
 import { useSocket } from '../context/socketcontext';
-
-////////-------- Import CSS ---------////////
+import { fetchPhoto, fetchUsers, fetchCurrentUser as fetchFriendList } from '../lib/queries';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import './friend.css';
 import './OnlineStatus.css';
 
@@ -20,8 +20,6 @@ import './OnlineStatus.css';
 import RequireLogin from '../components/RequireLogin';
 import '../components/NotificationBell.css';
 import HeaderProfile from '../components/HeaderProfile';
-import { useQuery } from '@tanstack/react-query';
-import { fetchPhoto } from '../lib/queries';
 import UserAvatar from '../components/UserAvatar';
 
 // แสดงข้อมูลสถานะการเชื่อมต่อ socket อย่างละเอียด
@@ -37,27 +35,42 @@ const Friend = () => {
     queryFn: fetchPhoto,
   });
   const { socket, onlineUsers } = useSocket();
-  const { friends, setFriends } = useNotifications();
+  const { setFriends } = useNotifications();
 
   // ย้ายตัวแปรเหล่านี้มาอยู่ด้านบนก่อนการใช้งานใน useEffect
   const userEmail = localStorage.getItem('userEmail');
   const displayName = localStorage.getItem('userName');
   const photoURL = localStorage.getItem('userPhoto');
 
-  const [users, setUsers] = useState([]);
+  const { isDarkMode } = useTheme();
+  const queryClient = useQueryClient();
+
+  // Servers States (React Query for Reactivity)
+  const { data: allUsers = [] } = useQuery({
+    queryKey: ['users'],
+    queryFn: fetchUsers,
+    enabled: !!userEmail,
+  });
+
+  const { data: friendsListData = [] } = useQuery({
+    queryKey: ['userFriends', userEmail],
+    queryFn: () => fetchFriendList(userEmail),
+    enabled: !!userEmail,
+  });
+
   const [currentUserfollow, setCurrentUserfollow] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
   const [selectedUser, setSelectedUser] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loadingFriendEmail, setLoadingFriendEmail] = useState(null);
-  const [loadingCurrentUser, setLoadingCurrentUser] = useState(true);
+  const [loadingCurrentUser, setLoadingCurrentUser] = useState(false);
   const modalRef = useRef(null);
   const [openMenuFor, setOpenMenuFor] = useState(null);
   const [followers, setFollowers] = useState([]);
   const [following, setFollowing] = useState([]);
   const [getnickName, getNickName] = useState([]);
   const dropdownRefs = useRef({});
-  const { isDarkMode } = useTheme();
+
+  const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState('');
   const [notifications, setNotifications] = useState([]);
   const [newFriendRequest, setNewFriendRequest] = useState(null);
@@ -127,49 +140,34 @@ const Friend = () => {
     fetchGmailUser();
   }, [fetchGmailUser]);
 
-  const fetchCurrentUserAndFriends = useCallback(async () => {
-    setError('');
-    try {
-      const encodedEmail = encodeURIComponent(userEmail);
+  const isFriend = useCallback(
+    (email) => {
+      if (!Array.isArray(friendsListData)) return false;
+      return friendsListData.some((f) => f.email === email);
+    },
+    [friendsListData]
+  );
 
-      ////////Fetch Online Users////////
-      const allUsersRes = await api.get(`/api/users`);
-      const allUsers = allUsersRes.data;
+  const filteredUsers = allUsers.filter(
+    (user) =>
+      user.email !== userEmail &&
+      (user.displayName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.email?.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
 
-      /////////Set Online Users////////
-      setUsers(allUsers);
+  const filteredFriends = allUsers
+    .filter((user) => isFriend(user.email))
+    .filter(
+      (user) =>
+        user.displayName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.email?.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+    .sort((a, b) => a.displayName.localeCompare(b.displayName));
 
-      //////////Fetch  Favorites////////
-      const userRes = await api.get(`/api/friends/${encodedEmail}`);
-      const currentUser = userRes.data;
 
-      /////////Set Favorites////////
-      if (Array.isArray(currentUser)) {
-        // ดึง email จาก friends array (object)
-        const friendEmails = currentUser.map((f) => f.email);
-        const filteredFriends = allUsers
-          .filter((user) => friendEmails.includes(user.email))
-          .map((user) => ({
-            photoURL: user.photoURL,
-            email: user.email,
-            displayName: user.displayName,
-            isOnline: user.isOnline || false,
-          }))
-          .sort((a, b) => a.displayName.localeCompare(b.displayName)); // เรียงตามชื่อ
-        setFriends(filteredFriends);
-      } else {
-        setFriends([]);
-      }
-    } catch (error) {
-      console.error('เกิดข้อผิดพลาดในการดึงข้อมูลผู้ใช้:', error);
-      setError('เกิดข้อผิดพลาดในการดึงข้อมูลผู้ใช้');
-      toast.error('เกิดข้อผิดพลาดในการดึงข้อมูลผู้ใช้');
-    }
-  }, [userEmail, setFriends]);
 
   useEffect(() => {
     if (!userEmail) return;
-    fetchCurrentUserAndFriends();
 
     // แจ้งสถานะออนไลน์เมื่อเริ่มต้น
     // socket.emit("user-online", {
@@ -190,7 +188,8 @@ const Friend = () => {
     socket.on('notify-friend-accept', async () => {
       try {
         // ดึงข้อมูลเพื่อนล่าสุด
-        await fetchCurrentUserAndFriends();
+        queryClient.invalidateQueries({ queryKey: ['userFriends', userEmail] });
+        queryClient.invalidateQueries({ queryKey: ['users'] });
 
         // ต้องดึงข้อมูลจาก API เพื่อดูว่าใครยอมรับคำขอเพื่อนเรา
         const response = await api.get(
@@ -228,7 +227,8 @@ const Friend = () => {
     socket.on('notify-friend-removed', async (data) => {
       if (data.to === userEmail) {
         // ดึงข้อมูลเพื่อนใหม่
-        await fetchCurrentUserAndFriends();
+        queryClient.invalidateQueries({ queryKey: ['userFriends', userEmail] });
+        queryClient.invalidateQueries({ queryKey: ['users'] });
 
         // แสดง toast notification
         toast.info(`คุณถูกลบออกจากรายการเพื่อน`, {
@@ -247,7 +247,7 @@ const Friend = () => {
       socket.off('notify-friend-accept');
       socket.off('notify-friend-removed');
     };
-  }, [socket, userEmail, fetchCurrentUserAndFriends]);
+  }, [socket, userEmail, queryClient]);
 
   const handleSearch = (e) => {
     setSearchTerm(e.target.value.toLowerCase());
@@ -281,6 +281,9 @@ const Friend = () => {
         },
       });
 
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      queryClient.invalidateQueries({ queryKey: ['userFriends', userEmail] });
+
       toast.success('เพิ่มเพื่อนสำเร็จ! กรุณารอการตอบกลับจาก ' + friendEmail);
     } catch (error) {
       console.error('ข้อผิดพลาดในการเพิ่มเพื่อน:', error);
@@ -309,7 +312,8 @@ const Friend = () => {
       }
 
       // อัปเดต UI ทันที
-      setFriends((prevFriends) => prevFriends.filter((friend) => friend.email !== friendEmail));
+      queryClient.invalidateQueries({ queryKey: ['userFriends', userEmail] });
+      queryClient.invalidateQueries({ queryKey: ['users'] });
 
       // แจ้งเตือน real-time ให้อีกฝ่ายทราบ (เพื่อให้เขาสามารถอัปเดต UI ได้ทันที)
       if (socket.connected) {
@@ -329,8 +333,7 @@ const Friend = () => {
     }
   };
 
-  const isFriend = (email) =>
-    Array.isArray(friends) && friends.some((friend) => friend.email === email);
+
 
   const handleProfileClick = (user) => {
     setSelectedUser(user);
@@ -355,12 +358,7 @@ const Friend = () => {
     };
   }, []);
 
-  const filteredUsers = users.filter(
-    (u) =>
-      (u.displayName || '').toLowerCase().includes(searchTerm.toLowerCase()) &&
-      u.email !== userEmail &&
-      !friends.some((f) => f.email === u.email)
-  );
+
 
   const fetchCurrentUser = useCallback(async () => {
     try {
@@ -401,6 +399,8 @@ const Friend = () => {
 
         return { ...prevUser, following: newFollowing };
       });
+
+      queryClient.invalidateQueries({ queryKey: ['users'] });
 
       toast.success(isFollowing ? 'เลิกติดตามสำเร็จ' : 'ติดตามสำเร็จ');
     } catch (err) {
@@ -459,9 +459,7 @@ const Friend = () => {
     };
   }, [showNotificationDropdown]);
 
-  const filteredFriends = friends.filter((friend) =>
-    friend.displayName.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+
 
   const fetchFollowInfo = async (targetEmail) => {
     try {

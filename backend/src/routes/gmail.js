@@ -1,4 +1,5 @@
 import express from 'express';
+import mongoose from 'mongoose';
 import { Gmail } from '../model/gmail.js';
 import { UserPhoto } from '../model/userPhoto.js';
 const app = express.Router();
@@ -50,7 +51,12 @@ app.post('/login', async (req, res) => {
 // สำหรับดึงข้อมูลผู้ใช้ทั้งหมด (users)
 app.get('/users', async (req, res) => {
   try {
-    const users = await Gmail.find().lean();
+    const [users, allInfos] = await Promise.all([
+      Gmail.find().lean(),
+      mongoose.model('Info').find().select('email nickname').lean()
+    ]);
+
+    const infoMap = new Map(allInfos.map(info => [info.email, info.nickname]));
 
     // Optimization: Batch fetch photos for users with custom order
     const photoIds = users
@@ -70,6 +76,15 @@ app.get('/users', async (req, res) => {
         }
       });
     }
+
+    // Update displayName with nickname if available
+    users.forEach(user => {
+      const nickname = infoMap.get(user.email);
+      if (nickname) {
+        user.displayName = nickname;
+      }
+    });
+
     res.json(users);
   } catch (error) {
     console.error('Error fetching users:', error);
@@ -83,7 +98,11 @@ app.get('/users/:email', async (req, res) => {
     if (!email) {
       return res.status(400).send('Email is required.');
     }
-    const user = await Gmail.findOne({ email }).lean();
+    const [user, info] = await Promise.all([
+      Gmail.findOne({ email }).lean(),
+      mongoose.model('Info').findOne({ email }).select('nickname').lean()
+    ]);
+    
     if (!user) return res.status(404).send('User not found');
 
     // Check for custom photo order
@@ -93,6 +112,12 @@ app.get('/users/:email', async (req, res) => {
         user.photoURL = photo.url;
       }
     }
+    
+    // Override displayName with nickname if available
+    if (info && info.nickname) {
+      user.displayName = info.nickname;
+    }
+    
     res.json(user);
   } catch (error) {
     console.error('Error fetching friends:', error);
@@ -104,7 +129,12 @@ app.get('/users/:email', async (req, res) => {
 app.get('/usersfriends', async (req, res) => {
   try {
     const email = JSON.parse(decodeURIComponent(req.query.emails));
-    const users = await Gmail.find({ email: { $in: email } }).lean();
+    const [users, allInfos] = await Promise.all([
+      Gmail.find({ email: { $in: email } }).lean(),
+      mongoose.model('Info').find({ email: { $in: email } }).select('email nickname').lean()
+    ]);
+
+    const infoMap = new Map(allInfos.map(info => [info.email, info.nickname]));
 
     // Optimization: Batch fetch photos
     const photoIds = users
@@ -124,6 +154,15 @@ app.get('/usersfriends', async (req, res) => {
         }
       });
     }
+
+    // Update displayName with nickname if available
+    users.forEach(user => {
+      const nickname = infoMap.get(user.email);
+      if (nickname) {
+        user.displayName = nickname;
+      }
+    });
+
     res.json(users);
   } catch (error) {
     console.error(error);

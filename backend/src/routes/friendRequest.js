@@ -1,4 +1,5 @@
 import express from 'express';
+import mongoose from 'mongoose';
 const router = express.Router();
 import User from '../model/userroom.js';
 import Friend from '../model/Friend.js';
@@ -152,22 +153,72 @@ router.get('/friend-requests/:userEmail', requireOwner, async (req, res) => {
   try {
     const { userEmail } = req.params;
 
-    // ดึงคำขอเพื่อนที่ถูกส่งมาถึงผู้ใช้
+    // 1. ดึงคำขอเพื่อนที่ถูกส่งมาถึงผู้ใช้
     const requests = await FriendRequest.find({
       to: userEmail,
       status: 'pending',
-    }).sort({ timestamp: -1 });
+    }).sort({ timestamp: -1 }).lean();
 
-    res.status(200).json({
-      success: true,
-      requests: requests.map((req) => ({
+    if (requests.length === 0) {
+      return res.status(200).json({ success: true, requests: [] });
+    }
+
+    // 2. ดึงข้อมูลล่าสุดของผู้ส่งทุกคน
+    const fromEmails = [...new Set(requests.map(r => r.from.email))];
+    
+    const [usersData, infosData] = await Promise.all([
+      Gmail.find({ email: { $in: fromEmails } }).lean(),
+      mongoose.model('Info').find({ email: { $in: fromEmails } }).select('email nickname').lean()
+    ]);
+
+    const infoMap = new Map(infosData.map(i => [i.email, i.nickname]));
+    
+    // 3. จัดการเรื่องรูปภาพล่าสุด (เหมือนที่ทำใน /api/users)
+    const photoIds = usersData
+      .filter((u) => u.photosOrder && u.photosOrder.length > 0)
+      .map((u) => u.photosOrder[0]);
+
+    let photoMap = new Map();
+    if (photoIds.length > 0) {
+      const { UserPhoto } = await import('../model/userPhoto.js');
+      const photos = await UserPhoto.find({ _id: { $in: photoIds } }).select('_id url').lean();
+      photoMap = new Map(photos.map((p) => [p._id.toString(), p.url]));
+    }
+
+    const userDataMap = new Map();
+    usersData.forEach(user => {
+      let finalPhotoURL = user.photoURL;
+      if (user.photosOrder && user.photosOrder.length > 0) {
+        const customPhoto = photoMap.get(user.photosOrder[0].toString());
+        if (customPhoto) finalPhotoURL = customPhoto;
+      }
+      
+      userDataMap.set(user.email, {
+        displayName: infoMap.get(user.email) || user.displayName,
+        photoURL: finalPhotoURL
+      });
+    });
+
+    // 4. ประกอบร่างข้อมูล
+    const enrichedRequests = requests.map((req) => {
+      const latestFrom = userDataMap.get(req.from.email) || req.from;
+      return {
         requestId: req.requestId,
-        from: req.from,
+        from: {
+          email: req.from.email,
+          displayName: latestFrom.displayName,
+          photoURL: latestFrom.photoURL,
+        },
         to: req.to,
         timestamp: req.timestamp,
         status: req.status,
         read: req.read,
-      })),
+      };
+    });
+
+    res.status(200).json({
+      success: true,
+      requests: enrichedRequests,
     });
   } catch (error) {
     console.error('เกิดข้อผิดพลาดในการดึงข้อมูลคำขอเพื่อน:', error);
