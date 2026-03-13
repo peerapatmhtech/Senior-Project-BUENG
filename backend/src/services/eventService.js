@@ -89,10 +89,17 @@ export const saveEventsFromSource = async ({ data, email, subGenres }) => {
       }
 
       // 2. Check if the user already has this event
-      const existingUserEvent = await UserEvent.findOne({ email, eventId: event._id }).session(
-        session
-      );
-      if (existingUserEvent) continue;
+      const existingUserEvent = await UserEvent.findOne({ email, eventId: event._id }).session(session);
+      
+      if (existingUserEvent) {
+        if (existingUserEvent.status === 'deleted') {
+          // Reactivate the deleted user event
+          existingUserEvent.status = 'active';
+          await existingUserEvent.save({ session });
+          newUserEvents.push(existingUserEvent);
+        }
+        continue;
+      }
 
       // 3. Create the UserEvent linking to the template Event
       const userEvent = new UserEvent({
