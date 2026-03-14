@@ -181,81 +181,104 @@ const HeaderProfile = ({
                 </div>
 
                 <div className="notification-list">
-                  {notifications && notifications.length > 0 ? (
-                    notifications.map((notif) => (
-                      <div
-                        key={notif.id}
-                        data-notification-id={notif.id}
-                        className={`notification-item ${notif.read ? 'read' : 'unread'}`}
-                        onClick={() => markNotificationAsRead(notif.id)}
-                      >
-                        <div className="notification-item-content">
-                          <div className="notification-item-avatar">
-                            <UserAvatar
-                              src={notif.from?.photoURL}
-                              alt={notif.from?.displayName || 'User'}
-                            />
-                            {!notif.read && <div className="notification-unread-dot"></div>}
-                          </div>
-
-                          <div className="notification-item-details">
-                            <div className="notification-item-header">
-                              <p className="notification-item-user">
-                                {notif.from?.displayName || 'User'}
-                              </p>
-                              <span
-                                className={`notification-item-tag ${
-                                  isFriend && isFriend(notif.from?.email) ? 'friend' : 'request'
-                                }`}
-                              >
-                                {isFriend && isFriend(notif.from?.email) ? 'Friend' : 'Request'}
-                              </span>
-                            </div>
-
-                            <p className="notification-item-message">
-                              {isFriend && isFriend(notif.from?.email)
-                                ? 'youAreNowFriends'
-                                : 'sentYouAFriendRequest'}
-                            </p>
-
-                            <p className="notification-item-time">
-                              {new Date(notif.timestamp).toLocaleString(undefined, {
-                                year: 'numeric',
-                                month: 'short',
-                                day: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              })}
-                            </p>
-
-                            {(!isFriend || !isFriend(notif.from?.email)) && (
-                              <div className="notification-item-actions">
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleFriendRequestResponse(notif.id, 'accept');
-                                  }}
-                                  className="btn-accept"
-                                >
-                                  <Check size={12} />
-                                  Accept
-                                </button>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDeleteFriendRequest(notif.id);
-                                  }}
-                                  className="btn-decline"
-                                >
-                                  <X size={12} />
-                                  Decline
-                                </button>
-                              </div>
-                            )}
-                          </div>
+                  {/* 1. Grouped Match Notification (Summary) */}
+                  {notifications.filter((n) => n.type === 'match' && !n.read).length > 0 && (
+                    <div className="notification-item unread summary-match-item">
+                      <div className="notification-item-content">
+                        <div className="notification-item-avatar match-avatar">
+                          <div className="match-icon-pulse">🔥</div>
+                        </div>
+                        <div className="notification-item-details">
+                          <p className="notification-item-user">Congratulations!</p>
+                          <p className="notification-item-message">
+                            {notifications.filter((n) => n.type === 'match' && !n.read).length} people are interested in matching with you
+                          </p>
                         </div>
                       </div>
-                    ))
+                    </div>
+                  )}
+
+                  {/* 2. Friend Request Notifications (Individual) */}
+                  {notifications && notifications.length > 0 ? (
+                    notifications.map((notif) => {
+                      // Only show individual items if they are friend requests
+                      if (notif.type !== 'friend-request' && notif.type !== undefined) return null;
+
+                      return (
+                        <div
+                          key={notif.id}
+                          data-notification-id={notif.id}
+                          className={`notification-item ${notif.read ? 'read' : 'unread'}`}
+                          onClick={() => markNotificationAsRead(notif.id)}
+                        >
+                          <div className="notification-item-content">
+                            <div className="notification-item-avatar">
+                              <UserAvatar
+                                src={notif.from?.photoURL}
+                                alt={notif.from?.displayName || 'User'}
+                              />
+                              {!notif.read && <div className="notification-unread-dot"></div>}
+                            </div>
+
+                            <div className="notification-item-details">
+                              <div className="notification-item-header">
+                                <p className="notification-item-user">
+                                  {notif.from?.displayName || 'User'}
+                                </p>
+                                <span
+                                  className={`notification-item-tag ${
+                                    isFriend && isFriend(notif.from?.email) ? 'friend' : 'request'
+                                  }`}
+                                >
+                                  {isFriend && isFriend(notif.from?.email) ? 'Friend' : 'Request'}
+                                </span>
+                              </div>
+
+                              <p className="notification-item-message">
+                                {isFriend && isFriend(notif.from?.email)
+                                  ? 'youAreNowFriends'
+                                  : 'sentYouAFriendRequest'}
+                              </p>
+
+                              <p className="notification-item-time">
+                                {new Date(notif.timestamp).toLocaleString(undefined, {
+                                  year: 'numeric',
+                                  month: 'short',
+                                  day: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })}
+                              </p>
+
+                              {(!isFriend || !isFriend(notif.from?.email)) && (
+                                <div className="notification-item-actions">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleFriendRequestResponse(notif.id, 'accept');
+                                    }}
+                                    className="btn-accept"
+                                  >
+                                    <Check size={12} />
+                                    Accept
+                                  </button>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDeleteFriendRequest(notif.id);
+                                    }}
+                                    className="btn-decline"
+                                  >
+                                    <X size={12} />
+                                    Decline
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })
                   ) : (
                     <div className="notification-empty">
                       <Bell className="notification-empty-icon" />

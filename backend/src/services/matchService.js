@@ -5,11 +5,11 @@ import { GEMINI_MODEL } from '../constants/index.js';
 
 /**
  * Perform semantic matching between a user and other users based on their "About Me" descriptions.
- * @param {object} io - Socket.io instance
+ * @param {object} app - Express app instance
  * @param {string} userEmail - The email of the user who updated their profile
  * @param {string} profileDescription - The new "About Me" content
  */
-export const matchByProfile = async (io, userEmail, profileDescription) => {
+export const matchByProfile = async (app, userEmail, profileDescription) => {
   try {
     const genAI = getGenAI();
     // if (!profileDescription || profileDescription.trim().length < 10) {
@@ -79,35 +79,53 @@ ${JSON.stringify(userList)}`;
     const response = JSON.parse(result.response.text());
     const matches = response.matches || [];
 
-    // 3. Save matches to InfoMatch collection
-    for (const match of matches) {
-      // Sort emails to maintain consistency in InfoMatch (email vs usermatch)
+    // 3. Prepare Bulk Operations for performance and atomicity
+    const bulkOps = matches.map((match) => {
       const users = [userEmail, match.email].sort();
+      return {
+        updateOne: {
+          filter: {
+            email: users[0],
+            usermatch: users[1],
+            eventId: null,
+          },
+          update: {
+            $set: {
+              detail: match.reason,
+              chance: match.chance,
+              status: 'pending',
+              initiatorEmail: userEmail,
+            },
+          },
+          upsert: true,
+        },
+      };
+    });
 
-      await InfoMatch.findOneAndUpdate(
-        {
-          email: users[0],
-          usermatch: users[1],
-          // We can identify profile matches by null eventId or a specific flag
-          eventId: null,
-        },
-        {
-          email: users[0],
-          usermatch: users[1],
-          detail: match.reason, // Use AI reason as the detail
-          chance: match.chance,
-          status: 'pending',
-          initiatorEmail: userEmail,
-        },
-        { upsert: true, new: true }
-      );
+    if (bulkOps.length > 0) {
+      await InfoMatch.bulkWrite(bulkOps);
     }
 
     // 4. Notify clients via Socket.io
+    const io = app.get('io');
+    const userSockets = app.get('userSockets') || {};
+
     if (io) {
+      // Collect logs and notify
+      for (const match of matches) {
+        const recipientSocket = userSockets[match.email];
+        if (recipientSocket) {
+          io.to(recipientSocket).emit('notify-match', {
+            type: 'profile',
+            from: userEmail,
+            reason: match.reason
+          });
+        }
+      }
+
       io.emit('match_updated');
       console.info(
-        `[AI Matching] Successfully processed matches for ${userEmail}. Found ${matches.length} matches.`
+        `[AI Matching] Processed ${matches.length} matches for ${userEmail} using BulkWrite.`
       );
     }
   } catch (error) {

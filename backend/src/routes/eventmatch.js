@@ -32,31 +32,60 @@ export default function (io) {
         return res.status(200).json({ message: 'No likes found from other users' });
       }
 
+      const bulkOps = [];
+      const matchData = []; // To keep track for notification
+
       for (const like of otherUserLikes) {
-        // To ensure uniqueness, sort emails alphabetically
         const users = [email, like.userEmail].sort();
-
-        // Avoid creating duplicate pending matches
-        const existingMatch = await InfoMatch.findOne({
-          // eventId: like.eventId, // เอาออกเพื่อเช็คแค่ว่า User คู่นี้เคย Match กันหรือยัง (ไม่สนว่า Event ไหน)
-          email: users[0],
-          usermatch: users[1],
-          status: { $in: ['pending', 'matched'] }, // Don't recreate if it was already unmatched
+        
+        // Push bulk operation
+        bulkOps.push({
+          updateOne: {
+            filter: {
+              email: users[0],
+              usermatch: users[1],
+              // Optionally check if we want to allow multiple matches per event or just one pair
+              // In this logic, we use status exclusion to prevent duplicate pending
+              status: { $nin: ['matched', 'unmatched'] } 
+            },
+            update: {
+              $setOnInsert: {
+                eventId: like.eventId,
+                detail: like.eventTitle,
+                email: users[0],
+                usermatch: users[1],
+                chance: 40,
+                status: 'pending',
+                initiatorEmail: email,
+              }
+            },
+            upsert: true
+          }
         });
-        if (existingMatch) continue;
 
-        const newInfoMatch = new InfoMatch({
-          eventId: like.eventId,
-          detail: like.eventTitle,
-          email: users[0], // Always store the alphabetically first email here
-          usermatch: users[1], // And the second here
-          chance: 40,
-          status: 'pending', // Initial status
-          initiatorEmail: email, // The user who triggered this action
-        });
+        matchData.push({ targetEmail: like.userEmail, title: like.eventTitle });
+      }
 
-        await newInfoMatch.save();
-        io.emit('match_updated'); // Emit event here
+      const result = await InfoMatch.bulkWrite(bulkOps);
+      
+      // Notify only for newly upserted matches
+      if (io && result.upsertedCount > 0) {
+        const userSockets = req.app.get('userSockets') || {};
+        
+        // Note: bulkWrite result doesn't easily tell which specific one was upserted in order
+        // For simplicity and correctness, we notify all intended targets if they are online
+        // The frontend will de-duplicate via fetchNotifications anyway
+        for (const target of matchData) {
+          const recipientSocket = userSockets[target.targetEmail];
+          if (recipientSocket) {
+            io.to(recipientSocket).emit('notify-match', {
+              type: 'event',
+              eventTitle: target.title,
+              from: email
+            });
+          }
+        }
+        io.emit('match_updated');
       }
 
       res.status(200).json({

@@ -65,7 +65,7 @@ app.post('/save-user-info', requireOwner, async (req, res) => {
     );
 
     // Trigger AI Matching in background (don't await to keep response fast)
-    matchByProfile(req.app.get('io'), email, userInfo?.detail).catch(err => 
+    matchByProfile(req.app, email, userInfo?.detail).catch(err => 
       console.error('[AI Match Trigger] Error:', err)
     );
 

@@ -88,58 +88,80 @@ const NotificationBell = () => {
           {notifications && notifications.length > 0 ? (
             <>
               <ul className="notification-list">
-                {notifications.map((notif) => (
-                  <li
-                    key={notif.id}
-                    data-notification-id={notif.id}
-                    className={`notification-item ${notif.read ? "read" : "unread"}`}
-                  >
-                    <div className="notification-content" onClick={() => markNotificationAsRead(notif.id)}>
-                      <img
-                        src={
-                          notif.from?.photoURL ||
-                          "https://via.placeholder.com/40"
-                        }
-                        alt={notif.from?.displayName || "ผู้ใช้"}
-                        className="notification-avatar"
-                      />
+                {/* 1. Grouped Match Notification (Summary) */}
+                {notifications.filter(n => n.type === "match" && !n.read).length > 0 && (
+                  <li className="notification-item unread summary-match">
+                    <div className="notification-content">
+                      <div className="notification-icon-wrapper">
+                        <div className="match-noti-icon summary">🔥</div>
+                      </div>
                       <div className="notification-details">
                         <p className="notification-message">
-                          <strong>
-                            {notif.from?.displayName || "ผู้ใช้"}
-                          </strong>{" "}
-                          {isFriend(notif.from?.email) ? "เป็นเพื่อนกันแล้ว" : "ส่งคำขอเป็นเพื่อน"}
+                          <strong>ยินดีด้วย!</strong> มี {notifications.filter(n => n.type === "match" && !n.read).length} คนที่สนใจแมตช์กับคุณ
                         </p>
-                        <span className="notification-time">
-                          {new Date(notif.timestamp).toLocaleString("th-TH")}
-                        </span>
-                        
-                        {!isFriend(notif.from?.email) && notif.type === "friend-request" && (
-                          <div className="notification-actions">
-                            <button
-                              className="notification-button accept"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleFriendRequestResponse(notif.id, "accept");
-                              }}
-                            >
-                              ยอมรับ
-                            </button>
-                            <button
-                              className="notification-button reject"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteFriendRequest(notif.id);
-                              }}
-                            >
-                              ปฏิเสธ
-                            </button>
-                          </div>
-                        )}
                       </div>
                     </div>
                   </li>
-                ))}
+                )}
+
+                {/* 2. Friend Request Notifications (Individual) */}
+                {notifications.map((notif) => {
+                  // Only show individual items if they are friend requests
+                  if (notif.type !== "friend-request") return null;
+
+                  return (
+                    <li
+                      key={notif.id}
+                      data-notification-id={notif.id}
+                      className={`notification-item ${notif.read ? "read" : "unread"}`}
+                    >
+                      <div className="notification-content" onClick={() => markNotificationAsRead(notif.id)}>
+                        <div className="notification-icon-wrapper">
+                          <img
+                            src={
+                              notif.from?.photoURL ||
+                              "https://via.placeholder.com/40"
+                            }
+                            alt={notif.from?.displayName || "ผู้ใช้"}
+                            className="notification-avatar"
+                          />
+                        </div>
+                        <div className="notification-details">
+                          <p className="notification-message">
+                            <strong>{notif.from?.displayName || "ผู้ใช้"}</strong>{" "}
+                            {isFriend(notif.from?.email) ? "เป็นเพื่อนกันแล้ว" : "ส่งคำขอเป็นเพื่อน"}
+                          </p>
+                          <span className="notification-time">
+                            {new Date(notif.timestamp).toLocaleString("th-TH")}
+                          </span>
+                          
+                          {!isFriend(notif.from?.email) && (
+                            <div className="notification-actions">
+                              <button
+                                className="notification-button accept"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleFriendRequestResponse(notif.id, "accept");
+                                }}
+                              >
+                                ยอมรับ
+                              </button>
+                              <button
+                                className="notification-button reject"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteFriendRequest(notif.id);
+                                }}
+                              >
+                                ปฏิเสธ
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </li>
+                  );
+                })}
               </ul>
             </>
           ) : (

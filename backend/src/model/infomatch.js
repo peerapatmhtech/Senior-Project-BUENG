@@ -28,6 +28,10 @@ const infoMatchSchema = new Schema(
       type: Number,
       default: 0,
     },
+    read: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true }
 );
