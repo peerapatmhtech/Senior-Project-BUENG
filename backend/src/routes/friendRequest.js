@@ -1,11 +1,12 @@
 import express from 'express';
 import mongoose from 'mongoose';
 const router = express.Router();
-import User from '../model/userroom.js';
 import Friend from '../model/Friend.js';
 import FriendRequest from '../model/friendRequest.js';
-import { requireOwner } from '../middleware/required.js';
 import { Gmail } from '../model/gmail.js';
+import { Info } from '../model/info.js';
+import { UserPhoto } from '../model/userPhoto.js';
+import { requireOwner } from '../middleware/required.js';
 
 // API สำหรับส่งคำขอเป็นเพื่อน
 router.post('/friend-request', async (req, res) => {
@@ -90,7 +91,10 @@ router.post('/friend-request', async (req, res) => {
       const recipientSocket = userSockets[to];
 
       if (recipientSocket) {
-        io.to(recipientSocket).emit('notify-friend-request', { from: from.email });
+        io.to(recipientSocket).emit('notify-friend-request', { 
+          from: from.email,
+          to: to 
+        });
       }
     }
 
@@ -168,19 +172,21 @@ router.get('/friend-requests/:userEmail', requireOwner, async (req, res) => {
     
     const [usersData, infosData] = await Promise.all([
       Gmail.find({ email: { $in: fromEmails } }).lean(),
-      mongoose.model('Info').find({ email: { $in: fromEmails } }).select('email nickname').lean()
+      Info.find({ email: { $in: fromEmails } }).select('email nickname').lean()
     ]);
 
     const infoMap = new Map(infosData.map(i => [i.email, i.nickname]));
     
     // 3. จัดการเรื่องรูปภาพล่าสุด (เหมือนที่ทำใน /api/users)
-    const photoIds = usersData
+    const photoIdStrings = usersData
       .filter((u) => u.photosOrder && u.photosOrder.length > 0)
       .map((u) => u.photosOrder[0]);
 
     let photoMap = new Map();
-    if (photoIds.length > 0) {
-      const { UserPhoto } = await import('../model/userPhoto.js');
+    if (photoIdStrings.length > 0) {
+      // แปลงเป็น ObjectId เพื่อความชัวร์ในการ Query ให้ตรงกับ _id ใน MongoDB
+      const photoIds = photoIdStrings.map(id => new mongoose.Types.ObjectId(id));
+      
       const photos = await UserPhoto.find({ _id: { $in: photoIds } }).select('_id url').lean();
       photoMap = new Map(photos.map((p) => [p._id.toString(), p.url]));
     }
@@ -201,13 +207,15 @@ router.get('/friend-requests/:userEmail', requireOwner, async (req, res) => {
 
     // 4. ประกอบร่างข้อมูล
     const enrichedRequests = requests.map((req) => {
-      const latestFrom = userDataMap.get(req.from.email) || req.from;
+      const email = req.from.email;
+      const latest = userDataMap.get(email);
+      
       return {
         requestId: req.requestId,
         from: {
-          email: req.from.email,
-          displayName: latestFrom.displayName,
-          photoURL: latestFrom.photoURL,
+          email: email,
+          displayName: latest?.displayName || req.from.displayName,
+          photoURL: latest?.photoURL || req.from.photoURL,
         },
         to: req.to,
         timestamp: req.timestamp,
@@ -302,7 +310,10 @@ router.post('/friend-request-response', requireOwner, async (req, res) => {
         const recipientSocket = userSockets[friendEmail];
 
         if (recipientSocket) {
-          io.to(recipientSocket).emit('notify-friend-accept', { from: userEmail });
+          io.to(recipientSocket).emit('notify-friend-accept', { 
+            from: userEmail,
+            to: friendEmail 
+          });
         }
       }
 
@@ -345,19 +356,29 @@ router.get('/friend-accepts/:userEmail', requireOwner, async (req, res) => {
       return res.status(200).json({ success: true, latestAccept: null });
     }
 
-    // ดึงข้อมูลผู้ใช้ที่ยอมรับคำขอ
-    const acceptedUser = await User.findOne({ email: latestAccept.to });
+    // ดึงข้อมูลผู้ใช้ที่ยอมรับคำขอ (จากแหล่งข้อมูลหลัก)
+    const [acceptedGmail, acceptedInfo] = await Promise.all([
+      Gmail.findOne({ email: latestAccept.to }).lean(),
+      Info.findOne({ email: latestAccept.to }).select('email nickname').lean()
+    ]);
 
-    if (!acceptedUser) {
+    if (!acceptedGmail) {
       return res.status(200).json({ success: true, latestAccept: null });
+    }
+
+    // ดึงรูปหลัก
+    let finalPhotoURL = acceptedGmail.photoURL;
+    if (acceptedGmail.photosOrder && acceptedGmail.photosOrder.length > 0) {
+      const mainPhoto = await UserPhoto.findById(acceptedGmail.photosOrder[0]).lean();
+      if (mainPhoto) finalPhotoURL = mainPhoto.url;
     }
 
     res.status(200).json({
       success: true,
       latestAccept: {
-        email: acceptedUser.email,
-        displayName: acceptedUser.displayName,
-        photoURL: acceptedUser.photoURL,
+        email: acceptedGmail.email,
+        displayName: acceptedInfo?.nickname || acceptedGmail.displayName,
+        photoURL: finalPhotoURL,
         timestamp: latestAccept.updatedAt,
       },
     });

@@ -1,6 +1,5 @@
 import express from 'express';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import dotenv from 'dotenv';
+import { getGenAI } from '../services/gemini.js';
 import {
   GEMINI_MODEL,
   DEFAULT_TEMPERATURE,
@@ -8,10 +7,6 @@ import {
 } from '../constants/index.js';
 import { MessageSender, GeminiRole } from '../enums/index.js';
 
-dotenv.config();
-
-// Initialize Gemini AI with your API key from environment variables
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const router = express.Router();
 
 // Define the POST route for the AI chat
@@ -45,6 +40,7 @@ router.post('/ai/chat', async (req, res) => {
     }));
 
     // Initialize Gemini model
+    const genAI = getGenAI();
     const model = genAI.getGenerativeModel({
       model: GEMINI_MODEL,
       systemInstruction: systemContent,

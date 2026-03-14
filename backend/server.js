@@ -3,6 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import bodyParser from 'body-parser';
 import dotenv from 'dotenv';
+dotenv.config();
 import http from 'http';
 import { Server } from 'socket.io';
 import path from 'path';
@@ -35,7 +36,7 @@ import { authMiddleware } from './src/middleware/authMiddleware.js';
 import { limiter } from './src/middleware/ratelimit.js'; // Strings must use singlequote.
 // import { Gmail } from './src/model/gmail.js';
 
-dotenv.config();
+
 const allowedOrigins = process.env.VITE_APP_WEB_BASE_URL;
 
 const __filename = fileURLToPath(import.meta.url);

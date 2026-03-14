@@ -39,6 +39,7 @@ const Profile = () => {
   const [isEditingName, setIsEditingName] = useState(false);
   const [isEditingAbout, setIsEditingAbout] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const fileInputRef = useRef(null);
 
   // Server States - ใช้สำหรับแสดงผล
@@ -101,6 +102,9 @@ const Profile = () => {
       return;
     }
 
+    if (isSaving) return;
+    setIsSaving(true);
+
     try {
       const res = await api.post(`/api/save-user-info`, {
         email: userEmail,
@@ -115,25 +119,14 @@ const Profile = () => {
       } else {
         toast.error('failedToSaveProfile');
       }
-
-      // ส่งข้อมูลไปยัง Make.com webhook
-      const webhookResponse = await fetch(import.meta.env.VITE_APP_MAKE_WEBHOOK_MATCH_ABOUT_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          detail: tempInfo.detail,
-          userEmail: userEmail,
-        }),
-      });
-      if (!webhookResponse.ok) {
-        console.error(
-          'ข้อผิดพลาดในการส่งข้อมูลไปยัง Make.com webhook:',
-          webhookResponse.statusText
-        );
-      }
     } catch (error) {
       console.error('เกิดข้อผิดพลาดในการบันทึกข้อมูล:', error);
       toast.error('failedToSaveProfile');
+    } finally {
+      // Debounce delay to prevent double-clicking or rapid changes
+      setTimeout(() => setIsSaving(true), 1000); // Wait 1s before allowing another save
+      // Wait, actually I should set it back to FALSE to allow next save after delay
+      setTimeout(() => setIsSaving(false), 1000);
     }
   };
 
