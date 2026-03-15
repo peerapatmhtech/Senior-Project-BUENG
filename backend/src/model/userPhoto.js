@@ -1,21 +1,21 @@
 import mongoose from 'mongoose';
 
-const userPhotoSchema = new mongoose.Schema({
-  email: {
-    type: String,
-    required: true,
-    index: true,
+const userPhotoSchema = new mongoose.Schema(
+  {
+    email: {
+      type: String,
+      required: true,
+      index: true,
+    },
+    url: {
+      type: String,
+      required: true,
+    },
+    filename: String,
+    storagePath: String,
+    title: String,
   },
-  url: {
-    type: String,
-    required: true,
-  },
-  filename: String,
-  title: String,
-  createdAt: {
-    type: Date,
-    default: Date.now,
-  },
-});
+  { timestamps: true }
+);
 
 export const UserPhoto = mongoose.model('UserPhoto', userPhotoSchema);

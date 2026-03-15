@@ -7,7 +7,8 @@ const app = express.Router();
 // 📌 3️⃣ API บันทึก/อัปเดตผู้ใช้จาก Google Login และสร้าง Session
 app.post('/login', async (req, res) => {
   try {
-    const { displayName, email, photoURL } = req.body;
+    const email = req.user.email;
+    const { displayName, photoURL } = req.body;
 
     if (!email) {
       return res.status(400).json({ message: 'Email is required for login.' });

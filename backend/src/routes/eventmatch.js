@@ -6,10 +6,11 @@ export default function (io) {
   const router = express.Router();
 
   router.post('/events/match', async (req, res) => {
-    const { email, action } = req.body;
+    const email = req.user.email;
+    const { action } = req.body;
 
     if (!email) {
-      return res.status(400).json({ message: 'Email is required' });
+      return res.status(400).json({ message: 'Email is required (Auth token failure)' });
     }
 
     // Check if there are any likes for the provided email
@@ -35,28 +36,28 @@ export default function (io) {
       const bulkOps = [];
       const matchData = []; // To keep track for notification
 
+      const emailDomain = email.split('@')[1];
+      const university = emailDomain.includes('bu') ? 'Bangkok University' : 'Other';
+
       for (const like of otherUserLikes) {
         const users = [email, like.userEmail].sort();
         
-        // Push bulk operation
         bulkOps.push({
           updateOne: {
             filter: {
               email: users[0],
               usermatch: users[1],
-              // Optionally check if we want to allow multiple matches per event or just one pair
-              // In this logic, we use status exclusion to prevent duplicate pending
-              status: { $nin: ['matched', 'unmatched'] } 
+              status: { $ne: 'matched' }
             },
             update: {
-              $setOnInsert: {
+              $set: {
                 eventId: like.eventId,
                 detail: like.eventTitle,
-                email: users[0],
-                usermatch: users[1],
                 chance: 40,
-                status: 'pending',
+                status: 'pending', // Re-trigger even if previously unmatched
                 initiatorEmail: email,
+                lastMatchedAt: new Date(),
+                university: university
               }
             },
             upsert: true

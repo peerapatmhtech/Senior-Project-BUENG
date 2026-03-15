@@ -12,17 +12,21 @@ import { GEMINI_MODEL } from '../constants/index.js';
 export const matchByProfile = async (app, userEmail, profileDescription) => {
   try {
     const genAI = getGenAI();
-    // if (!profileDescription || profileDescription.trim().length < 10) {
-    //   console.info(`[AI Matching] Description for ${userEmail} too short, skipping.`);
-    //   return;
-    // }
+    if (!profileDescription || profileDescription.trim().length < 5) {
+      return;
+    }
 
-    // 1. Fetch all other users with descriptions
+    // 1. Pre-filtering: Scope to university (emails ending with same domain)
+    const emailDomain = userEmail.split('@')[1];
+
+    // Limit to 50 users to avoid Token limits and improve relevance
     const otherUsers = await Info.find({
-      email: { $ne: userEmail },
+      email: { $ne: userEmail, $regex: `@${emailDomain}$` },
       'userInfo.detail': { $exists: true, $ne: '' },
     })
       .select('email userInfo.detail')
+      .sort({ updatedAt: -1 })
+      .limit(50)
       .lean();
 
     if (otherUsers.length === 0) return;
@@ -34,25 +38,23 @@ export const matchByProfile = async (app, userEmail, profileDescription) => {
     }));
 
     const systemPrompt = `
-Role: BUENG AI Matcher
-Task: วิเคราะห์ความสนใจที่คล้ายกันระหว่าง "ผู้ใช้ปัจจุบัน" กับ "รายการผู้ใช้อื่น"
-Goal: ค้นหาบุคคลที่มีแนวโน้มว่าจะเข้ากันได้ดีหรือมีความสนใจคล้ายกัน เพื่อจับคู่กัน
+Role: Senior BUENG AI Matchmaker
+Task: วิเคราะห์ความสนใจที่คล้ายกันระหว่างนักศึกษาในมหาวิทยาลัยเดียวกัน
+Goal: ค้นหาความเข้ากันได้ที่มีความหมาย ให้ 2 คนจับคู่กันได้อย่างลงตัว
 
 Output Format: JSON Object ที่มี key "matches" เป็น array
-JSON Structure:
 { 
   "matches": [
     { 
-      "email": "อีเมลของผู้ที่ถูกจับคู่ด้วย", 
-      "chance": 0-100 (ตัวเลขโอกาสที่จะแมตช์), 
-      "reason": "เหตุผลสั้นๆ เป็นภาษาไทยที่บอกว่าทำไมถึงแมตช์กัน" 
+      "email": "receiver@bumail.net", 
+      "chance": 0-100, 
+      "reason": "ทำไมถึงแมตช์กัน (พูดจาเป็นกันเอง ภาษาไทย)" 
     }
   ] 
 }
 
 Constraints:
-- เลือกเฉพาะคนที่มีค่า chance สูงกว่า 60 เท่านั้น (ถ้าไม่มีให้ส่ง array ว่าง)
-- เหตุผลต้องเป็นกันเองและสั้นๆ
+- เลือกเฉพาะคู่ที่มีความเข้ากันได้สูง (Chance > 70)
 - ห้ามตอบอย่างอื่นนอกจาก JSON`;
 
     const model = genAI.getGenerativeModel({
@@ -61,17 +63,17 @@ Constraints:
     });
 
     const promptText = `
-ผู้ใช้ปัจจุบัน:
+User ปัจจุบัน:
 Email: ${userEmail}
-About Me: ${profileDescription}
+โปรไฟล์: "${profileDescription}"
 
-รายการผู้ใช้อื่น:
+นักศึกษาคนอื่นๆ ในมหาวิทยาลัย:
 ${JSON.stringify(userList)}`;
 
     const result = await model.generateContent({
       contents: [{ role: 'user', parts: [{ text: promptText }] }],
       generationConfig: {
-        temperature: 0.7,
+        temperature: 0.8,
         responseMimeType: 'application/json',
       },
     });
@@ -79,7 +81,7 @@ ${JSON.stringify(userList)}`;
     const response = JSON.parse(result.response.text());
     const matches = response.matches || [];
 
-    // 3. Prepare Bulk Operations for performance and atomicity
+    // 3. Bulk Operations with Re-matching Support
     const bulkOps = matches.map((match) => {
       const users = [userEmail, match.email].sort();
       return {
@@ -88,6 +90,7 @@ ${JSON.stringify(userList)}`;
             email: users[0],
             usermatch: users[1],
             eventId: null,
+            status: { $ne: 'matched' }, // Don't disturb already matched/friends
           },
           update: {
             $set: {
@@ -95,7 +98,11 @@ ${JSON.stringify(userList)}`;
               chance: match.chance,
               status: 'pending',
               initiatorEmail: userEmail,
+              lastMatchedAt: new Date(),
             },
+            $setOnInsert: {
+              university: emailDomain.includes('bu') ? 'Bangkok University' : 'Other',
+            }
           },
           upsert: true,
         },
@@ -106,12 +113,11 @@ ${JSON.stringify(userList)}`;
       await InfoMatch.bulkWrite(bulkOps);
     }
 
-    // 4. Notify clients via Socket.io
+    // 4. Notify via Socket.io
     const io = app.get('io');
     const userSockets = app.get('userSockets') || {};
 
-    if (io) {
-      // Collect logs and notify
+    if (io && bulkOps.length > 0) {
       for (const match of matches) {
         const recipientSocket = userSockets[match.email];
         if (recipientSocket) {
@@ -122,13 +128,10 @@ ${JSON.stringify(userList)}`;
           });
         }
       }
-
       io.emit('match_updated');
-      console.info(
-        `[AI Matching] Processed ${matches.length} matches for ${userEmail} using BulkWrite.`
-      );
+      console.info(`[AI Match] Successfully matched ${matches.length} users for ${userEmail}.`);
     }
   } catch (error) {
-    console.error('[AI Matching] Error:', error);
+    console.error('[AI Match Service Error]:', error);
   }
 };

@@ -235,45 +235,19 @@ io.on('connection', (socket) => {
     broadcastUserStatus();
   });
 });
-// 📌 API บันทึกหมวดหมู่เพลงที่ผู้ใช้เลือก
-import * as genreController from './src/controllers/genreController.js';
-app.post('/api/update-genres', limiter, genreController.updateGenres);
-
-// เก็บ socket instance ไว้ใช้ใน middleware
+// ✅ Global Routes Setup
 app.set('io', io);
 app.set('userSockets', userSockets);
 
-// ใช้งานเส้นทาง debug เพื่อตรวจสอบ API routes ทั้งหมด
-app.get('/api/debug/routes', (req, res) => {
-  const routes = [];
-  app._router.stack.forEach((middleware) => {
-    if (middleware.route) {
-      // Routes registered directly on the app
-      routes.push({
-        path: middleware.route.path,
-        methods: Object.keys(middleware.route.methods),
-      });
-    } else if (middleware.name === 'router') {
-      // Router middleware
-      middleware.handle.stack.forEach((handler) => {
-        if (handler.route) {
-          routes.push({
-            path: '/api' + handler.route.path,
-            methods: Object.keys(handler.route.methods),
-          });
-        }
-      });
-    }
-  });
-  res.json(routes);
-});
-// ใช้งาน routes ที่แยกไว้
-
-// Public / Semi-public Auth Routes (some bypass verification inside)
+// 1. Public Auth Routes (Login, Register, Verification)
 app.use('/api/auth', authRoutes);
 
-// Global Auth Middleware for remaining /api routes
+// 2. Global Auth Middleware for all other /api routes
 app.use('/api', authMiddleware);
+
+// 3. Protected API Routes
+import * as genreController from './src/controllers/genreController.js';
+app.post('/api/update-genres', limiter, genreController.updateGenres);
 
 app.use('/api', MakeRoutes(io));
 app.use('/api', userPhotoRoutes);
@@ -288,6 +262,23 @@ app.use('/api', infoRoutes);
 app.use('/api', likeRoutes);
 app.use('/api', roommatchRoutes(io));
 app.use('/api', friendApiRoutes);
+
+// Debug Route (Protected by authMiddleware now)
+app.get('/api/debug/routes', (req, res) => {
+  const routes = [];
+  app._router.stack.forEach((middleware) => {
+    if (middleware.route) {
+      routes.push({ path: middleware.route.path, methods: Object.keys(middleware.route.methods) });
+    } else if (middleware.name === 'router') {
+      middleware.handle.stack.forEach((handler) => {
+        if (handler.route) {
+          routes.push({ path: '/api' + handler.route.path, methods: Object.keys(handler.route.methods) });
+        }
+      });
+    }
+  });
+  res.json(routes);
+});
 
 // เริ่มต้นเซิร์ฟเวอร์
 server.listen(port, () => console.info(`🚀 Server is running on port ${port}`));

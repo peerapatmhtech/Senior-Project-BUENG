@@ -5,7 +5,8 @@ const app = express();
 
 // POST /like
 app.post('/like', async (req, res) => {
-  const { userEmail, eventId, eventTitle } = req.body;
+  const userEmail = req.user.email;
+  const { eventId, eventTitle } = req.body;
 
   try {
     const existing = await Like.findOne({ userEmail, eventId });
@@ -22,12 +23,9 @@ app.post('/like', async (req, res) => {
 // Route to get all likes by user
 // GET /likes/:userEmail
 app.get('/likes/:userEmail', requireOwner, async (req, res) => {
-  const { userEmail } = req.params;
+  const userEmail = req.user.email;
 
   try {
-    if (!userEmail) {
-      return res.status(400).json({ message: 'User email is required.' });
-    }
     const likes = await Like.find({ userEmail });
     res.json(likes);
   } catch (err) {
@@ -47,7 +45,8 @@ app.get('/likes', async (req, res) => {
 // Route to unlike an event
 // DELETE /unlike/:userEmail/:eventId
 app.delete('/like/:userEmail/:eventId', async (req, res) => {
-  const { userEmail, eventId } = req.params;
+  const userEmail = req.user.email;
+  const { eventId } = req.params;
   try {
     const result = await Like.deleteOne({ userEmail, eventId });
     if (result.deletedCount === 0) {
@@ -61,7 +60,7 @@ app.delete('/like/:userEmail/:eventId', async (req, res) => {
 // Route to delete all likes by user
 // DELETE /like/:userEmail
 app.delete('/like/:userEmail', async (req, res) => {
-  const { userEmail } = req.params;
+  const userEmail = req.user.email;
   try {
     const result = await Like.deleteMany({ userEmail });
     if (result.deletedCount === 0) {

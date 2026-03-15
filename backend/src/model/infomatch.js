@@ -18,10 +18,18 @@ const infoMatchSchema = new Schema(
       default: 'pending',
       index: true,
     },
-    // The user who initiated the like first
+    // The user who initiated the like or the AI matching
     initiatorEmail: {
       type: String,
       required: true,
+    },
+    university: {
+      type: String,
+      default: 'Bangkok University',
+    },
+    lastMatchedAt: {
+      type: Date,
+      default: Date.now,
     },
     // Tracks how many times this potential match has been skipped
     skipCount: {

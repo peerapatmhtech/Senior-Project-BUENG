@@ -2,30 +2,12 @@ import express from 'express';
 import { UserPhoto } from '../model/userPhoto.js';
 import { Gmail } from '../model/gmail.js';
 import multer from 'multer';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import admin from '../firebase/firebaseAdmin.js';
 
 const router = express.Router();
 
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    const uploadDir = path.resolve(__dirname, '..', '..', '..', 'uploads', 'user-photos');
-    // Create the directory if it doesn't exist
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-    cb(null, uploadDir);
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    const ext = path.extname(file.originalname);
-    cb(null, file.fieldname + '-' + uniqueSuffix + ext);
-  },
-});
+// Using memory storage as requested
+const storage = multer.memoryStorage();
 
 // File filter to only allow image files
 const fileFilter = (req, file, cb) => {
@@ -51,37 +33,73 @@ router.post('/upload-user-photo', upload.single('photo'), async (req, res) => {
       });
     }
 
-    const { email } = req.body;
-    if (!email) {
-      return res.status(400).json({
-        success: false,
-        message: 'ไม่พบอีเมลผู้ใช้',
-      });
+    const email = req.user.email;
+    const bucket = admin.storage().bucket(process.env.VITE_FIREBASE_STORAGE_BUCKET);
+
+    // 1. ค้นหาและลบรูปภาพเก่า (ถ้ามี) ตามที่ผู้ใช้แจ้ง
+    try {
+      const oldPhoto = await UserPhoto.findOne({ email });
+      if (oldPhoto && oldPhoto.storagePath) {
+        const oldFile = bucket.file(oldPhoto.storagePath);
+        await oldFile.delete().catch((err) => {
+          console.warn('⚠️ Warning: Could not delete old file from Firebase:', err.message);
+        });
+        // ลบ record เก่าทิ้งเพื่อให้เป็นแบบ 1 record ต่อ email ตามนัยสำคัญที่ผู้ใช้แจ้ง
+        await UserPhoto.deleteOne({ _id: oldPhoto._id });
+      }
+    } catch (findErr) {
+      console.warn('⚠️ Warning: Error during old photo cleanup:', findErr.message);
     }
 
-    // Create a URL for the uploaded file
-    const fileUrl = `/uploads/user-photos/${req.file.filename}`;
+    // 2. เตรียมข้อมูลไฟล์ใหม่
+    const filename = `${Date.now()}-${req.file.originalname}`;
+    const storagePath = `user-photos/${email}/${filename}`;
+    const blob = bucket.file(storagePath);
 
-    // Create a new user photo record
-    const newPhoto = new UserPhoto({
-      email,
-      url: fileUrl,
-      filename: req.file.filename,
-      title: req.body.title || `รูปภาพ ${Date.now()}`,
-    });
-
-    await newPhoto.save();
-
-    res.status(201).json({
-      success: true,
-      message: 'อัปโหลดรูปภาพสำเร็จ',
-      photo: {
-        id: newPhoto._id,
-        url: newPhoto.url,
-        title: newPhoto.title,
-        createdAt: newPhoto.createdAt,
+    // 3. เริ่มการอัปโหลดไปยัง Firebase Storage
+    const blobStream = blob.createWriteStream({
+      metadata: {
+        contentType: req.file.mimetype,
       },
+      resumable: false,
     });
+
+    blobStream.on('error', (err) => {
+      throw err;
+    });
+
+    blobStream.on('finish', async () => {
+      // ทำให้ไฟล์เป็น Public
+      await blob.makePublic();
+      
+      // ดึง Public URL
+      const publicUrl = `https://storage.googleapis.com/${bucket.name}/${storagePath}`;
+
+      // 4. บันทึกลง MongoDB
+      const newPhoto = new UserPhoto({
+        email,
+        url: publicUrl,
+        filename: filename,
+        storagePath: storagePath,
+        title: req.body.title || `รูปภาพ ${Date.now()}`,
+      });
+
+      await newPhoto.save();
+
+      res.status(201).json({
+        success: true,
+        message: 'อัปโหลดรูปภาพสำเร็จ',
+        photo: {
+          id: newPhoto._id,
+          url: newPhoto.url,
+          title: newPhoto.title,
+          createdAt: newPhoto.createdAt,
+        },
+      });
+    });
+
+    blobStream.end(req.file.buffer);
+
   } catch (error) {
     console.error('❌ Error uploading user photo:', error);
     res.status(500).json({
@@ -90,23 +108,21 @@ router.post('/upload-user-photo', upload.single('photo'), async (req, res) => {
     });
   }
 });
+
 router.get('/user-photos/:email', async (req, res) => {
   const { email } = req.params;
   try {
     if (!email) return res.status(400).json({ success: false, message: 'Email is required' });
 
-    // 1. ดึงรูปภาพและข้อมูล User (เพื่อเอาลำดับ) พร้อมกัน (Parallel Execution)
-    // ใช้ .lean() เพื่อลด overhead ของ Mongoose Document
     const [userPhotos, user] = await Promise.all([
       UserPhoto.find({ email }).lean(),
       Gmail.findOne({ email }).select('photosOrder').lean(),
     ]);
 
     if (!userPhotos || userPhotos.length === 0) {
-      return res.status(204).send(); // No Content — user has no photos yet
+      return res.status(204).send();
     }
 
-    // 2. เรียงลำดับรูปภาพตาม photosOrder
     if (user?.photosOrder?.length > 0) {
       const orderMap = new Map(user.photosOrder.map((id, index) => [id.toString(), index]));
       userPhotos.sort((a, b) => {
@@ -115,14 +131,12 @@ router.get('/user-photos/:email', async (req, res) => {
         const indexA = orderMap.has(idA) ? orderMap.get(idA) : Infinity;
         const indexB = orderMap.has(idB) ? orderMap.get(idB) : Infinity;
 
-        // ถ้าทั้งคู่ไม่อยู่ในรายการจัดลำดับ ให้เรียงตามเวลาล่าสุด (Newest first)
         if (indexA === Infinity && indexB === Infinity) {
           return new Date(b.createdAt) - new Date(a.createdAt);
         }
         return indexA - indexB;
       });
     } else {
-      // ถ้าไม่มีการจัดลำดับ ให้เรียงตามเวลาล่าสุด
       userPhotos.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     }
 
@@ -132,6 +146,7 @@ router.get('/user-photos/:email', async (req, res) => {
     res.status(500).json({ success: false, message: 'Server error' });
   }
 });
+
 router.get('/user-photo', async (req, res) => {
   try {
     const userPhoto = await UserPhoto.find().lean();
@@ -147,17 +162,27 @@ router.get('/user-photo', async (req, res) => {
 
 router.delete('/user-photo/:photoId', async (req, res) => {
   try {
-    const { email } = req.body;
+    const email = req.user.email;
     const { photoId } = req.params;
 
-    // ใช้ findOneAndDelete พร้อมเช็ค email เพื่อความปลอดภัย (Ownership check)
-    const deletedPhoto = await UserPhoto.findOneAndDelete({ _id: photoId, email });
-
-    if (!deletedPhoto) {
+    const photo = await UserPhoto.findOne({ _id: photoId, email });
+    if (!photo) {
       return res.status(404).json({ success: false, message: 'Photo not found or unauthorized' });
     }
 
-    // ลบ ID ออกจาก photosOrder ใน Gmail Model ด้วย (ถ้ามี)
+    // 1. ลบจาก Firebase Storage
+    if (photo.storagePath) {
+      const bucket = admin.storage().bucket(process.env.VITE_FIREBASE_STORAGE_BUCKET);
+      await bucket.file(photo.storagePath).delete().catch((err) => {
+        console.warn('⚠️ Warning: Could not delete file from Firebase during permanent deletion:', err.message);
+        // สานต่อการลบใน DB แม้ไฟล์ใน Storage จะหายไปแล้วหรือลบไม่ได้
+      });
+    }
+
+    // 2. ลบจาก MongoDB
+    await UserPhoto.deleteOne({ _id: photoId });
+
+    // 3. ลบ ID ออกจาก photosOrder
     await Gmail.updateOne({ email }, { $pull: { photosOrder: photoId } });
 
     res.json({ success: true, message: 'Photo deleted successfully' });
@@ -169,8 +194,8 @@ router.delete('/user-photo/:photoId', async (req, res) => {
 
 router.post('/user-photos/reorder', async (req, res) => {
   try {
-    const { email, photoIds } = req.body;
-    // ใช้ updateOne เพื่อประสิทธิภาพที่ดีกว่า findOne + save
+    const email = req.user.email;
+    const { photoIds } = req.body;
     const result = await Gmail.updateOne({ email }, { photosOrder: photoIds });
 
     if (result.matchedCount === 0) {

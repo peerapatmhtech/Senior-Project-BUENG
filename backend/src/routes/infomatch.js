@@ -30,7 +30,7 @@ app.get('/infomatch/all', async (req, res) => {
 // READ - ดึงข้อมูล InfoMatch ตาม Email
 app.get('/infomatch/:email', requireOwner, async (req, res) => {
   try {
-    const { email } = req.params;
+    const email = req.user.email;
 
     const infoMatch = await InfoMatch.find({
       status: 'pending',
@@ -61,7 +61,7 @@ app.get('/infomatch/:email', requireOwner, async (req, res) => {
 // READ - ดึงข้อมูล InfoMatch ตาม email และเพื่อน
 app.get('/infomatch/user/:email', requireOwner, async (req, res) => {
   try {
-    const { email } = req.params;
+    const email = req.user.email;
 
     // Import Friend model
     const { default: Friend } = await import('../model/Friend.js');
@@ -263,7 +263,7 @@ app.patch('/infomatch/:id/skip', async (req, res) => {
 // DELETE - ลบ InfoMatch ทั้งหมดของผู้ใช้
 app.delete('/user/:email', requireOwner, async (req, res) => {
   try {
-    const { email } = req.params;
+    const email = req.user.email;
 
     const result = await InfoMatch.deleteMany({ email });
 

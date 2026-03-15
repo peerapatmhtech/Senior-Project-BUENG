@@ -8,11 +8,8 @@ const app = express.Router();
 //////////ดึงห้องที่ผู้ใช้เชื่อมต่อ/////////////////
 app.get('/user-rooms/:email', requireOwner, async (req, res) => {
   try {
-    if (!req.params.email) {
-      return res.status(400).json({ error: 'Email is required.' });
-    }
-
-    const user = await Info.findOne({ email: req.params.email });
+    const email = req.user.email;
+    const user = await Info.findOne({ email });
     if (!user) return res.status(204).json({ error: 'User not found' });
 
     // ✅ แยกเฉพาะ roomId ออกมา
@@ -41,10 +38,8 @@ app.get('/infos', async (req, res) => {
 // Get user by email (query)
 app.get('/infos/:email', requireOwner, async (req, res) => {
   try {
-    if (!req.params.email) {
-      return res.status(400).json({ message: 'Missing email parameter' });
-    }
-    const user = await Info.findOne({ email: req.params.email });
+    const email = req.user.email;
+    const user = await Info.findOne({ email });
     if (!user) {
       return res.status(200).json({ message: 'User not found' });
     }
@@ -56,7 +51,8 @@ app.get('/infos/:email', requireOwner, async (req, res) => {
 });
 // POST /api/save-user-info
 app.post('/save-user-info', requireOwner, async (req, res) => {
-  const { email, userInfo } = req.body;
+  const email = req.user.email;
+  const { userInfo } = req.body;
   try {
     const updatedUser = await Info.findOneAndUpdate(
       { email },
@@ -77,10 +73,11 @@ app.post('/save-user-info', requireOwner, async (req, res) => {
 });
 // Change Nickname
 app.post('/save-user-name', requireOwner, async (req, res) => {
-  const { userEmail, nickName } = req.body;
+  const email = req.user.email;
+  const { nickName } = req.body;
   try {
     const infoUpdate = await Info.findOneAndUpdate(
-      { email: userEmail },
+      { email },
       {
         $set: {
           nickname: nickName,
@@ -91,7 +88,7 @@ app.post('/save-user-name', requireOwner, async (req, res) => {
     );
     
     // Update displayName in Gmail collection as well to ensure consistency across the app
-    await Gmail.findOneAndUpdate({ email: userEmail }, { displayName: nickName });
+    await Gmail.findOneAndUpdate({ email: email }, { displayName: nickName });
 
     if (!infoUpdate) {
       return res.status(404).json({ message: 'ไม่พบผู้ใช้นี้ในทั้งสอง collection' });

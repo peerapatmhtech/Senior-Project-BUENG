@@ -20,7 +20,6 @@ const roomSchema = new mongoose.Schema({
   },
   tags: [String],
   createdBy: String, // ชื่อหรืออีเมลของผู้สร้าง
-  createdAt: { type: Date, default: Date.now },
-});
+}, { timestamps: true });
 
 export const Room = mongoose.model('Room', roomSchema);
