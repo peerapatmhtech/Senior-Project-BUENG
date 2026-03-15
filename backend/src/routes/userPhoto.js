@@ -36,21 +36,6 @@ router.post('/upload-user-photo', upload.single('photo'), async (req, res) => {
     const email = req.user.email;
     const bucket = admin.storage().bucket(process.env.VITE_FIREBASE_STORAGE_BUCKET);
 
-    // 1. ค้นหาและลบรูปภาพเก่า (ถ้ามี) ตามที่ผู้ใช้แจ้ง
-    try {
-      const oldPhoto = await UserPhoto.findOne({ email });
-      if (oldPhoto && oldPhoto.storagePath) {
-        const oldFile = bucket.file(oldPhoto.storagePath);
-        await oldFile.delete().catch((err) => {
-          console.warn('⚠️ Warning: Could not delete old file from Firebase:', err.message);
-        });
-        // ลบ record เก่าทิ้งเพื่อให้เป็นแบบ 1 record ต่อ email ตามนัยสำคัญที่ผู้ใช้แจ้ง
-        await UserPhoto.deleteOne({ _id: oldPhoto._id });
-      }
-    } catch (findErr) {
-      console.warn('⚠️ Warning: Error during old photo cleanup:', findErr.message);
-    }
-
     // 2. เตรียมข้อมูลไฟล์ใหม่
     const filename = `${Date.now()}-${req.file.originalname}`;
     const storagePath = `user-photos/${email}/${filename}`;
@@ -71,7 +56,7 @@ router.post('/upload-user-photo', upload.single('photo'), async (req, res) => {
     blobStream.on('finish', async () => {
       // ทำให้ไฟล์เป็น Public
       await blob.makePublic();
-      
+
       // ดึง Public URL
       const publicUrl = `https://storage.googleapis.com/${bucket.name}/${storagePath}`;
 
@@ -99,7 +84,6 @@ router.post('/upload-user-photo', upload.single('photo'), async (req, res) => {
     });
 
     blobStream.end(req.file.buffer);
-
   } catch (error) {
     console.error('❌ Error uploading user photo:', error);
     res.status(500).json({
@@ -173,10 +157,16 @@ router.delete('/user-photo/:photoId', async (req, res) => {
     // 1. ลบจาก Firebase Storage
     if (photo.storagePath) {
       const bucket = admin.storage().bucket(process.env.VITE_FIREBASE_STORAGE_BUCKET);
-      await bucket.file(photo.storagePath).delete().catch((err) => {
-        console.warn('⚠️ Warning: Could not delete file from Firebase during permanent deletion:', err.message);
-        // สานต่อการลบใน DB แม้ไฟล์ใน Storage จะหายไปแล้วหรือลบไม่ได้
-      });
+      await bucket
+        .file(photo.storagePath)
+        .delete()
+        .catch((err) => {
+          console.warn(
+            '⚠️ Warning: Could not delete file from Firebase during permanent deletion:',
+            err.message
+          );
+          // สานต่อการลบใน DB แม้ไฟล์ใน Storage จะหายไปแล้วหรือลบไม่ได้
+        });
     }
 
     // 2. ลบจาก MongoDB
