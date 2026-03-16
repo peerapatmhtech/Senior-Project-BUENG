@@ -7,11 +7,9 @@ const SERPAPI_URL = 'https://serpapi.com/search.json';
 const API_KEY = process.env.SERPAPI_API_KEY;
 
 /**
- * Search for events using SerpApi (Google Events engine)
- * @param {string} query - The search query (e.g., "Events in Bangkok")
- * @returns {Promise<Array>} - Array of event results
+ * Common internal function to fetch data from SerpApi
  */
-export const searchEvents = async (query) => {
+const fetchSerpData = async (query) => {
   if (!API_KEY) {
     throw new Error('SERPAPI_API_KEY_MISSING');
   }
@@ -22,14 +20,34 @@ export const searchEvents = async (query) => {
         engine: 'google_events',
         q: query,
         google_domain: 'google.co.th',
+        hl: 'th',
+        htichips: 'date:week',
         api_key: API_KEY,
       },
     });
-
-    // SerpApi returns results in events_results array
-    return response.data.events_results || [];
+    return response.data;
   } catch (error) {
     console.error('SerpApi request failed:', error.message);
     throw new Error('SERPAPI_REQUEST_FAILED');
   }
+};
+
+/**
+ * Search for events using SerpApi (Google Events engine) - Returns array of events
+ * @param {string} query - The search query (e.g., "Events in Bangkok")
+ * @returns {Promise<Array>} - Array of event results
+ */
+export const searchEvents = async (query) => {
+  const data = await fetchSerpData(query);
+  // SerpApi returns results in events_results array
+  return data.events_results || [];
+};
+
+/**
+ * Search for events using SerpApi - Returns full response data
+ * @param {string} query - The search query
+ * @returns {Promise<Object>} - Full response object from SerpApi
+ */
+export const searchEventsFull = (query) => {
+  return fetchSerpData(query);
 };

@@ -5,7 +5,13 @@ import { Gmail } from '../model/gmail.js';
 import { saveEventsFromSource } from './eventService.js';
 import * as serpApiService from './serpApiService.js';
 
-export const updateGenresAndFindEvents = async ({ email, genres, subGenres, updatedAt }) => {
+export const updateGenresAndFindEvents = async ({
+  email,
+  genres,
+  subGenres,
+  updatedAt,
+  searchContext,
+}) => {
   // 1. Validation
   const emailValid = await Gmail.findOne({ email });
   if (!emailValid) {
@@ -116,8 +122,13 @@ export const updateGenresAndFindEvents = async ({ email, genres, subGenres, upda
         const subGenreStr = String(item).trim();
         if (!subGenreStr) continue;
 
-        // Construct a descriptive search query
-        const searchQuery = `Events for ${subGenreStr} in Thailand`;
+        // Construct a descriptive search query with location/date context if available
+        let searchQuery = `Events for ${subGenreStr}`;
+        if (searchContext) {
+          searchQuery += ` ${searchContext}`;
+        } else {
+          searchQuery += ' in Thailand';
+        }
 
         serpSearchPromises.push(
           (async () => {

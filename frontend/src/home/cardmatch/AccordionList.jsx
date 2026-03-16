@@ -1,7 +1,7 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import './AccordionList.css';
-import { FaChevronDown, FaPlus, FaTimes } from 'react-icons/fa';
+import { FaPlus, FaTimes, FaCalendarAlt, FaMapMarkerAlt } from 'react-icons/fa';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import api from '../../server/api';
@@ -14,63 +14,52 @@ const fetchInitialFilters = async (email) => {
     const res = await api.get(`/api/filters/${encodeURIComponent(email)}`);
     return res.data;
   } catch (err) {
-    // It's okay if it fails, means no filters saved yet.
-    return null; // Return null to indicate no data
+    return null;
   }
 };
 
-const GenreItem = ({ genre, itemIdx, genreIdx, selectedLabels, onTabSelect, onToggle, isOpen }) => (
+const GenreItem = ({ genre, itemIdx, genreIdx, selectedLabels, onTabSelect }) => (
   <div className="accordion-genre-section">
-    <button
-      className={`accordion-genre-header ${isOpen ? 'open' : ''}`}
-      onClick={onToggle}
-      aria-expanded={isOpen}
-    >
-      <span className="accordion-genre-title">{genre.title}</span>
-      <FaChevronDown className="arrow" />
-    </button>
-    <div className={`accordion-tabs-wrapper ${isOpen ? 'open' : ''}`}>
-      <div className="accordion-tabs">
-        {(genre.tabs || []).map((tab) => {
-          const label = typeof tab === 'string' ? tab : tab.label;
-          const icon = typeof tab === 'string' ? null : tab.icon;
-          const isSelected = selectedLabels.some(
-            (sel) => sel.key === `${itemIdx}-${genreIdx}` && sel.label === label
-          );
-          return (
-            <button
-              key={label}
-              className={`accordion-tab ${isSelected ? 'selected' : ''}`}
-              onClick={() => onTabSelect(itemIdx, genreIdx, label)}
-              type="button"
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                {icon && <span className="tab-icon">{icon}</span>}
-                {isSelected && <FaPlus style={{ fontSize: '10px' }} />}
-                <span>{label}</span>
-              </div>
-            </button>
-          );
-        })}
-      </div>
+    <span className="accordion-genre-title">{genre.title}</span>
+    <div className="accordion-tabs">
+      {(genre.tabs || []).map((tab) => {
+        const label = typeof tab === 'string' ? tab : tab.label;
+        const icon = typeof tab === 'string' ? null : tab.icon;
+        const isSelected = selectedLabels.some(
+          (sel) => sel.key === `${itemIdx}-${genreIdx}` && sel.label === label
+        );
+        return (
+          <button
+            key={label}
+            className={`accordion-tab ${isSelected ? 'selected' : ''}`}
+            onClick={() => onTabSelect(itemIdx, genreIdx, label)}
+            type="button"
+          >
+            {icon && <span className="tab-icon">{icon}</span>}
+            {isSelected && <FaPlus style={{ fontSize: '10px', marginRight: '4px' }} />}
+            <span>{label}</span>
+          </button>
+        );
+      })}
     </div>
   </div>
 );
 
 const AccordionList = ({ items, setWaiting }) => {
-  const [isAccordionOpen, setIsAccordionOpen] = useState(false);
-  const [openGenres, setOpenGenres] = useState([]);
   const [selectedLabels, setSelectedLabels] = useState([]);
+  const [dateFilter, setDateFilter] = useState('');
+  const [locationFilter, setLocationFilter] = useState('');
+
   const containerRef = useRef(null);
   const queryClient = useQueryClient();
   const email = localStorage.getItem('userEmail');
 
-  // 1. Fetch initial filters with useQuery
+  // 1. Fetch initial filters
   const { isLoading: isLoadingFilters } = useQuery({
     queryKey: ['filters', email],
     queryFn: () => fetchInitialFilters(email),
     enabled: !!email,
-    staleTime: 1000 * 60 * 5, // 5 minutes, as filters/interests don't change often
+    staleTime: 1000 * 60 * 5,
     onSuccess: (data) => {
       if (data && data.subGenres) {
         const newSelectedLabels = [];
@@ -95,15 +84,8 @@ const AccordionList = ({ items, setWaiting }) => {
     mutationFn: (variables) => api.post(`/api/update-genres`, variables),
     onSuccess: (res) => {
       const finalEvents = res.data;
-      toast.success('บันทึกความสนใจของคุณแล้ว');
-
-      // Update cache directly with the newly found events
       queryClient.setQueryData(['events', email], finalEvents);
-
-      // Invalidate to be sure, but UI will update immediately because of setQueryData
       queryClient.invalidateQueries({ queryKey: ['events', email] });
-
-      // Reset waiting state immediately
       setWaiting(false);
     },
     onError: (error) => {
@@ -117,7 +99,7 @@ const AccordionList = ({ items, setWaiting }) => {
     },
   });
 
-  // 3. Mutation for clearing genres
+  // 3. Clear genres
   const clearMutation = useMutation({
     mutationFn: async () => {
       await api.post(`/api/update-genres`, {
@@ -131,18 +113,51 @@ const AccordionList = ({ items, setWaiting }) => {
     onSuccess: () => {
       toast.info('ล้างข้อมูลความสนใจทั้งหมดแล้ว');
       setSelectedLabels([]);
-      // Also refetch events after clearing
+      setDateFilter('');
+      setLocationFilter('');
       queryClient.invalidateQueries({ queryKey: ['events', email] });
       queryClient.invalidateQueries({ queryKey: ['filters', email] });
     },
     onError: () => toast.error('ล้างข้อมูลล้มเหลว'),
   });
 
-  const handleToggleAccordion = () => setIsAccordionOpen((prev) => !prev);
-  const handleToggleGenre = (genreKey) =>
-    setOpenGenres((prev) =>
-      prev.includes(genreKey) ? prev.filter((k) => k !== genreKey) : [...prev, genreKey]
-    );
+  const handleSave = useCallback(() => {
+    if (!email || selectedLabels.length === 0) return;
+
+    const subGenresObj = {};
+    selectedLabels.forEach((sel) => {
+      const [itemIdx, genreIdx] = sel.key.split('-').map(Number);
+      const item = items[itemIdx];
+      if (item && item.genres && item.genres[genreIdx]) {
+        const genreTitle = item.genres[genreIdx].title;
+        if (!subGenresObj[genreTitle]) subGenresObj[genreTitle] = [];
+        if (!subGenresObj[genreTitle].includes(sel.label)) subGenresObj[genreTitle].push(sel.label);
+      }
+    });
+
+    // Add date and location to search query context if backend supports it
+    // For now, we follow existing pattern but add these to the query
+    const searchQueryEnhancement = `${dateFilter} ${locationFilter}`.trim();
+
+    setWaiting(true);
+    saveMutation.mutate({
+      email,
+      genres: Object.keys(subGenresObj),
+      subGenres: subGenresObj,
+      searchContext: searchQueryEnhancement, // Future proofing
+      updatedAt: new Date().toISOString(),
+    });
+  }, [email, selectedLabels, dateFilter, locationFilter, items, saveMutation, setWaiting]);
+
+  // "Select and See" - Trigger search on selection change
+  useEffect(() => {
+    if (selectedLabels.length > 0) {
+      const timer = setTimeout(() => {
+        handleSave();
+      }, 500); // Small delay to debounce rapid clicks
+      return () => clearTimeout(timer);
+    }
+  }, [selectedLabels, dateFilter, locationFilter, handleSave]); // re-run handleSave if any filter changes
 
   const handleTabSelect = (itemIdx, genreIdx, label) => {
     const key = `${itemIdx}-${genreIdx}`;
@@ -160,140 +175,87 @@ const AccordionList = ({ items, setWaiting }) => {
   const handleRemoveLabel = (key, label) =>
     setSelectedLabels((prev) => prev.filter((sel) => !(sel.key === key && sel.label === label)));
 
-  const handleSave = () => {
-    if (!email) return toast.error('ไม่พบอีเมลผู้ใช้ กรุณาเข้าสู่ระบบใหม่');
-    if (selectedLabels.length === 0) return toast.warn('กรุณาเลือกความสนใจอย่างน้อย 1 อย่าง');
-
-    const subGenresObj = {};
-    selectedLabels.forEach((sel) => {
-      const [itemIdx, genreIdx] = sel.key.split('-').map(Number);
-      const item = items[itemIdx];
-      if (item && item.genres && item.genres[genreIdx]) {
-        const genreTitle = item.genres[genreIdx].title;
-        if (!subGenresObj[genreTitle]) subGenresObj[genreTitle] = [];
-        if (!subGenresObj[genreTitle].includes(sel.label)) subGenresObj[genreTitle].push(sel.label);
-      }
-    });
-
-    setWaiting(true);
-    saveMutation.mutate({
-      email,
-      genres: Object.keys(subGenresObj),
-      subGenres: subGenresObj,
-      updatedAt: new Date().toISOString(),
-    });
-  };
-
   const handleClear = () => clearMutation.mutate();
 
-  useEffect(() => {
-    function handleClickOutside(event) {
-      if (containerRef.current && !containerRef.current.contains(event.target)) {
-        setIsAccordionOpen(false);
-      }
-    }
-    if (isAccordionOpen) document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isAccordionOpen]);
-
   const isLoading = saveMutation.isPending || clearMutation.isPending || isLoadingFilters;
-  const isSelectionEmpty = selectedLabels.length === 0;
 
   return (
     <div className="accordion-list" ref={containerRef}>
       <ToastContainer position="bottom-right" autoClose={3000} hideProgressBar={false} />
-      {isLoading && (
-        <div className="accordion-loading-overlay">
-          <div className="accordion-spinner">
-            <div className="spinner-dot"></div>
-            <div className="spinner-dot"></div>
-            <div className="spinner-dot"></div>
-            <div className="spinner-dot"></div>
-          </div>
-          <div className="accordion-loading-text">กำลังบันทึก...</div>
+
+      <div className="search-filters-top">
+        <div className="filter-input-group">
+          <label>
+            <FaCalendarAlt /> เมื่อไหร่?
+          </label>
+          <input
+            type="text"
+            className="filter-input"
+            placeholder="เช่น สุดสัปดาห์นี้, พรุ่งนี้"
+            value={dateFilter}
+            onChange={(e) => setDateFilter(e.target.value)}
+          />
         </div>
-      )}
-
-      <div className="accordion-item">
-        <button
-          className={`accordion-header ${isAccordionOpen ? 'open' : ''}`}
-          onClick={handleToggleAccordion}
-          aria-expanded={isAccordionOpen}
-          style={isSelectionEmpty ? { border: '1px solid #ff4d4f' } : {}}
-        >
-          <div className="accordion-header-content">
-            <span className="accordion-title">
-              เลือกความสนใจของคุณ{' '}
-              {isSelectionEmpty && (
-                <span style={{ color: '#ff4d4f', fontSize: '0.8rem' }}>(กรุณาเลือก)</span>
-              )}
-            </span>
-            <span className="accordion-selection-count">
-              {selectedLabels.length}/{MAX_SELECTIONS} รายการที่เลือก
-            </span>
-          </div>
-          <FaChevronDown className="arrow" />
-        </button>
-
-        <div className={`accordion-content ${isAccordionOpen ? 'open' : ''}`}>
-          {selectedLabels.length > 0 && (
-            <div className="accordion-selected-chips-container">
-              {selectedLabels.map((sel) => (
-                <span className="accordion-filter-chip" key={sel.key + sel.label}>
-                  {sel.label}
-                  <span
-                    className="accordion-filter-remove"
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => handleRemoveLabel(sel.key, sel.label)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        handleRemoveLabel(sel.key, sel.label);
-                      }
-                    }}
-                    aria-label={`ลบ ${sel.label}`}
-                  >
-                    <FaTimes />
-                  </span>
-                </span>
-              ))}
-            </div>
-          )}
-
-          {items.map((item, itemIdx) => (
-            <div key={itemIdx}>
-              {item.genres &&
-                item.genres.map((genre, genreIdx) => {
-                  const genreKey = `${itemIdx}-${genreIdx}`;
-                  return (
-                    <GenreItem
-                      key={genreKey}
-                      genre={genre}
-                      itemIdx={itemIdx}
-                      genreIdx={genreIdx}
-                      selectedLabels={selectedLabels}
-                      onTabSelect={handleTabSelect}
-                      onToggle={() => handleToggleGenre(genreKey)}
-                      isOpen={openGenres.includes(genreKey)}
-                    />
-                  );
-                })}
-            </div>
-          ))}
+        <div className="filter-input-group">
+          <label>
+            <FaMapMarkerAlt /> ที่ไหน?
+          </label>
+          <input
+            type="text"
+            className="filter-input"
+            placeholder="เช่น สยาม, เซ็นทรัลเวิลด์"
+            value={locationFilter}
+            onChange={(e) => setLocationFilter(e.target.value)}
+          />
         </div>
       </div>
 
-      <div className="submit-genres">
-        <button
-          className="clear-genres-button"
-          onClick={handleClear}
-          // disabled={isLoading || isSelectionEmpty}
-        >
-          ล้างทั้งหมด
-        </button>
-        <button className="submit-genres-button" onClick={handleSave} disabled={isLoading}>
-          {isLoading ? 'กำลังบันทึก...' : 'ค้นหากิจกรรม'}
-        </button>
+      <div className="accordion-content">
+        <span className="accordion-title" style={{ marginBottom: '1.5rem', display: 'block' }}>
+          เลือกสิ่งที่คุณสนใจ (สูงสุด {MAX_SELECTIONS})
+        </span>
+
+        {selectedLabels.length > 0 && (
+          <div className="accordion-selected-chips-container">
+            {selectedLabels.map((sel) => (
+              <span className="accordion-filter-chip" key={sel.key + sel.label}>
+                {sel.label}
+                <span
+                  className="accordion-filter-remove"
+                  onClick={() => handleRemoveLabel(sel.key, sel.label)}
+                  aria-label={`ลบ ${sel.label}`}
+                >
+                  <FaTimes />
+                </span>
+              </span>
+            ))}
+          </div>
+        )}
+
+        {items.map((item, itemIdx) => (
+          <div key={itemIdx}>
+            {item.genres &&
+              item.genres.map((genre, genreIdx) => (
+                <GenreItem
+                  key={`${itemIdx}-${genreIdx}`}
+                  genre={genre}
+                  itemIdx={itemIdx}
+                  genreIdx={genreIdx}
+                  selectedLabels={selectedLabels}
+                  onTabSelect={handleTabSelect}
+                />
+              ))}
+          </div>
+        ))}
+
+        <div className="submit-genres">
+          <button className="clear-genres-button" onClick={handleClear} disabled={isLoading}>
+            ล้างทั้งหมด
+          </button>
+          <button className="submit-genres-button" onClick={handleSave} disabled={isLoading}>
+            {isLoading ? 'กำลังค้นหา...' : 'ค้นหากิจกรรม'}
+          </button>
+        </div>
       </div>
     </div>
   );

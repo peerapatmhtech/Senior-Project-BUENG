@@ -1,5 +1,5 @@
 import express from 'express';
-import axios from 'axios';
+import * as serpApiService from '../services/serpApiService.js';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -62,20 +62,8 @@ export default function (io) {
     }
 
     try {
-      const apiKey = process.env.SERPAPI_API_KEY;
-      if (!apiKey) {
-        return res.status(500).json({ message: 'SerpApi API key is not configured.' });
-      }
-
-      const response = await axios.get('https://serpapi.com/search.json', {
-        params: {
-          engine: 'google_events',
-          q,
-          api_key: apiKey,
-        },
-      });
-
-      res.json(response.data);
+      const data = await serpApiService.searchEventsFull(q);
+      res.json(data);
     } catch (error) {
       console.error('Error searching events via SerpApi:', error);
       res.status(500).json({ message: 'Error searching events', error: error.message });

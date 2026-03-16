@@ -210,6 +210,26 @@ const EventListContent = ({
   </div>
 );
 
+const SkeletonCard = () => (
+  <div className="event-card">
+    <div className="skeleton skeleton-image" />
+    <div className="skeleton skeleton-title" />
+    <div className="event-info">
+      <div className="skeleton skeleton-text" />
+      <div className="skeleton skeleton-text short" />
+    </div>
+    <div className="event-description">
+      <div className="skeleton skeleton-text" />
+      <div className="skeleton skeleton-text" />
+      <div className="skeleton skeleton-text" />
+    </div>
+    <div className="bottom-event">
+      <div className="skeleton skeleton-button" />
+      <div className="skeleton skeleton-button" />
+    </div>
+  </div>
+);
+
 const EventList = ({ waiting }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const email = localStorage.getItem('userEmail');
@@ -374,7 +394,17 @@ const EventList = ({ waiting }) => {
     }
   };
 
-  if (waiting || isLoadingEvents) return <span className="loader"></span>;
+  if (waiting || isLoadingEvents) {
+    return (
+      <div className={`event-container ${isDarkMode ? 'dark-mode' : ''}`}>
+        <div className="event-list">
+          {[...Array(6)].map((_, i) => (
+            <SkeletonCard key={i} />
+          ))}
+        </div>
+      </div>
+    );
+  }
   if (isErrorEvents) return <p className="loading-text">เกิดข้อผิดพลาดในการโหลดข้อมูล</p>;
 
   return (
