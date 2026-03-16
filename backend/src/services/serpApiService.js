@@ -9,7 +9,7 @@ const API_KEY = process.env.SERPAPI_API_KEY;
 /**
  * Common internal function to fetch data from SerpApi
  */
-const fetchSerpData = async (query) => {
+const fetchSerpData = async (query, dateFilter = null) => {
   if (!API_KEY) {
     throw new Error('SERPAPI_API_KEY_MISSING');
   }
@@ -21,7 +21,7 @@ const fetchSerpData = async (query) => {
         q: query,
         google_domain: 'google.co.th',
         hl: 'th',
-        htichips: 'date:week',
+        htichips: dateFilter ? `date:${dateFilter}` : 'date:week',
         api_key: API_KEY,
       },
     });
@@ -35,10 +35,11 @@ const fetchSerpData = async (query) => {
 /**
  * Search for events using SerpApi (Google Events engine) - Returns array of events
  * @param {string} query - The search query (e.g., "Events in Bangkok")
+ * @param {string} [dateFilter] - Optional date filter (today, tomorrow, week, month)
  * @returns {Promise<Array>} - Array of event results
  */
-export const searchEvents = async (query) => {
-  const data = await fetchSerpData(query);
+export const searchEvents = async (query, dateFilter) => {
+  const data = await fetchSerpData(query, dateFilter);
   // SerpApi returns results in events_results array
   return data.events_results || [];
 };

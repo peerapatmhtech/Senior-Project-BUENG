@@ -2,7 +2,7 @@ import * as genreService from '../services/genreService.js';
 
 export const updateGenres = async (req, res) => {
   const email = req.user.email;
-  const { genres, subGenres, updatedAt, searchContext } = req.body;
+  const { genres, subGenres, updatedAt, location, date } = req.body;
 
   if (!email || !genres || !subGenres) {
     return res.status(400).json({ message: 'Missing genres or subGenres' });
@@ -14,7 +14,8 @@ export const updateGenres = async (req, res) => {
       genres,
       subGenres,
       updatedAt,
-      searchContext,
+      location,
+      date,
     });
 
     return res.json(finalEvents);

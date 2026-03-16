@@ -102,7 +102,7 @@ ${JSON.stringify(userList)}`;
             },
             $setOnInsert: {
               university: emailDomain.includes('bu') ? 'Bangkok University' : 'Other',
-            }
+            },
           },
           upsert: true,
         },
@@ -124,7 +124,7 @@ ${JSON.stringify(userList)}`;
           io.to(recipientSocket).emit('notify-match', {
             type: 'profile',
             from: userEmail,
-            reason: match.reason
+            reason: match.reason,
           });
         }
       }

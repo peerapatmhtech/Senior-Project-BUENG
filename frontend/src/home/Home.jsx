@@ -40,6 +40,52 @@ import {
   Accessibility,
 } from 'lucide-react';
 
+const CATEGORIES = [
+  {
+    title: 'เลือกความสนใจของคุณ',
+    genres: [
+      {
+        title: 'All Categories',
+        tabs: [
+          { label: 'Apparel', icon: <Shirt size={18} /> },
+          { label: 'Accessories', icon: <Diamond size={18} /> },
+          { label: 'Art', icon: <Palette size={18} /> },
+          { label: 'Badminton', icon: <Trophy size={18} /> },
+          { label: 'Beauty', icon: <Sparkles size={18} /> },
+          { label: 'Books', icon: <Book size={18} /> },
+          { label: 'Cafe', icon: <Coffee size={18} /> },
+          { label: 'Cake', icon: <Cake size={18} /> },
+          { label: 'Coffee', icon: <Coffee size={18} /> },
+          { label: 'Cooking', icon: <Utensils size={18} /> },
+          { label: 'Computers', icon: <Monitor size={18} /> },
+          { label: 'Drum', icon: <Drum size={18} /> },
+          { label: 'Dinner', icon: <GlassWater size={18} /> },
+          { label: 'Electronic', icon: <Zap size={18} /> },
+          { label: 'Family', icon: <Users size={18} /> },
+          { label: 'Football', icon: <Trophy size={18} /> },
+          { label: 'Game', icon: <Gamepad2 size={18} /> },
+          { label: 'Growth', icon: <Sprout size={18} /> },
+          { label: 'Guitar', icon: <Music size={18} /> },
+          { label: 'Gym', icon: <Dumbbell size={18} /> },
+          { label: 'Hangout', icon: <Wine size={18} /> },
+          { label: 'Junk Food', icon: <Pizza size={18} /> },
+          { label: 'Market', icon: <Store size={18} /> },
+          { label: 'Music', icon: <Music size={18} /> },
+          { label: 'Programming', icon: <CodeXml size={18} /> },
+          { label: 'Photo', icon: <Camera size={18} /> },
+          { label: 'Shopping', icon: <ShoppingCart size={18} /> },
+          { label: 'Swimming', icon: <Waves size={18} /> },
+          { label: 'Travel', icon: <Plane size={18} /> },
+          { label: 'Technology', icon: <Cpu size={18} /> },
+          { label: 'Volunteer', icon: <HeartHandshake size={18} /> },
+          { label: 'Workshop', icon: <Wrench size={18} /> },
+          { label: 'Yoga', icon: <Accessibility size={18} /> },
+        ],
+      },
+    ],
+  },
+];
+
 const Newcommu = () => {
   const { isDarkMode } = useTheme();
   const [selectedRooms, setSelectedRooms] = useState([]);
@@ -120,54 +166,7 @@ const Newcommu = () => {
         <div className="event-list-co">
           <div className="bg-event-con">
             <div className="show-commu">
-              <AccordionList
-                items={[
-                  {
-                    title: 'เลือกความสนใจของคุณ',
-                    genres: [
-                      {
-                        title: 'All Categories',
-                        tabs: [
-                          { label: 'Apparel', icon: <Shirt size={18} /> },
-                          { label: 'Accessories', icon: <Diamond size={18} /> },
-                          { label: 'Art', icon: <Palette size={18} /> },
-                          { label: 'Badminton', icon: <Trophy size={18} /> },
-                          { label: 'Beauty', icon: <Sparkles size={18} /> },
-                          { label: 'Books', icon: <Book size={18} /> },
-                          { label: 'Cafe', icon: <Coffee size={18} /> },
-                          { label: 'Cake', icon: <Cake size={18} /> },
-                          { label: 'Coffee', icon: <Coffee size={18} /> },
-                          { label: 'Cooking', icon: <Utensils size={18} /> },
-                          { label: 'Computers', icon: <Monitor size={18} /> },
-                          { label: 'Drum', icon: <Drum size={18} /> },
-                          { label: 'Dinner', icon: <GlassWater size={18} /> },
-                          { label: 'Electronic', icon: <Zap size={18} /> },
-                          { label: 'Family', icon: <Users size={18} /> },
-                          { label: 'Football', icon: <Trophy size={18} /> },
-                          { label: 'Game', icon: <Gamepad2 size={18} /> },
-                          { label: 'Growth', icon: <Sprout size={18} /> },
-                          { label: 'Guitar', icon: <Music size={18} /> },
-                          { label: 'Gym', icon: <Dumbbell size={18} /> },
-                          { label: 'Hangout', icon: <Wine size={18} /> },
-                          { label: 'Junk Food', icon: <Pizza size={18} /> },
-                          { label: 'Market', icon: <Store size={18} /> },
-                          { label: 'Music', icon: <Music size={18} /> },
-                          { label: 'Programming', icon: <CodeXml size={18} /> },
-                          { label: 'Photo', icon: <Camera size={18} /> },
-                          { label: 'Shopping', icon: <ShoppingCart size={18} /> },
-                          { label: 'Swimming', icon: <Waves size={18} /> },
-                          { label: 'Travel', icon: <Plane size={18} /> },
-                          { label: 'Technology', icon: <Cpu size={18} /> },
-                          { label: 'Volunteer', icon: <HeartHandshake size={18} /> },
-                          { label: 'Workshop', icon: <Wrench size={18} /> },
-                          { label: 'Yoga', icon: <Accessibility size={18} /> },
-                        ],
-                      },
-                    ],
-                  },
-                ]}
-                setWaiting={setWaiting}
-              />
+              <AccordionList items={CATEGORIES} setWaiting={setWaiting} />
 
               <EventList waiting={waiting} />
             </div>

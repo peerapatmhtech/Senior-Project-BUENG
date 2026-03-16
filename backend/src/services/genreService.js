@@ -10,7 +10,8 @@ export const updateGenresAndFindEvents = async ({
   genres,
   subGenres,
   updatedAt,
-  searchContext,
+  location,
+  date,
 }) => {
   // 1. Validation
   const emailValid = await Gmail.findOne({ email });
@@ -19,11 +20,13 @@ export const updateGenresAndFindEvents = async ({
   }
 
   // 2. Update Preferences
-  const user = await Filter.findOneAndUpdate(
+  await Filter.findOneAndUpdate(
     { email },
     { genres, subGenres: subGenres || {} },
     { new: true, upsert: true }
   );
+
+  const user = await Filter.findOne({ email });
 
   // 3. Exclude Matched Events
   const matchedInfos = await InfoMatch.find({
@@ -44,6 +47,27 @@ export const updateGenresAndFindEvents = async ({
   const allFoundEvents = [];
   const missingSubGenres = {};
 
+  // Helper to map semantic dates to regex-friendly natural language patterns
+  const getDateKeywords = (dateVal) => {
+    const now = new Date();
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const tomorrow = new Date(now);
+    tomorrow.setDate(now.getDate() + 1);
+
+    switch (dateVal) {
+      case 'today':
+        return [new RegExp(`${months[now.getMonth()]} ${now.getDate()}`, 'i'), /today/i];
+      case 'tomorrow':
+        return [new RegExp(`${months[tomorrow.getMonth()]} ${tomorrow.getDate()}`, 'i'), /tomorrow/i];
+      case 'week':
+        return [/this week/i, /week/i];
+      case 'month':
+        return [new RegExp(months[now.getMonth()], 'i'), /this month/i];
+      default:
+        return [];
+    }
+  };
+
   // 5. Parallel Search in Database
   const searchPromises = subgenresEntries.map(async ([category, subgenreList]) => {
     const trimmedCategory = category.trim();
@@ -53,6 +77,40 @@ export const updateGenresAndFindEvents = async ({
       email: { $ne: user.email },
       _id: { $nin: matchedEventIds },
     };
+
+    const filterAnd = [];
+
+    // Filter by location if provided
+    if (location) {
+      const locationRegex = new RegExp(location.trim(), 'i');
+      filterAnd.push({
+        $or: [
+          { title: locationRegex },
+          { address: locationRegex },
+          { venue: locationRegex },
+          { description: locationRegex },
+        ]
+      });
+    }
+
+    // Filter by date if provided
+    if (date) {
+      const dateContext = getDateKeywords(date);
+      if (dateContext.length > 0) {
+        filterAnd.push({
+          $or: [
+            { 'date.when': { $in: dateContext } },
+            { 'date.start_display': { $in: dateContext } },
+            { title: { $in: dateContext } },
+            { description: { $in: dateContext } },
+          ]
+        });
+      }
+    }
+
+    if (filterAnd.length > 0) {
+      query.$and = filterAnd;
+    }
 
     if (Array.isArray(subgenreList) && subgenreList.length > 0) {
       const cleanSubgenres = subgenreList.map((s) => String(s).trim()).filter((s) => s.length > 0);
@@ -81,6 +139,47 @@ export const updateGenresAndFindEvents = async ({
       missingSubGenres[result.category] = result.subgenreList;
     }
   });
+
+  // 5.5 Fallback: Broad search if no category matches
+  if (allFoundEvents.length === 0 && (location || date)) {
+    const query = {
+      email: { $ne: user.email },
+      _id: { $nin: matchedEventIds },
+    };
+    
+    const filterAnd = [];
+    if (location) {
+      const locationRegex = new RegExp(location.trim(), 'i');
+      filterAnd.push({
+        $or: [
+          { title: locationRegex },
+          { address: locationRegex },
+          { venue: locationRegex },
+          { description: locationRegex },
+        ]
+      });
+    }
+    
+    if (date) {
+      const dateContext = getDateKeywords(date);
+      if (dateContext.length > 0) {
+        filterAnd.push({
+          $or: [
+            { 'date.when': { $in: dateContext } },
+            { 'date.start_display': { $in: dateContext } },
+            { title: { $in: dateContext } },
+            { description: { $in: dateContext } },
+          ]
+        });
+      }
+    }
+
+    if (filterAnd.length > 0) {
+      query.$and = filterAnd;
+      const broadEvents = await Event.find(query).sort({ date: 1 }).limit(50).lean();
+      allFoundEvents.push(...broadEvents);
+    }
+  }
 
   // 6. Deduplication
   const uniqueFoundEventsMap = new Map();
@@ -122,10 +221,10 @@ export const updateGenresAndFindEvents = async ({
         const subGenreStr = String(item).trim();
         if (!subGenreStr) continue;
 
-        // Construct a descriptive search query with location/date context if available
-        let searchQuery = `Events for ${subGenreStr}`;
-        if (searchContext) {
-          searchQuery += ` ${searchContext}`;
+        // Construct query q as recommended: "interest in location"
+        let searchQuery = subGenreStr;
+        if (location) {
+          searchQuery += ` in ${location.trim()}`;
         } else {
           searchQuery += ' in Thailand';
         }
@@ -133,17 +232,16 @@ export const updateGenresAndFindEvents = async ({
         serpSearchPromises.push(
           (async () => {
             try {
-              const eventsFound = await serpApiService.searchEvents(searchQuery);
+              // Now passing date to searchEvents (used for htichips)
+              const eventsFound = await serpApiService.searchEvents(searchQuery, date);
 
               if (eventsFound && eventsFound.length > 0) {
-                // Automate saving of these new events
                 await saveEventsFromSource({
                   data: eventsFound,
                   email: user.email,
                   subGenres: { [category]: [subGenreStr] },
                 });
 
-                // Add to results so user sees them immediately
                 finalEvents.push(...eventsFound);
               }
             } catch (searchError) {

@@ -1,14 +1,13 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import './AccordionList.css';
-import { FaPlus, FaTimes, FaCalendarAlt, FaMapMarkerAlt } from 'react-icons/fa';
+import { FaTimes, FaCalendarAlt, FaMapMarkerAlt, FaSearch, FaFilter, FaChevronDown } from 'react-icons/fa';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import api from '../../server/api';
 
 const MAX_SELECTIONS = 2;
 
-// Helper function to fetch initial filters
 const fetchInitialFilters = async (email) => {
   try {
     const res = await api.get(`/api/filters/${encodeURIComponent(email)}`);
@@ -18,44 +17,79 @@ const fetchInitialFilters = async (email) => {
   }
 };
 
-const GenreItem = ({ genre, itemIdx, genreIdx, selectedLabels, onTabSelect }) => (
-  <div className="accordion-genre-section">
-    <span className="accordion-genre-title">{genre.title}</span>
-    <div className="accordion-tabs">
-      {(genre.tabs || []).map((tab) => {
-        const label = typeof tab === 'string' ? tab : tab.label;
-        const icon = typeof tab === 'string' ? null : tab.icon;
-        const isSelected = selectedLabels.some(
-          (sel) => sel.key === `${itemIdx}-${genreIdx}` && sel.label === label
-        );
-        return (
-          <button
-            key={label}
-            className={`accordion-tab ${isSelected ? 'selected' : ''}`}
-            onClick={() => onTabSelect(itemIdx, genreIdx, label)}
-            type="button"
-          >
-            {icon && <span className="tab-icon">{icon}</span>}
-            {isSelected && <FaPlus style={{ fontSize: '10px', marginRight: '4px' }} />}
-            <span>{label}</span>
-          </button>
-        );
-      })}
+const GenreItem = React.memo(({ genre, itemIdx, genreIdx, selectedLabels, onTabSelect, searchTerm }) => {
+  const filteredTabs = useMemo(() => {
+    if (!searchTerm) return genre.tabs || [];
+    return (genre.tabs || []).filter(tab => {
+      const label = typeof tab === 'string' ? tab : tab.label;
+      return label.toLowerCase().includes(searchTerm.toLowerCase());
+    });
+  }, [genre.tabs, searchTerm]);
+
+  if (filteredTabs.length === 0) return null;
+
+  return (
+    <div className="accordion-genre-section">
+      <span className="accordion-genre-title">{genre.title}</span>
+      <div className="accordion-tabs">
+        {filteredTabs.map((tab) => {
+          const label = typeof tab === 'string' ? tab : tab.label;
+          const icon = typeof tab === 'string' ? null : tab.icon;
+          const isSelected = selectedLabels.some(
+            (sel) => sel.key === `${itemIdx}-${genreIdx}` && sel.label === label
+          );
+          return (
+            <button
+              key={label}
+              className={`accordion-tab ${isSelected ? 'selected' : ''}`}
+              onClick={() => onTabSelect(itemIdx, genreIdx, label)}
+              type="button"
+            >
+              {icon && <span className="tab-icon">{icon}</span>}
+              <span>{label}</span>
+              {isSelected && <FaTimes style={{ fontSize: '10px', marginLeft: '4px' }} />}
+            </button>
+          );
+        })}
+      </div>
     </div>
-  </div>
-);
+  );
+});
+
+GenreItem.displayName = 'GenreItem';
+
+const DATE_OPTIONS = [
+  { label: 'Anytime', value: '' },
+  { label: 'Today', value: 'today' },
+  { label: 'Tomorrow', value: 'tomorrow' },
+  { label: 'This Week', value: 'week' },
+  { label: 'Next Week', value: 'next_week' },
+  { label: 'This Month', value: 'month' },
+  { label: 'Next Month', value: 'next_month' },
+];
 
 const AccordionList = ({ items, setWaiting }) => {
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [selectedLabels, setSelectedLabels] = useState([]);
   const [dateFilter, setDateFilter] = useState('');
   const [locationFilter, setLocationFilter] = useState('');
+  const [genreSearch, setGenreSearch] = useState('');
+  const [debouncedDate, setDebouncedDate] = useState('');
+  const [debouncedLocation, setDebouncedLocation] = useState('');
 
   const containerRef = useRef(null);
   const queryClient = useQueryClient();
   const email = localStorage.getItem('userEmail');
 
-  // 1. Fetch initial filters
-  const { isLoading: isLoadingFilters } = useQuery({
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedDate(dateFilter);
+      setDebouncedLocation(locationFilter);
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [dateFilter, locationFilter]);
+
+  useQuery({
     queryKey: ['filters', email],
     queryFn: () => fetchInitialFilters(email),
     enabled: !!email,
@@ -79,184 +113,217 @@ const AccordionList = ({ items, setWaiting }) => {
     },
   });
 
-  // 2. Mutation for saving genres
-  const saveMutation = useMutation({
+  const { mutate: mutateSave } = useMutation({
     mutationFn: (variables) => api.post(`/api/update-genres`, variables),
     onSuccess: (res) => {
-      const finalEvents = res.data;
-      queryClient.setQueryData(['events', email], finalEvents);
-      queryClient.invalidateQueries({ queryKey: ['events', email] });
+      queryClient.setQueryData(['events', email], res.data);
       setWaiting(false);
     },
-    onError: (error) => {
-      const errorMessage = error.response?.data || 'บันทึกข้อมูลล้มเหลว';
-      toast.error(
-        typeof errorMessage === 'string'
-          ? errorMessage
-          : errorMessage?.message || 'บันทึกข้อมูลล้มเหลว'
-      );
+    onError: () => {
+      toast.error('บันทึกข้อมูลล้มเหลว');
       setWaiting(false);
     },
   });
 
-  // 3. Clear genres
-  const clearMutation = useMutation({
-    mutationFn: async () => {
-      await api.post(`/api/update-genres`, {
+  const handleSave = useCallback(
+    (showSkeletons = false) => {
+      if (!email || (selectedLabels.length === 0 && !debouncedLocation && !debouncedDate)) return;
+
+      const subGenresObj = {};
+      selectedLabels.forEach((sel) => {
+        const [itemIdx, genreIdx] = sel.key.split('-').map(Number);
+        const item = items[itemIdx];
+        if (item && item.genres && item.genres[genreIdx]) {
+          const genreTitle = item.genres[genreIdx].title;
+          if (!subGenresObj[genreTitle]) subGenresObj[genreTitle] = [];
+          if (!subGenresObj[genreTitle].includes(sel.label))
+            subGenresObj[genreTitle].push(sel.label);
+        }
+      });
+
+      if (showSkeletons) setWaiting(true);
+
+      mutateSave({
         email,
-        genres: [],
-        subGenres: {},
+        genres: Object.keys(subGenresObj),
+        subGenres: subGenresObj,
+        location: debouncedLocation,
+        date: debouncedDate,
         updatedAt: new Date().toISOString(),
       });
-      await api.delete(`/api/events/user/${email}`);
     },
-    onSuccess: () => {
-      toast.info('ล้างข้อมูลความสนใจทั้งหมดแล้ว');
-      setSelectedLabels([]);
-      setDateFilter('');
-      setLocationFilter('');
-      queryClient.invalidateQueries({ queryKey: ['events', email] });
-      queryClient.invalidateQueries({ queryKey: ['filters', email] });
-    },
-    onError: () => toast.error('ล้างข้อมูลล้มเหลว'),
-  });
+    [email, selectedLabels, debouncedDate, debouncedLocation, items, mutateSave, setWaiting]
+  );
 
-  const handleSave = useCallback(() => {
-    if (!email || selectedLabels.length === 0) return;
-
-    const subGenresObj = {};
-    selectedLabels.forEach((sel) => {
-      const [itemIdx, genreIdx] = sel.key.split('-').map(Number);
-      const item = items[itemIdx];
-      if (item && item.genres && item.genres[genreIdx]) {
-        const genreTitle = item.genres[genreIdx].title;
-        if (!subGenresObj[genreTitle]) subGenresObj[genreTitle] = [];
-        if (!subGenresObj[genreTitle].includes(sel.label)) subGenresObj[genreTitle].push(sel.label);
-      }
-    });
-
-    // Add date and location to search query context if backend supports it
-    // For now, we follow existing pattern but add these to the query
-    const searchQueryEnhancement = `${dateFilter} ${locationFilter}`.trim();
-
-    setWaiting(true);
-    saveMutation.mutate({
-      email,
-      genres: Object.keys(subGenresObj),
-      subGenres: subGenresObj,
-      searchContext: searchQueryEnhancement, // Future proofing
-      updatedAt: new Date().toISOString(),
-    });
-  }, [email, selectedLabels, dateFilter, locationFilter, items, saveMutation, setWaiting]);
-
-  // "Select and See" - Trigger search on selection change
   useEffect(() => {
-    if (selectedLabels.length > 0) {
+    if (selectedLabels.length > 0 || debouncedLocation || debouncedDate) {
       const timer = setTimeout(() => {
-        handleSave();
-      }, 500); // Small delay to debounce rapid clicks
+        const hasEvents = !!queryClient.getQueryData(['events', email])?.length;
+        handleSave(!hasEvents);
+      }, 300);
       return () => clearTimeout(timer);
     }
-  }, [selectedLabels, dateFilter, locationFilter, handleSave]); // re-run handleSave if any filter changes
+  }, [selectedLabels, debouncedDate, debouncedLocation, handleSave, queryClient, email]);
 
-  const handleTabSelect = (itemIdx, genreIdx, label) => {
+  const handleTabSelect = useCallback((itemIdx, genreIdx, label) => {
     const key = `${itemIdx}-${genreIdx}`;
     setSelectedLabels((prev) => {
       const exists = prev.some((sel) => sel.key === key && sel.label === label);
       if (exists) return prev.filter((sel) => !(sel.key === key && sel.label === label));
       if (prev.length >= MAX_SELECTIONS) {
-        toast.warn(`เลือกได้สูงสุด ${MAX_SELECTIONS} รายการ`);
+        toast.warn(`เลือกได้สูงสุด ${MAX_SELECTIONS}`);
         return prev;
       }
       return [...prev, { key, label }];
     });
-  };
+  }, []);
 
-  const handleRemoveLabel = (key, label) =>
+  const handleRemoveLabel = useCallback((key, label) => {
     setSelectedLabels((prev) => prev.filter((sel) => !(sel.key === key && sel.label === label)));
+  }, []);
 
-  const handleClear = () => clearMutation.mutate();
+  const genreSections = useMemo(() => {
+    return items.map((item, itemIdx) => (
+      <div key={itemIdx}>
+        {item.genres?.map((genre, genreIdx) => (
+          <GenreItem
+            key={`${itemIdx}-${genreIdx}`}
+            genre={genre}
+            itemIdx={itemIdx}
+            genreIdx={genreIdx}
+            selectedLabels={selectedLabels}
+            onTabSelect={handleTabSelect}
+            searchTerm={genreSearch}
+          />
+        ))}
+      </div>
+    ));
+  }, [items, selectedLabels, handleTabSelect, genreSearch]);
 
-  const isLoading = saveMutation.isPending || clearMutation.isPending || isLoadingFilters;
+
 
   return (
-    <div className="accordion-list" ref={containerRef}>
-      <ToastContainer position="bottom-right" autoClose={3000} hideProgressBar={false} />
+    <div className="filter-bar-container" ref={containerRef}>
+      <ToastContainer position="bottom-right" autoClose={2000} hideProgressBar />
 
-      <div className="search-filters-top">
-        <div className="filter-input-group">
-          <label>
-            <FaCalendarAlt /> เมื่อไหร่?
-          </label>
+      {/* Compact Top Bar */}
+      <div className="compact-filter-bar">
+        <div className="filter-item search-box">
+          <FaSearch className="icon" />
           <input
             type="text"
-            className="filter-input"
-            placeholder="เช่น สุดสัปดาห์นี้, พรุ่งนี้"
-            value={dateFilter}
-            onChange={(e) => setDateFilter(e.target.value)}
+            placeholder="Interests..."
+            value={genreSearch}
+            onChange={(e) => {
+              setGenreSearch(e.target.value);
+              if (!isDrawerOpen) setIsDrawerOpen(true);
+            }}
           />
         </div>
-        <div className="filter-input-group">
-          <label>
-            <FaMapMarkerAlt /> ที่ไหน?
-          </label>
+
+        <div className="filter-divider" />
+
+        <div className="filter-item">
+          <FaCalendarAlt className="icon" />
+          <select
+            className="filter-select"
+            value={dateFilter}
+            onChange={(e) => setDateFilter(e.target.value)}
+          >
+            {DATE_OPTIONS.map(opt => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="filter-divider" />
+
+        <div className="filter-item">
+          <FaMapMarkerAlt className="icon" />
           <input
             type="text"
-            className="filter-input"
-            placeholder="เช่น สยาม, เซ็นทรัลเวิลด์"
+            placeholder="Location..."
             value={locationFilter}
             onChange={(e) => setLocationFilter(e.target.value)}
           />
         </div>
-      </div>
 
-      <div className="accordion-content">
-        <span className="accordion-title" style={{ marginBottom: '1.5rem', display: 'block' }}>
-          เลือกสิ่งที่คุณสนใจ (สูงสุด {MAX_SELECTIONS})
-        </span>
-
-        {selectedLabels.length > 0 && (
-          <div className="accordion-selected-chips-container">
-            {selectedLabels.map((sel) => (
-              <span className="accordion-filter-chip" key={sel.key + sel.label}>
-                {sel.label}
-                <span
-                  className="accordion-filter-remove"
-                  onClick={() => handleRemoveLabel(sel.key, sel.label)}
-                  aria-label={`ลบ ${sel.label}`}
-                >
-                  <FaTimes />
-                </span>
-              </span>
-            ))}
-          </div>
-        )}
-
-        {items.map((item, itemIdx) => (
-          <div key={itemIdx}>
-            {item.genres &&
-              item.genres.map((genre, genreIdx) => (
-                <GenreItem
-                  key={`${itemIdx}-${genreIdx}`}
-                  genre={genre}
-                  itemIdx={itemIdx}
-                  genreIdx={genreIdx}
-                  selectedLabels={selectedLabels}
-                  onTabSelect={handleTabSelect}
-                />
-              ))}
-          </div>
-        ))}
-
-        <div className="submit-genres">
-          <button className="clear-genres-button" onClick={handleClear} disabled={isLoading}>
-            ล้างทั้งหมด
+        <div className="filter-actions-group">
+          <button 
+            className="manual-search-btn"
+            onClick={() => handleSave(true)}
+            disabled={selectedLabels.length === 0}
+            title={selectedLabels.length === 0 ? "Please select a category" : "Search with current filters"}
+          >
+            <FaSearch />
           </button>
-          <button className="submit-genres-button" onClick={handleSave} disabled={isLoading}>
-            {isLoading ? 'กำลังค้นหา...' : 'ค้นหากิจกรรม'}
+          
+          <button 
+            className={`drawer-toggle-btn ${selectedLabels.length > 0 ? 'active' : ''}`}
+            onClick={() => setIsDrawerOpen(!isDrawerOpen)}
+          >
+            <FaFilter />
+            <span className="btn-label">
+              {selectedLabels.length > 0 ? `${selectedLabels.length}` : 'Categories'}
+            </span>
+            <FaChevronDown className={`chevron ${isDrawerOpen ? 'up' : ''}`} />
           </button>
         </div>
       </div>
+
+      {/* Selected Pills (Visible even when drawer closed) */}
+      {selectedLabels.length > 0 && !isDrawerOpen && (
+        <div className="mini-selected-pills">
+          {selectedLabels.map((sel) => (
+            <span className="mini-pill" key={sel.key + sel.label}>
+              {sel.label}
+              <FaTimes className="remove" onClick={() => handleRemoveLabel(sel.key, sel.label)} />
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* Fullscreen/Overlay Drawer for Categories */}
+      {isDrawerOpen && (
+        <>
+          <div className="drawer-overlay" onClick={() => setIsDrawerOpen(false)} />
+          <div className="categories-drawer">
+            <div className="drawer-header">
+              <h3>Personalize Your Experience</h3>
+              <button className="close-drawer" onClick={() => setIsDrawerOpen(false)}><FaTimes /></button>
+            </div>
+            
+            <div className="drawer-search-inner">
+               <FaSearch />
+               <input 
+                 type="text" 
+                 placeholder="Search specific interest..." 
+                 value={genreSearch} 
+                 onChange={(e) => setGenreSearch(e.target.value)}
+               />
+            </div>
+
+            <div className="drawer-scroll-content">
+              {genreSections}
+            </div>
+
+            <div className="drawer-footer">
+              <button 
+                className="clear-all" 
+                onClick={() => {
+                  setSelectedLabels([]);
+                  setIsDrawerOpen(false);
+                }}
+              >
+                Clear All
+              </button>
+              <button className="apply-btn" onClick={() => setIsDrawerOpen(false)}>
+                Show Events
+              </button>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 };
