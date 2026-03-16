@@ -1,6 +1,8 @@
 import express from 'express';
-import { Like } from '../model/like.js'; // Import the Like model
+import { Like } from '../model/like.js'; 
+import { Info } from '../model/info.js';
 import { requireOwner } from '../middleware/required.js';
+import { matchByProfile, triggerInactiveUserMatch } from '../services/matchService.js';
 const app = express();
 
 // POST /like
@@ -12,8 +14,24 @@ app.post('/like', async (req, res) => {
     const existing = await Like.findOne({ userEmail, eventId });
     if (existing) return res.status(400).json({ message: 'Already liked.' });
 
+    // Check if this is the first like
+    const likeCount = await Like.countDocuments({ userEmail });
+    
     const like = new Like({ userEmail, eventId, eventTitle });
     await like.save();
+
+    // Trigger update lastActive status
+    await triggerInactiveUserMatch(req.app, userEmail);
+
+    // If first like, trigger matchByProfile to kickstart social matching
+    if (likeCount === 0) {
+      const profile = await Info.findOne({ email: userEmail });
+      if (profile?.userInfo?.detail) {
+        console.info(`[AI Trigger] User ${userEmail} liked their first event. Triggering profile matching...`);
+        // We run this async without awaiting if it's slow, but let's await for reliability
+        await matchByProfile(req.app, userEmail, profile.userInfo.detail);
+      }
+    }
 
     res.json({ message: 'Liked!' });
   } catch (err) {

@@ -1,6 +1,8 @@
 import express from 'express';
 import { Like } from '../model/like.js';
 import { InfoMatch } from '../model/infomatch.js';
+import { Filter } from '../model/filter.js';
+import { triggerInactiveUserMatch } from '../services/matchService.js';
 
 export default function (io) {
   const router = express.Router();
@@ -13,25 +15,43 @@ export default function (io) {
       return res.status(400).json({ message: 'Email is required (Auth token failure)' });
     }
 
-    // Check if there are any likes for the provided email
-    // FIX: Check Like model instead of InfoMatch (InfoMatch doesn't have userEmail and is for results)
-    const emailExists = await Like.findOne({ userEmail: email });
-    if (!emailExists) {
+    // Trigger inactive check/update lastActive
+    await triggerInactiveUserMatch(req.app, email);
+
+    // Check if there are any likes for the current user
+    const likes = await Like.find({ userEmail: email }).select('eventId').lean();
+    if (likes.length === 0) {
       return res.status(404).json({ message: 'No likes found for the provided email' });
     }
 
     try {
-      const currentUserEventIds = action.eventsId;
+      const currentUserEventIds = action?.eventsId || [];
+      if (currentUserEventIds.length === 0) {
+        return res.status(400).json({ message: 'No event IDs provided' });
+      }
 
       // Find likes from other users that match the current user's liked events
       const otherUserLikes = await Like.find({
         userEmail: { $ne: email },
         eventId: { $in: currentUserEventIds },
-      });
+      }).lean();
 
       if (!otherUserLikes || otherUserLikes.length === 0) {
         return res.status(200).json({ message: 'No likes found from other users' });
       }
+
+      // Pre-fetch filters for Jaccard calculation
+      const otherEmails = [...new Set(otherUserLikes.map(l => l.userEmail))];
+      const [myFilter, otherFilters] = await Promise.all([
+        Filter.findOne({ email }).lean(),
+        Filter.find({ email: { $in: otherEmails } }).lean()
+      ]);
+
+      const mySubGenres = new Set(myFilter?.subGenres ? Object.values(myFilter.subGenres).flat() : []);
+      const filterMap = otherFilters.reduce((acc, f) => {
+        acc[f.email] = new Set(f.subGenres ? Object.values(f.subGenres).flat() : []);
+        return acc;
+      }, {});
 
       const bulkOps = [];
       const matchData = []; // To keep track for notification
@@ -42,6 +62,18 @@ export default function (io) {
       for (const like of otherUserLikes) {
         const users = [email, like.userEmail].sort();
         
+        // Calculate Jaccard Similarity (Intersection / Union)
+        const otherSubGenres = filterMap[like.userEmail] || new Set();
+        const intersection = new Set([...mySubGenres].filter(x => otherSubGenres.has(x)));
+        const union = new Set([...mySubGenres, ...otherSubGenres]);
+        
+        let jaccardChance = 30; // Default
+        if (union.size > 0) {
+          jaccardChance = Math.round((intersection.size / union.size) * 100);
+          // Boost if they like the same event
+          jaccardChance = Math.min(100, jaccardChance + 20); 
+        }
+
         bulkOps.push({
           updateOne: {
             filter: {
@@ -53,7 +85,7 @@ export default function (io) {
               $set: {
                 eventId: like.eventId,
                 detail: like.eventTitle,
-                chance: 40,
+                chance: jaccardChance,
                 status: 'pending', // Re-trigger even if previously unmatched
                 initiatorEmail: email,
                 lastMatchedAt: new Date(),

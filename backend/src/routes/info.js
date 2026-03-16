@@ -2,7 +2,7 @@ import express from 'express';
 import { Info } from '../model/info.js';
 import { Gmail } from '../model/gmail.js';
 import { requireOwner } from '../middleware/required.js';
-import { matchByProfile } from '../services/matchService.js';
+import { matchByProfile, triggerInactiveUserMatch } from '../services/matchService.js';
 const app = express.Router();
 
 //////////ดึงห้องที่ผู้ใช้เชื่อมต่อ/////////////////
@@ -43,6 +43,12 @@ app.get('/infos/:email', requireOwner, async (req, res) => {
     if (!user) {
       return res.status(200).json({ message: 'User not found' });
     }
+
+    // Trigger inactive check / update lastActive in background
+    triggerInactiveUserMatch(req.app, email).catch(err => 
+      console.error('[AI Trigger] Inactive Match Error:', err)
+    );
+
     res.json(user);
   } catch (err) {
     console.error('Database error:', err);

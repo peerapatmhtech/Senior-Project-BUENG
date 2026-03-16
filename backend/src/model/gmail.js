@@ -8,6 +8,7 @@ const userSchema = new mongoose.Schema(
     photosOrder: { type: [String], default: [] },
     isVerified: { type: Boolean, default: false },
     emailVerificationToken: { type: String, default: null },
+    lastActiveAt: { type: Date, default: Date.now },
   },
   { timestamps: true }
 );

@@ -213,9 +213,11 @@ export const updateGenresAndFindEvents = async ({
   // 7. Handle Missing Genres (Direct SerpApi Search)
   if (Object.keys(missingSubGenres).length > 0) {
     const serpSearchPromises = [];
+    const maxItems = parseInt(process.env.SERP_MAX_ITEMS || '3', 10);
+
     for (const [category, subList] of Object.entries(missingSubGenres)) {
       const items = Array.isArray(subList) ? subList : [subList];
-      const limitedItems = items.slice(0, 3); // Limit to 3 searches to avoid rate limits
+      const limitedItems = items.slice(0, maxItems); // Limit to avoid rate limits (configurable via env)
 
       for (const item of limitedItems) {
         const subGenreStr = String(item).trim();
