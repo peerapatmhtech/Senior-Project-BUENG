@@ -40,6 +40,10 @@ const infoMatchSchema = new Schema(
       type: Boolean,
       default: false,
     },
+    swipedBy: {
+      type: [String],
+      default: [],
+    },
   },
   { timestamps: true }
 );

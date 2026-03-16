@@ -51,27 +51,19 @@ const RoomMatch = ({ accordionComponent }) => {
   });
   // --- Mutations ---
   const likeMutation = useMutation({
-    mutationFn: async ({ room, userEmail }) => {
-      // If the current user is NOT the one who initiated the match,
-      // this like will complete the match.
-      if (room.status === 'pending' && room.initiatorEmail !== userEmail) {
-        const response = await api.patch(`/api/infomatch/${room._id}/match`, {
-          status: 'matched',
-        });
-        return response.data;
-      }
-      // If the current user already initiated, do nothing, just wait.
-      // Or if you want to allow "liking" to create the initial record, that logic would go here.
-      // For now, we assume the record is created by the background process.
-      return room; // Return the room without change
+    mutationFn: async ({ room }) => {
+      const response = await api.post(`/api/infomatch/${room._id}/interaction`, {
+        action: 'like',
+      });
+      return response.data;
     },
-    onSuccess: (updatedRoom) => {
+    onSuccess: (res) => {
       toast.success('คุณกดไลค์แล้ว!');
-      // ตรวจสอบสถานะ "matched" จากข้อมูลที่ API ส่งกลับมา
-      if (updatedRoom && updatedRoom.data && updatedRoom.data.status === 'matched') {
-        setMatchedRoom(updatedRoom.data);
+      const roomData = res.data;
+      if (roomData && roomData.status === 'matched') {
+        setMatchedRoom(roomData);
         setShowMatchModal(true);
-        localStorage.setItem(`match_shown_${updatedRoom._id}`, 'true');
+        localStorage.setItem(`match_shown_${roomData._id}`, 'true');
       }
       queryClient.invalidateQueries({ queryKey: ['rooms', userEmail] });
     },
@@ -79,7 +71,9 @@ const RoomMatch = ({ accordionComponent }) => {
   });
 
   const skipMutation = useMutation({
-    mutationFn: (roomId) => api.patch(`/api/infomatch/${roomId}/skip`),
+    mutationFn: (roomId) => api.post(`/api/infomatch/${roomId}/interaction`, {
+      action: 'skip'
+    }),
     onSuccess: (_data) => {
       queryClient.invalidateQueries({ queryKey: ['rooms', userEmail] });
     },

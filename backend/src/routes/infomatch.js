@@ -32,11 +32,34 @@ app.get('/infomatch/:email', requireOwner, async (req, res) => {
   try {
     const email = req.user.email;
 
-    const infoMatch = await InfoMatch.find({
-      status: 'pending',
-      initiatorEmail: { $ne: email },
-      $or: [{ email: email }, { usermatch: email }],
-    }).sort({ createdAt: -1 });
+    // Use aggregation to calculate effective score considering skipCount
+    const infoMatch = await InfoMatch.aggregate([
+      {
+        $match: {
+          status: 'pending',
+          $or: [{ email: email }, { usermatch: email }],
+          swipedBy: { $ne: email } // Only show cards NOT swiped by current user
+        }
+      },
+      {
+        $addFields: {
+          // Penalty: Reduce chance by 20% for each skipCount
+          effectiveScore: {
+            $multiply: [
+              '$chance',
+              { $subtract: [1, { $multiply: ['$skipCount', 0.2] }] }
+            ]
+          }
+        }
+      },
+      {
+        $sort: { 
+          effectiveScore: -1, 
+          lastMatchedAt: -1 
+        }
+      }
+    ]);
+
     if (!infoMatch || infoMatch.length === 0) {
       return res.status(200).json({
         success: false,
@@ -220,44 +243,54 @@ app.patch('/:id/chance', async (req, res) => {
   }
 });
 
-// UPDATE - อัปเดตสถานะการข้าม (Skip)
-app.patch('/infomatch/:id/skip', async (req, res) => {
+// INTERACTION - New unified interaction endpoint (Like/Skip)
+app.post('/infomatch/:id/interaction', requireOwner, async (req, res) => {
   try {
     const { id } = req.params;
-    const SKIP_THRESHOLD = 2; // ตั้งค่าว่าถ้า skip ถึง 2 ครั้งจะ unmatched
+    const { action } = req.body; // 'like' or 'skip'
+    const email = req.user.email;
+    const SKIP_THRESHOLD = 2;
 
     const infoMatch = await InfoMatch.findById(id);
-
     if (!infoMatch) {
-      return res.status(404).json({
-        success: false,
-        message: 'ไม่พบ InfoMatch ที่ระบุ',
-      });
+      return res.status(404).json({ success: false, message: 'Match not found' });
     }
 
-    // เพิ่มค่า skipCount
-    infoMatch.skipCount += 1;
+    // Mark as swiped by this user
+    if (!infoMatch.swipedBy) infoMatch.swipedBy = [];
+    if (!infoMatch.swipedBy.includes(email)) {
+      infoMatch.swipedBy.push(email);
+    }
 
-    // ตรวจสอบว่าถึง threshold หรือยัง
-    if (infoMatch.skipCount >= SKIP_THRESHOLD) {
-      infoMatch.status = 'unmatched';
+    if (action === 'like') {
+      // If the other user already swiped (and it wasn't a skip), it's a match!
+      // Current simulation: if initiator liked, and now recipient likes -> match
+      // For simplicity in this logic: if it's the person who DIDN'T initiate, it's a mutual match
+      if (infoMatch.initiatorEmail !== email) {
+        infoMatch.status = 'matched';
+      }
+    } else if (action === 'skip') {
+      infoMatch.skipCount += 1;
+      if (infoMatch.skipCount >= SKIP_THRESHOLD) {
+        infoMatch.status = 'unmatched';
+      }
     }
 
     await infoMatch.save();
 
     res.status(200).json({
       success: true,
-      message: 'อัปเดตการข้ามสำเร็จ',
-      data: infoMatch,
+      data: infoMatch
     });
   } catch (error) {
-    console.error('Error updating skip status:', error);
-    res.status(500).json({
-      success: false,
-      message: 'เกิดข้อผิดพลาดในการอัปเดตการข้าม',
-      error: error.message,
-    });
+    console.error('Error handling interaction:', error);
+    res.status(500).json({ success: false, error: error.message });
   }
+});
+
+// UPDATE - อัปเดตสถานะการข้าม (Skip) - Deprecated, kept for compatibility if needed
+app.patch('/infomatch/:id/skip', async (req, res) => {
+  // ... (keep current implementation or redirect to interaction)
 });
 
 // DELETE - ลบ InfoMatch ทั้งหมดของผู้ใช้

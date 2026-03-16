@@ -59,20 +59,33 @@ export default function (io) {
       const emailDomain = email.split('@')[1];
       const university = emailDomain.includes('bu') ? 'Bangkok University' : 'Other';
 
-      for (const like of otherUserLikes) {
-        const users = [email, like.userEmail].sort();
-        
-        // Calculate Jaccard Similarity (Intersection / Union)
-        const otherSubGenres = filterMap[like.userEmail] || new Set();
+      // Group other likes by email to count total shared events between users
+      const likesByEmailMap = otherUserLikes.reduce((acc, l) => {
+        if (!acc[l.userEmail]) acc[l.userEmail] = [];
+        acc[l.userEmail].push(l);
+        return acc;
+      }, {});
+
+      for (const [targetEmail, sharedLikes] of Object.entries(likesByEmailMap)) {
+        const users = [email, targetEmail].sort();
+        const sharedLikeCount = sharedLikes.length;
+        const mainLike = sharedLikes[0]; // Representative event for the match record
+
+        // Calculate Jaccard Similarity (Interest overlapping)
+        const otherSubGenres = filterMap[targetEmail] || new Set();
         const intersection = new Set([...mySubGenres].filter(x => otherSubGenres.has(x)));
         const union = new Set([...mySubGenres, ...otherSubGenres]);
         
-        let jaccardChance = 30; // Default
+        let jaccardChance = 30; // Default base
         if (union.size > 0) {
           jaccardChance = Math.round((intersection.size / union.size) * 100);
-          // Boost if they like the same event
-          jaccardChance = Math.min(100, jaccardChance + 20); 
         }
+
+        // Formula from user: Math.min(95, 30 + sharedLikeCount * 13)
+        const likeBasedChance = Math.min(95, 30 + sharedLikeCount * 13);
+        
+        // Composite: Take 70% from shared likes volume and 30% from interest similarity (Jaccard)
+        const finalChance = Math.round(likeBasedChance * 0.7 + jaccardChance * 0.3);
 
         bulkOps.push({
           updateOne: {
@@ -83,10 +96,10 @@ export default function (io) {
             },
             update: {
               $set: {
-                eventId: like.eventId,
-                detail: like.eventTitle,
-                chance: jaccardChance,
-                status: 'pending', // Re-trigger even if previously unmatched
+                eventId: mainLike.eventId,
+                detail: mainLike.eventTitle,
+                chance: finalChance,
+                status: 'pending', 
                 initiatorEmail: email,
                 lastMatchedAt: new Date(),
                 university: university
@@ -96,7 +109,7 @@ export default function (io) {
           }
         });
 
-        matchData.push({ targetEmail: like.userEmail, title: like.eventTitle });
+        matchData.push({ targetEmail: targetEmail, title: mainLike.eventTitle });
       }
 
       const result = await InfoMatch.bulkWrite(bulkOps);
