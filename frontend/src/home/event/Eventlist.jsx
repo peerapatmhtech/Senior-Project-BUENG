@@ -9,6 +9,7 @@ import { FiCalendar, FiX, FiMapPin } from 'react-icons/fi';
 import { TbFileDescription, TbTicket } from 'react-icons/tb';
 import { toast } from 'react-toastify';
 import PropTypes from 'prop-types';
+import SocialProof from './SocialProof';
 
 // Helper function to fetch events
 const fetchEvents = async (email) => {
@@ -57,6 +58,13 @@ const EventListContent = ({
               width="200"
               loading="lazy"
             />
+            {/* Social Proof: Show friends who liked this event */}
+            {localStorage.getItem('userEmail') && (
+              <SocialProof 
+                eventId={event._id} 
+                email={localStorage.getItem('userEmail')} 
+              />
+            )}
             <div className="row-favorite">
               <h3 className="event-name">{event.title}</h3>
               <button

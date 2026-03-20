@@ -3,6 +3,8 @@ import { Event } from '../model/event.js';
 import { Filter } from '../model/filter.js';
 import { Gmail } from '../model/gmail.js';
 import { UserEvent } from '../model/userevent.model.js';
+import { Friend } from '../model/Friend.js';
+import { Like } from '../model/like.js';
 
 export default function (io) {
   const router = express.Router();
@@ -168,5 +170,50 @@ export default function (io) {
       res.status(500).json({ message: 'Server error' });
     }
   });
+
+  // Social Proof: Get friends who liked this event
+  router.get('/events/:eventId/social-proof/:email', async (req, res) => {
+    const { eventId, email } = req.params;
+    try {
+      // 1. Get user's friends
+      const userFriendRecord = await Friend.findOne({ email });
+      if (!userFriendRecord || !userFriendRecord.friends || userFriendRecord.friends.length === 0) {
+        return res.json({ friends: [], totalCount: 0 });
+      }
+
+      const friendEmails = userFriendRecord.friends.map((f) => f.email);
+
+      // 2. Find which friends liked this event
+      const likes = await Like.find({
+        eventId: eventId,
+        userEmail: { $in: friendEmails },
+      }).limit(5);
+
+      if (likes.length === 0) {
+        return res.json({ friends: [], totalCount: 0 });
+      }
+
+      const matchingFriendEmails = likes.map((l) => l.userEmail);
+
+      // 3. Get profile info for these friends
+      const friendProfiles = await Gmail.find({
+        email: { $in: matchingFriendEmails },
+      }).select('email displayName photoURL');
+
+      const totalCount = await Like.countDocuments({
+        eventId: eventId,
+        userEmail: { $in: friendEmails },
+      });
+
+      res.json({
+        friends: friendProfiles,
+        totalCount,
+      });
+    } catch (error) {
+      console.error('Error fetching social proof:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  });
+
   return router;
 }

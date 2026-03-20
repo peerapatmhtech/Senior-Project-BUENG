@@ -1,0 +1,66 @@
+.social-proof-container {
+  display: flex;
+  align-items: center;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  gap: 12px;
+  padding: 8px 12px;
+  background: var(--bg-secondary, rgba(0, 0, 0, 0.05));
+  border-radius: 20px;
+  width: fit-content;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  transition: transform 0.2s ease;
+}
+
+.social-proof-container:hover {
+  transform: translateY(-2px);
+  background: var(--bg-secondary-hover, rgba(0, 0, 0, 0.08));
+}
+
+.avatar-group {
+  display: flex;
+  align-items: center;
+}
+
+.social-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  object-fit: cover;
+}
+
+.avatar-more {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #eee;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: bold;
+  color: #666;
+  border: 2px solid #fff;
+}
+
+.social-proof-text {
+  font-size: 13px;
+  color: #555;
+  font-weight: 500;
+}
+
+/* Dark mode support */
+.dark-mode .social-proof-container {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.05);
+}
+
+.dark-mode .social-avatar,
+.dark-mode .avatar-more {
+  border-color: #333;
+}
+
+.dark-mode .social-proof-text {
+  color: #ddd;
+}
