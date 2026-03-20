@@ -38,6 +38,15 @@ export const getModel = (taskType = null, config = {}) => {
     modelRotationIndex = (modelRotationIndex + 1) % GEMINI_MODELS.length;
   }
 
+  // 3. Grounding: Enable Google Search for specific real-time tasks
+  if (taskType === 'CHAT' || taskType === 'RECOMMENDATION') {
+    config.tools = config.tools || [];
+    // Only add if not already present
+    if (!config.tools.find((t) => t.googleSearch)) {
+      config.tools.push({ googleSearch: {} });
+    }
+  }
+
   // Allow custom overrides if needed
   const finalModelName = config.model || modelName;
   

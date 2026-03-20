@@ -4,10 +4,10 @@
 
 // Gemini Model Names (Available models for rotation to avoid rate limits)
 export const GEMINI_MODELS = [
+  'gemini-3-flash-preview', // Requested futuristic model
   'gemini-1.5-flash',
   'gemini-1.5-pro',
-  'gemini-2.0-flash-exp', // New experimental model
-  'gemini-2.0-flash-lite-preview-02-05',
+  'gemini-2.0-flash-exp',
 ];
 
 // Deprecated: Use GEMINI_MODELS or TASK_MODELS mapping instead
