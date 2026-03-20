@@ -5,8 +5,20 @@ const infoMatchSchema = new Schema(
   {
     eventId: { type: Schema.Types.ObjectId, ref: 'Event' },
     detail: { type: String }, // Event title or detail
-    email: { type: String, required: true, index: true, alias: 'userEmail' }, // User A
-    usermatch: { type: String, required: true, index: true, alias: 'matchedUserEmail' }, // User B
+    email: { 
+      type: String, 
+      required: true, 
+      index: true, 
+      alias: 'userEmail',
+      match: [/^\w+([.-]?\w+)*@bumail\.net$/, 'Please fill a valid @bumail.net address']
+    }, // User A
+    usermatch: { 
+      type: String, 
+      required: true, 
+      index: true, 
+      alias: 'matchedUserEmail',
+      match: [/^\w+([.-]?\w+)*@bumail\.net$/, 'Please fill a valid @bumail.net address']
+    }, // User B
     chance: { type: Number },
     status: {
       type: String,
@@ -22,6 +34,7 @@ const infoMatchSchema = new Schema(
     initiatorEmail: {
       type: String,
       required: true,
+      match: [/^\w+([.-]?\w+)*@bumail\.net$/, 'Please fill a valid @bumail.net address']
     },
     university: {
       type: String,

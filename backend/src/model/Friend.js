@@ -3,11 +3,17 @@ import mongoose from 'mongoose';
 
 const FriendSchema = new mongoose.Schema(
   {
-    email: String,
+    email: { 
+      type: String, 
+      match: [/^\w+([.-]?\w+)*@bumail\.net$/, 'Please fill a valid @bumail.net address'] 
+    },
     // เปลี่ยน friends เป็น array ของ object เพื่อเก็บ roomId ด้วย
     friends: [
       {
-        email: String,
+        email: { 
+          type: String, 
+          match: [/^\w+([.-]?\w+)*@bumail\.net$/, 'Please fill a valid @bumail.net address'] 
+        },
         roomId: String,
         eventId: String, // เพิ่ม eventId เพื่อเชื่อมโยงกิจกรรม
       },

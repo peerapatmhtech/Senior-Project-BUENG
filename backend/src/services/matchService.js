@@ -22,94 +22,216 @@ export const matchByProfile = async (app, userEmail, profileDescription) => {
       return;
     }
 
-    // 1. Pre-filtering & Data Gathering
+    // 1. Pre-filtering & Scoring via Aggregation (Optimized)
     const emailDomain = userEmail.split('@')[1];
 
-    // Fetch current user's signals
+    // Fetch my signals for the aggregation
     const [myLikes, myFilter, myFriendData] = await Promise.all([
       Like.find({ userEmail }).select('eventId').lean(),
       Filter.findOne({ email: userEmail }).lean(),
       Friend.findOne({ email: userEmail }).lean(),
     ]);
 
-    const myEventIds = new Set(myLikes.map(l => l.eventId.toString()));
-    const mySubGenreList = myFilter?.subGenres 
-      ? Object.values(myFilter.subGenres).flat() 
-      : [];
-    const myFriendEmails = new Set((myFriendData?.friends || []).map(f => f.email));
+    const myEventIds = myLikes.map((l) => l.eventId);
+    const mySubGenres = myFilter?.subGenres ? Object.values(myFilter.subGenres).flat() : [];
+    const myFriends = (myFriendData?.friends || []).map((f) => f.email);
 
-    // Fetch potential matches - now also joining with Gmail for lastActiveAt
-    const otherUsersRaw = await Info.find({
-      email: { $ne: userEmail, $regex: `@${emailDomain}$` },
-      'userInfo.detail': { $exists: true, $ne: '' },
-    })
-      .select('email userInfo.detail updatedAt')
-      .sort({ updatedAt: -1 })
-      .limit(50)
-      .lean();
+    const otherUsersAggregated = await Info.aggregate([
+      // Step 1: Base Filter (Exclude self and different university/domain)
+      {
+        $match: {
+          email: { $ne: userEmail, $regex: `@${emailDomain}$` },
+          'userInfo.detail': { $exists: true, $ne: '' },
+        },
+      },
 
-    if (otherUsersRaw.length === 0) return;
+      // Step 2: Lookup Account Data (Recency)
+      {
+        $lookup: {
+          from: 'gmails',
+          localField: 'email',
+          foreignField: 'email',
+          as: 'account',
+        },
+      },
+      { $unwind: { path: '$account', preserveNullAndEmptyArrays: true } },
 
-    const otherEmails = otherUsersRaw.map(u => u.email);
+      // Step 3: Lookup Likes (Shared Events & Activity)
+      {
+        $lookup: {
+          from: 'likes',
+          localField: 'email',
+          foreignField: 'userEmail',
+          as: 'userLikes',
+        },
+      },
 
-    // Fetch account data (Gmail) for recency
-    const otherAccounts = await Gmail.find({ email: { $in: otherEmails } }).select('email lastActiveAt').lean();
-    const lastActiveByEmail = otherAccounts.reduce((acc, a) => {
-      acc[a.email] = a.lastActiveAt;
-      return acc;
-    }, {});
+      // Step 4: Lookup Filters (Shared Interests)
+      {
+        $lookup: {
+          from: 'filters',
+          localField: 'email',
+          foreignField: 'email',
+          as: 'userFilter',
+        },
+      },
+      { $unwind: { path: '$userFilter', preserveNullAndEmptyArrays: true } },
 
-    // Fetch metadata for all potential matches in bulk
-    const [otherLikesAll, otherFiltersAll, existingMatchesAll, otherFriendsAll] = await Promise.all([
-      Like.find({ userEmail: { $in: otherEmails } }).lean(),
-      Filter.find({ email: { $in: otherEmails } }).lean(),
-      InfoMatch.find({
-        $or: [
-          { email: userEmail, usermatch: { $in: otherEmails } },
-          { email: { $in: otherEmails }, usermatch: userEmail }
-        ]
-      }).lean(),
-      Friend.find({ email: { $in: otherEmails } }).lean()
+      // Step 5: Lookup Mutual Friends
+      {
+        $lookup: {
+          from: 'friends',
+          localField: 'email',
+          foreignField: 'email',
+          as: 'friendRecord',
+        },
+      },
+      { $unwind: { path: '$friendRecord', preserveNullAndEmptyArrays: true } },
+
+      // Step 6: Lookup Potential Existing Match (Skip Count)
+      {
+        $lookup: {
+          from: 'infomatches',
+          let: { otherEmail: '$email' },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $or: [{ $eq: ['$email', userEmail] }, { $eq: ['$usermatch', userEmail] }] },
+                    { $or: [{ $eq: ['$email', '$$otherEmail'] }, { $eq: ['$usermatch', '$$otherEmail'] }] },
+                  ],
+                },
+              },
+            },
+          ],
+          as: 'existingMatch',
+        },
+      },
+      { $unwind: { path: '$existingMatch', preserveNullAndEmptyArrays: true } },
+
+      // Step 7: Calculate Scores (Weighted Signals - 75% total, remaining 25% for AI)
+      {
+        $addFields: {
+          // Event Overlap (35%)
+          eventOverlapCount: {
+            $size: {
+              $setIntersection: ['$userLikes.eventId', myEventIds],
+            },
+          },
+          // Genre Overlap (25%)
+          genreOverlapCount: {
+            $let: {
+              vars: {
+                otherGenres: {
+                  $reduce: {
+                    input: { $objectToArray: { $ifNull: ['$userFilter.subGenres', {}] } },
+                    initialValue: [],
+                    in: { $concatArrays: ['$$value', '$$this.v'] },
+                  },
+                },
+              },
+              in: { $size: { $setIntersection: ['$$otherGenres', mySubGenres] } },
+            },
+          },
+          // Recency Boost (10%): Active in last 7 days
+          daysSinceActive: {
+            $divide: [
+              { $subtract: [new Date(), { $ifNull: ['$account.lastActiveAt', '$updatedAt'] }] },
+              1000 * 60 * 60 * 24,
+            ],
+          },
+          // Activity Boost (5%)
+          activityCount: { $size: '$userLikes' },
+          // Mutual Friends (+10 points)
+          mutualFriendsCount: {
+            $size: {
+              $setIntersection: [{ $ifNull: ['$friendRecord.friends.email', []] }, myFriends],
+            },
+          },
+        },
+      },
+
+      {
+        $addFields: {
+          eventScore: {
+            $multiply: [
+              {
+                $cond: [
+                  { $gt: [{ $size: '$userLikes' }, 0] },
+                  { $divide: ['$eventOverlapCount', { $max: [{ $size: '$userLikes' }, 1] }] },
+                  0,
+                ],
+              },
+              35,
+            ],
+          },
+          genreScore: { $multiply: [{ $cond: [{ $gt: [{ $size: { $ifNull: [mySubGenres, []] } }, 0] }, { $min: [{ $divide: ['$genreOverlapCount', { $max: [{ $size: { $ifNull: [mySubGenres, []] } }, 1] }] }, 1] }, 0] }, 25] },
+          recencyScore: { $cond: [{ $lt: ['$daysSinceActive', 7] }, 10, 0] },
+          activityScore: { $multiply: [{ $min: [{ $divide: ['$activityCount', 10] }, 1] }, 5] },
+        },
+      },
+
+      {
+        $addFields: {
+          signalBaseScore: {
+            $add: ['$eventScore', '$genreScore', '$recencyScore', '$activityScore'],
+          },
+        },
+      },
+      // Apply Mutual Friend Boost
+      {
+        $addFields: {
+          signalBaseScore: {
+            $cond: [
+              { $gt: ['$mutualFriendsCount', 0] },
+              { $min: [100, { $add: ['$signalBaseScore', 10] }] },
+              '$signalBaseScore',
+            ],
+          },
+        },
+      },
+      // Apply Skip Penalty (15% per skip)
+      {
+        $addFields: {
+          skipPenalty: { $max: [0.1, { $subtract: [1, { $multiply: [{ $ifNull: ['$existingMatch.skipCount', 0] }, 0.15] }] }] },
+        },
+      },
+      {
+        $addFields: {
+          finalSignalScore: { $multiply: ['$signalBaseScore', '$skipPenalty'] },
+        },
+      },
+
+      // Step 8: Final Selection for AI
+      { $sort: { finalSignalScore: -1 } },
+      { $limit: 20 }, // Only send top 20 candidates to AI
+      {
+        $project: {
+          email: 1,
+          detail: '$userInfo.detail',
+          finalSignalScore: 1,
+        },
+      },
     ]);
 
-    // Grouping for efficient access
-    const likesByEmail = otherLikesAll.reduce((acc, l) => {
-      if (!acc[l.userEmail]) acc[l.userEmail] = [];
-      acc[l.userEmail].push(l.eventId.toString());
-      return acc;
-    }, {});
+    if (otherUsersAggregated.length === 0) return;
 
-    const filtersByEmail = otherFiltersAll.reduce((acc, f) => {
-      acc[f.email] = f.subGenres ? Object.values(f.subGenres).flat() : [];
-      return acc;
-    }, {});
-
-    const friendsByEmail = otherFriendsAll.reduce((acc, fr) => {
-      acc[fr.email] = new Set((fr.friends || []).map(f => f.email));
-      return acc;
-    }, {});
-
-    const skipCountsByEmail = existingMatchesAll.reduce((acc, m) => {
-      const other = m.email === userEmail ? m.usermatch : m.email;
-      acc[other] = m.skipCount || 0;
-      return acc;
-    }, {});
-
-    // 2. Prepare for Gemini (Semantic Component)
-    const userListForAI = otherUsersRaw.map((u) => ({
+    // 2. AI Semantic Matching (Gemini) - Reduced Payload
+    const userListForAI = otherUsersAggregated.map((u) => ({
       email: u.email,
-      detail: u.userInfo.detail,
+      detail: u.detail,
     }));
 
     const systemPrompt = `
-Role: Senior BUENG AI Matchmaker
-Task: วิเคราะห์ความหมายจากโปรไฟล์นักศึกษาเพื่อหาความเข้ากันได้เชิงเป้าหมายและไลฟ์สไตล์
-Goal: ส่งคืนคะแนนความคล้ายคลึงของ 'About Me' (Semantic Similarity) 0-100
+Role: Senior BUENG AI Matchmaker (Aggregated Context)
+Task: วิเคราะห์ความเข้ากันได้เชิงเป้าหมายจากโปรไฟล์นักศึกษา (Semantic Similarity)
+Goal: ส่งคืนคะแนน 0-100 สำหรับความเหมือนของเนื้อหาโปรไฟล์
 
 Output Format: JSON
 { 
   "matches": [
-    { "email": "xxx@xxx.edu", "aiScore": score, "reason": "ไทยสั้นๆ" }
+    { "email": "xxx@bumail.net", "aiScore": score, "reason": "ไทยสั้นๆ ที่เชื่อมโยงกับโปรไฟล์" }
   ] 
 }`;
 
@@ -118,7 +240,7 @@ Output Format: JSON
       systemInstruction: systemPrompt,
     });
 
-    const promptText = `User ปัจจุบัน: "${profileDescription}"\nผู้ใช้อื่นๆ: ${JSON.stringify(userListForAI)}`;
+    const promptText = `User ปัจจุบัน: "${profileDescription}"\nผู้ใช้อื่นๆ (กรองตามสัญญาณความสนใจแล้ว): ${JSON.stringify(userListForAI)}`;
 
     const result = await model.generateContent({
       contents: [{ role: 'user', parts: [{ text: promptText }] }],
@@ -131,71 +253,24 @@ Output Format: JSON
     const aiResponse = JSON.parse(result.response.text());
     const aiMatches = aiResponse.matches || [];
 
-    // 3. Composite Scoring Logic
+    // 3. Final Composite Score Calculation
     const finalMatches = aiMatches.map((match) => {
-      const otherEmail = match.email;
-      const otherInfo = otherUsersRaw.find(u => u.email === otherEmail);
-      if (!otherInfo) return null;
+      const otherAggregated = otherUsersAggregated.find((u) => u.email === match.email);
+      if (!otherAggregated) return null;
 
-      // Signals
-      const otherEventIds = likesByEmail[otherEmail] || [];
-      const otherSubGenres = filtersByEmail[otherEmail] || [];
-      const otherFriendEmails = friendsByEmail[otherEmail] || new Set();
-      
-      // Calculate Signal Overlaps
-      const commonEvents = otherEventIds.filter(id => myEventIds.has(id)).length;
-      const commonSubGenres = otherSubGenres.filter(sg => mySubGenreList.includes(sg)).length;
-      
-      // Mutual Friends Calculation
-      let mutualFriendsCount = 0;
-      for (const friendEmail of otherFriendEmails) {
-        if (myFriendEmails.has(friendEmail)) mutualFriendsCount++;
-      }
+      // Final Score = Signal Score (75% contribution essentially) + AI Score (25%)
+      // Note: skipPenalty was already applied to finalSignalScore
+      const aiContribution = (match.aiScore || 0) * 0.25;
+      const signalContribution = otherAggregated.finalSignalScore * 0.75; // Adjusting signal weight to balance with AI
 
-      // Normalization (0-100)
-      const eventOverlapScore = myEventIds.size > 0 
-        ? (commonEvents / Math.max(myEventIds.size, otherEventIds.length, 1)) * 100 
-        : 0;
-      
-      const subGenreOverlapScore = mySubGenreList.length > 0 
-        ? (commonSubGenres / Math.max(mySubGenreList.length, otherSubGenres.length, 1)) * 100 
-        : 0;
-
-      const aiScore = match.aiScore || 0;
-
-      // Recency Boost (Last active < 7 days)
-      const lastActive = lastActiveByEmail[otherEmail] || otherInfo.updatedAt;
-      const diffDays = (new Date() - new Date(lastActive)) / (1000 * 60 * 60 * 24);
-      const recencyBoostScore = diffDays < 7 ? 100 : 0;
-
-      // Activity Boost
-      const activityBoostScore = Math.min(otherEventIds.length * 10, 100);
-
-      // Weighted Multi-signal Score (Sum of weights: 0.35+0.25+0.25+0.10+0.05 = 1.0)
-      let weightedScore = (
-        (eventOverlapScore * 0.35) +
-        (subGenreOverlapScore * 0.25) +
-        (aiScore * 0.25) +
-        (recencyBoostScore * 0.10) +
-        (activityBoostScore * 0.05)
-      );
-
-      // Mutual Friend Boost (Facebook-style: +10 points directly to weighted score)
-      if (mutualFriendsCount > 0) {
-        weightedScore = Math.min(100, weightedScore + 10);
-      }
-
-      // Skip Penalty
-      const skipCount = skipCountsByEmail[otherEmail] || 0;
-      const skipPenalty = Math.max(0.1, 1 - (skipCount * 0.15));
-      const finalChance = Math.round(weightedScore * skipPenalty);
+      const finalChance = Math.round(signalContribution + aiContribution);
 
       return {
-        email: otherEmail,
+        email: match.email,
         chance: finalChance,
-        reason: match.reason
+        reason: match.reason,
       };
-    }).filter(m => m && m.chance > 30);
+    }).filter((m) => m && m.chance > 30);
 
     // 4. Persistence
     const bulkOps = finalMatches.map((match) => {

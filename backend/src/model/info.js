@@ -1,7 +1,14 @@
 import mongoose from 'mongoose';
 const infoSchema = new mongoose.Schema(
   {
-    email: { type: String, required: true, unique: true, trim: true, lowercase: true },
+    email: { 
+      type: String, 
+      required: true, 
+      unique: true, 
+      trim: true, 
+      lowercase: true,
+      match: [/^\w+([.-]?\w+)*@bumail\.net$/, 'Please fill a valid @bumail.net address']
+    },
     userInfo: {
       detail: String,
       description: String,
@@ -44,5 +51,7 @@ infoSchema.statics.joinRoom = async function (userEmail, roomId, roomName) {
   await user.save(); // This will still trigger a validation error if pre-existing data in joinedRooms is invalid
   return user;
 };
+
+infoSchema.index({ email: 1 });
 
 export const Info = mongoose.model('Info', infoSchema);

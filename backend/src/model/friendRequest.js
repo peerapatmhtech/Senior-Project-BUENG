@@ -13,6 +13,7 @@ const FriendRequestSchema = new Schema(
       email: {
         type: String,
         required: true,
+        match: [/^\w+([.-]?\w+)*@bumail\.net$/, 'Please fill a valid @bumail.net address']
       },
       displayName: {
         type: String,
@@ -26,6 +27,7 @@ const FriendRequestSchema = new Schema(
     to: {
       type: String,
       required: true,
+      match: [/^\w+([.-]?\w+)*@bumail\.net$/, 'Please fill a valid @bumail.net address']
     },
     timestamp: {
       type: Date,

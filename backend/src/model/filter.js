@@ -2,7 +2,10 @@ import mongoose from 'mongoose';
 
 const GmailSchema = new mongoose.Schema(
   {
-    email: String,
+    email: { 
+      type: String,
+      match: [/^\w+([.-]?\w+)*@bumail\.net$/, 'Please fill a valid @bumail.net address']
+    },
     genres: [String],
     subGenres: {
       type: Map,
@@ -12,5 +15,7 @@ const GmailSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+GmailSchema.index({ email: 1 });
 
 export const Filter = mongoose.model('filters', GmailSchema);

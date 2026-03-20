@@ -3,7 +3,11 @@ import mongoose from 'mongoose';
 const userSchema = new mongoose.Schema(
   {
     displayName: String,
-    email: { type: String, unique: true },
+    email: { 
+      type: String, 
+      unique: true, 
+      match: [/^\w+([.-]?\w+)*@bumail\.net$/, 'Please fill a valid @bumail.net address'] 
+    },
     photoURL: String,
     photosOrder: { type: [String], default: [] },
     isVerified: { type: Boolean, default: false },
