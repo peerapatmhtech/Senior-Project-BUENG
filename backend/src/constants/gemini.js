@@ -5,22 +5,22 @@
 // Gemini Model Names (Available models for rotation to avoid rate limits)
 export const GEMINI_MODELS = [
   'gemini-3-flash-preview', // Requested futuristic model
-  'gemini-1.5-flash',
-  'gemini-1.5-pro',
+  'gemini-2.5-flash',
+  'gemini-2.5-pro',
   'gemini-2.0-flash-exp',
 ];
 
 // Deprecated: Use GEMINI_MODELS or TASK_MODELS mapping instead
-export const GEMINI_MODEL = 'gemini-1.5-flash';
-export const GEMINI_MODEL_PRO = 'gemini-1.5-pro';
+export const GEMINI_MODEL = 'gemini-2.5-flash';
+export const GEMINI_MODEL_PRO = 'gemini-2.5-flash';
 
 // Task-specific model mapping
 export const TASK_MODELS = {
-  SEARCH: 'gemini-1.5-flash',
-  RECOMMENDATION: 'gemini-1.5-flash',
-  INSIGHT: 'gemini-1.5-flash',
-  MATCHING: 'gemini-1.5-pro', // Pro for better semantic analysis
-  CHAT: 'gemini-1.5-flash', // Flash for faster chat response
+  SEARCH: 'gemini-2.5-flash',
+  RECOMMENDATION: 'gemini-2.5-flash',
+  INSIGHT: 'gemini-2.5-flash-lite',
+  MATCHING: 'gemini-2.5-flash-lite', // Pro for better semantic analysis
+  CHAT: 'gemini-2.5-flash', // Flash for faster chat response
 };
 
 // Generation Configuration Defaults
