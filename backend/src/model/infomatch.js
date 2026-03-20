@@ -5,8 +5,8 @@ const infoMatchSchema = new Schema(
   {
     eventId: { type: Schema.Types.ObjectId, ref: 'Event' },
     detail: { type: String }, // Event title or detail
-    email: { type: String, required: true, index: true }, // User A
-    usermatch: { type: String, required: true, index: true }, // User B
+    email: { type: String, required: true, index: true, alias: 'userEmail' }, // User A
+    usermatch: { type: String, required: true, index: true, alias: 'matchedUserEmail' }, // User B
     chance: { type: Number },
     status: {
       type: String,
@@ -49,6 +49,7 @@ const infoMatchSchema = new Schema(
 );
 
 // Ensures a unique potential match between two users for a specific event
-infoMatchSchema.index({ eventId: 1, email: 1, usermatch: 1 }, { unique: true });
+// Updated based on USER request: { userEmail: 1, matchedUserEmail: 1, eventId: 1 }
+infoMatchSchema.index({ email: 1, usermatch: 1, eventId: 1 }, { unique: true });
 
 export const InfoMatch = mongoose.model('InfoMatch', infoMatchSchema);
