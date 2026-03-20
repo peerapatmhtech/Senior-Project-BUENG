@@ -1,123 +1,120 @@
 import { Event } from '../model/event.js';
 import { UserEvent } from '../model/userevent.model.js';
-import mongoose from 'mongoose';
+
+
 
 /**
- * Processes the raw indices to exclude into a clean array of unique numbers.
- * @param {string|Array<number|string>} rawIndicesToExclude - The raw input for indices.
- * @returns {Array<number>} A clean array of unique numbers.
+ * Parses various date formats from SerpApi into a Date object.
+ * @param {any} dateInfo - The date information from source.
+ * @returns {Date|null}
  */
-function processIndicesToExclude(rawIndicesToExclude) {
-  let indices = [];
-  if (typeof rawIndicesToExclude === 'string') {
-    indices = rawIndicesToExclude
-      .split(',')
-      .map((s) => s.trim())
-      .filter((s) => s !== '')
-      .map(Number);
-  } else if (Array.isArray(rawIndicesToExclude)) {
-    indices = rawIndicesToExclude
-      .map((s) => String(s).trim())
-      .filter((s) => s !== '')
-      .map(Number);
+const parseSerpDate = (dateInfo) => {
+  if (!dateInfo) return null;
+  if (dateInfo instanceof Date) return dateInfo;
+
+  if (typeof dateInfo === 'string') {
+    const d = new Date(dateInfo);
+    return isNaN(d.getTime()) ? null : d;
   }
 
-  // Filter out NaN values and get unique numbers
-  return [...new Set(indices.filter((n) => !isNaN(n)))];
-}
+  if (typeof dateInfo === 'object') {
+    if (dateInfo.start_date) {
+      const d = new Date(dateInfo.start_date);
+      if (!isNaN(d.getTime())) return d;
+    }
+    if (dateInfo.when) {
+      const year = new Date().getFullYear();
+      const d = new Date(`${dateInfo.when} ${year}`);
+      if (!isNaN(d.getTime())) return d;
+    }
+  }
+  return null;
+};
 
 /**
- * Saves events from a data source, excluding specified indices and avoiding duplicates.
+ * Saves events from a data source using bulk operations to optimize database load.
  * @param {object} params - The parameters for saving events.
- * @param {object} params.data - The raw data object containing organic_results.
+ * @param {object} params.data - The raw data object containing events_results.
  * @param {string} params.email - The user's email.
- * @param {string|Array<number|string>} params.rawIndicesToExclude - Indices to exclude.
  * @param {object} params.subGenres - The sub-genres for the events.
- * @returns {Promise<Array<object>>} A promise that resolves to an array of newly created events.
+ * @returns {Promise<Array<object>>} A promise that resolves to an array of newly created or updated events.
  */
 export const saveEventsFromSource = async ({ data, email, subGenres }) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
   try {
-    // Validate required parameters
     if (!email) throw new Error('Email is required');
     if (!subGenres || Object.keys(subGenres).length === 0) throw new Error('subGenres is required');
 
-    const dataTranfer = data?.events_results ?? data;
-    if (!Array.isArray(dataTranfer) || dataTranfer.length === 0) {
+    const dataTransfer = data?.events_results ?? data;
+    if (!Array.isArray(dataTransfer) || dataTransfer.length === 0) {
       throw new Error('Data must be a non-empty array');
     }
 
-    const newUserEvents = [];
+    const validItems = dataTransfer.filter((item) => item.title && item.link);
+    if (validItems.length === 0) return [];
 
-    for (let i = 0; i < dataTranfer.length; i++) {
-      const item = dataTranfer[i];
-      const {
-        title,
-        date,
-        address,
-        link,
-        description,
-        image,
-        thumbnail,
-        venue,
-        ticket_info,
-        event_location_map,
-      } = item;
+    // 1. Prepare Event Bulk Operations (Upsert Events)
+    const eventOps = validItems.map((item) => {
+      const parsedDate = parseSerpDate(item.date);
+      return {
+        updateOne: {
+          filter: { title: item.title },
+          update: {
+            $set: {
+              email,
+              date: parsedDate,
+              dateRaw: item.date,
+              address: item.address,
+              description: item.description,
+              link: item.link,
+              genre: subGenres,
+              image: item.image,
+              thumbnail: item.thumbnail,
+              venue: item.venue,
+              ticket_info: item.ticket_info,
+              event_location_map: item.event_location_map,
+              createdByAI: true,
+            },
+          },
+          upsert: true,
+        },
+      };
+    });
 
-      if (!title || !link) continue;
+    await Event.bulkWrite(eventOps);
 
-      // 1. Find or create the template Event
-      let event = await Event.findOne({ title }).session(session);
-      if (!event) {
-        event = new Event({
-          email,
-          title,
-          date,
-          address,
-          description,
-          link,
-          genre: subGenres,
-          image,
-          thumbnail,
-          venue,
-          ticket_info,
-          event_location_map,
-          createdByAI: true,
-        });
-        await event.save({ session });
-      }
+    // 2. Fetch all event IDs for mapping
+    const titles = validItems.map((item) => item.title);
+    const events = await Event.find({ title: { $in: titles } }).select('_id title').lean();
+    const eventMap = new Map(events.map((e) => [e.title, e._id]));
 
-      // 2. Check if the user already has this event
-      const existingUserEvent = await UserEvent.findOne({ email, eventId: event._id }).session(session);
-      
-      if (existingUserEvent) {
-        if (existingUserEvent.status === 'deleted') {
-          // Reactivate the deleted user event
-          existingUserEvent.status = 'active';
-          await existingUserEvent.save({ session });
-          newUserEvents.push(existingUserEvent);
-        }
-        continue;
-      }
+    // 3. Prepare UserEvent Bulk Operations (Link Users to Events)
+    const userEventOps = [];
+    for (const item of validItems) {
+      const eventId = eventMap.get(item.title);
+      if (!eventId) continue;
 
-      // 3. Create the UserEvent linking to the template Event
-      const userEvent = new UserEvent({
-        email,
-        eventId: event._id,
-        status: 'active',
+      userEventOps.push({
+        updateOne: {
+          filter: { email, eventId },
+          update: {
+            $set: { status: 'active' },
+          },
+          upsert: true,
+        },
       });
-      await userEvent.save({ session });
-      newUserEvents.push(userEvent);
     }
 
-    await session.commitTransaction();
-    return newUserEvents;
+    if (userEventOps.length > 0) {
+      await UserEvent.bulkWrite(userEventOps);
+    }
+
+    // 4. Return the associated activities
+    return await UserEvent.find({
+      email,
+      eventId: { $in: Array.from(eventMap.values()) },
+    }).lean();
   } catch (error) {
-    await session.abortTransaction();
-    console.error('Transaction aborted. Error in saveEventsFromSource:', error);
-    throw error; // Re-throw the error to be handled by the route
-  } finally {
-    session.endSession();
+    console.error('Error in saveEventsFromSource (Bulk):', error);
+    throw error;
   }
 };

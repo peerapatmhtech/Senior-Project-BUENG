@@ -6,6 +6,7 @@ import cors from 'cors';
 import bodyParser from 'body-parser';
 import friendRequestRoutes from '../friendRequest.js';
 import User from '../../src/model/userroom.js';
+import Friend from '../../src/model/Friend.js';
 import FriendRequest from '../../src/model/friendRequest.js';
 
 // เริ่มต้นเซิร์ฟเวอร์สำหรับทดสอบ
@@ -34,6 +35,7 @@ beforeAll(async () => {
 // ล้างข้อมูลในฐานข้อมูลหลังการทดสอบแต่ละครั้ง
 afterEach(async () => {
   await User.deleteMany({});
+  await Friend.deleteMany({});
   await FriendRequest.deleteMany({});
 });
 
@@ -165,12 +167,12 @@ describe('Friend Request API', () => {
     const updatedRequest = await FriendRequest.findOne({ requestId });
     expect(updatedRequest.status).toBe('accepted');
 
-    // ตรวจสอบว่าทั้งสองคนเป็นเพื่อนกันแล้ว
-    const user1 = await User.findOne({ email: testUser1.email });
-    const user2 = await User.findOne({ email: testUser2.email });
+    // ตรวจสอบว่าทั้งสองคนเป็นเพื่อนกันแล้วใน Friend collection
+    const user1FriendData = await Friend.findOne({ email: testUser1.email });
+    const user2FriendData = await Friend.findOne({ email: testUser2.email });
 
-    expect(user1.friends.some((f) => f.email === testUser2.email)).toBe(true);
-    expect(user2.friends.some((f) => f.email === testUser1.email)).toBe(true);
+    expect(user1FriendData.friends.some((f) => f.email === testUser2.email)).toBe(true);
+    expect(user2FriendData.friends.some((f) => f.email === testUser1.email)).toBe(true);
   });
 
   test('POST /api/friend-request-response - ปฏิเสธคำขอเพื่อนสำเร็จ', async () => {

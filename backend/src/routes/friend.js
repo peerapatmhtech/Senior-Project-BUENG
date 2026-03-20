@@ -4,15 +4,15 @@ const app = express.Router();
 
 // เพิ่มเพื่อน
 app.post('/add-friend', async (req, res) => {
-  const { userEmail, friendEmail, roomId } = req.body;
+  const { userEmail, friendEmail, roomId, eventId } = req.body;
   if (!userEmail || !friendEmail || !roomId) {
-    return res.status(400).json({ error: 'Both userEmail and friendEmail are required.' });
+    return res.status(400).json({ error: 'Both userEmail, friendEmail and roomId are required.' });
   }
   if (userEmail === friendEmail) {
     return res.status(400).json({ error: 'You cannot add yourself as a friend.' });
   }
   try {
-    const user = await Friend.addFriend(userEmail, friendEmail, roomId);
+    const user = await Friend.addFriend(userEmail, friendEmail, roomId, eventId);
     return res.status(200).json({ message: 'Friend added successfully.', user });
   } catch (error) {
     console.error('Error while adding friend:', error);

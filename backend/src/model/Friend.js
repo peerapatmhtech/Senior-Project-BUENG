@@ -9,6 +9,7 @@ const FriendSchema = new mongoose.Schema(
       {
         email: String,
         roomId: String,
+        eventId: String, // เพิ่ม eventId เพื่อเชื่อมโยงกิจกรรม
       },
     ],
     following: { type: [String], default: [] },
@@ -17,17 +18,28 @@ const FriendSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// addFriend: เพิ่มเพื่อน (รองรับ roomId)
-FriendSchema.statics.addFriend = async function (userEmail, friendEmail, roomId) {
+// addFriend: เพิ่มเพื่อน (รองรับ roomId และ eventId)
+FriendSchema.statics.addFriend = async function (userEmail, friendEmail, roomId, eventId = null) {
   let user = await this.findOne({ email: userEmail });
   if (!user) {
     user = new this({
       email: userEmail,
-      friends: [{ email: friendEmail, roomId }],
+      friends: [{ email: friendEmail, roomId, eventId }],
     });
   } else {
-    if (!user.friends.some((f) => f.email === friendEmail)) {
-      user.friends.push({ email: friendEmail, roomId });
+    // ตรวจสอบทั้ง email และ roomId เพื่อไม่ให้ห้องซ้ำซ้อน 
+    // หรือถ้าเป็นเพื่อนกันอยู่แล้ว แต่มาจากกิจกรรมใหม่ (eventId ใหม่) อาจจะต้องการ อัปเดต?
+    // แต่ตามความต้องการคือ Source of Truth เดียว 
+    const isAlreadyFriend = user.friends.some((f) => f.email === friendEmail);
+    if (!isAlreadyFriend) {
+      user.friends.push({ email: friendEmail, roomId, eventId });
+    } else {
+      // หากเป็นเพื่อนกันอยู่แล้ว แต่อาจต้องการอัปเดต roomId หรือ eventId ล่าสุด
+      const friendIdx = user.friends.findIndex(f => f.email === friendEmail);
+      if (friendIdx !== -1) {
+        if (roomId) user.friends[friendIdx].roomId = roomId;
+        if (eventId) user.friends[friendIdx].eventId = eventId;
+      }
     }
   }
   await user.save();

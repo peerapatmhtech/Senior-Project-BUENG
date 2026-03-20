@@ -2,7 +2,8 @@ import express from 'express';
 import { Like } from '../model/like.js'; 
 import { Info } from '../model/info.js';
 import { requireOwner } from '../middleware/required.js';
-import { matchByProfile, triggerInactiveUserMatch } from '../services/matchService.js';
+import { triggerInactiveUserMatch } from '../services/matchService.js';
+import matchEmitter from '../services/eventEmitter.js';
 const app = express();
 
 // POST /like
@@ -27,9 +28,12 @@ app.post('/like', async (req, res) => {
     if (likeCount === 0) {
       const profile = await Info.findOne({ email: userEmail });
       if (profile?.userInfo?.detail) {
-        console.info(`[AI Trigger] User ${userEmail} liked their first event. Triggering profile matching...`);
-        // We run this async without awaiting if it's slow, but let's await for reliability
-        await matchByProfile(req.app, userEmail, profile.userInfo.detail);
+        // Trigger AI Matching via event emitter
+        matchEmitter.emit('userProfileUpdated', {
+          app: req.app,
+          email: userEmail,
+          detail: profile.userInfo.detail,
+        });
       }
     }
 

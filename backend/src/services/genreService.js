@@ -47,25 +47,56 @@ export const updateGenresAndFindEvents = async ({
   const allFoundEvents = [];
   const missingSubGenres = {};
 
-  // Helper to map semantic dates to regex-friendly natural language patterns
-  const getDateKeywords = (dateVal) => {
+  // Helper to map semantic dates to Date ranges and regex-friendly patterns
+  const getDateRangeAndRegex = (dateVal) => {
     const now = new Date();
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    now.setHours(0, 0, 0, 0);
     const tomorrow = new Date(now);
     tomorrow.setDate(now.getDate() + 1);
+    const nextDay = new Date(tomorrow);
+    nextDay.setDate(tomorrow.getDate() + 1);
+
+    let range = null;
+    let keywords = [];
 
     switch (dateVal) {
-      case 'today':
-        return [new RegExp(`${months[now.getMonth()]} ${now.getDate()}`, 'i'), /today/i];
-      case 'tomorrow':
-        return [new RegExp(`${months[tomorrow.getMonth()]} ${tomorrow.getDate()}`, 'i'), /tomorrow/i];
-      case 'week':
-        return [/this week/i, /week/i];
-      case 'month':
-        return [new RegExp(months[now.getMonth()], 'i'), /this month/i];
-      default:
-        return [];
+      case 'today': {
+        range = { $gte: now, $lt: tomorrow };
+        keywords = [/today/i];
+        break;
+      }
+      case 'tomorrow': {
+        range = { $gte: tomorrow, $lt: nextDay };
+        keywords = [/tomorrow/i];
+        break;
+      }
+      case 'week': {
+        const endOfWeek = new Date(now);
+        endOfWeek.setDate(now.getDate() + 7);
+        range = { $gte: now, $lt: endOfWeek };
+        keywords = [/this week/i, /week/i];
+        break;
+      }
+      case 'month': {
+        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+        range = { $gte: now, $lt: endOfMonth };
+        keywords = [/this month/i];
+        break;
+      }
     }
+
+    // Add month/day keywords for backup text search
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    if (dateVal === 'today') {
+      keywords.push(new RegExp(`${months[now.getMonth()]} ${now.getDate()}`, 'i'));
+    } else if (dateVal === 'tomorrow') {
+      keywords.push(new RegExp(`${months[tomorrow.getMonth()]} ${tomorrow.getDate()}`, 'i'));
+    }
+
+    return {
+      range,
+      regex: keywords.length > 0 ? new RegExp(keywords.map((k) => k.source).join('|'), 'i') : null,
+    };
   };
 
   // 5. Parallel Search in Database
@@ -89,22 +120,24 @@ export const updateGenresAndFindEvents = async ({
           { address: locationRegex },
           { venue: locationRegex },
           { description: locationRegex },
-        ]
+        ],
       });
     }
 
     // Filter by date if provided
     if (date) {
-      const dateContext = getDateKeywords(date);
-      if (dateContext.length > 0) {
-        filterAnd.push({
-          $or: [
-            { 'date.when': { $in: dateContext } },
-            { 'date.start_display': { $in: dateContext } },
-            { title: { $in: dateContext } },
-            { description: { $in: dateContext } },
-          ]
-        });
+      const { range, regex } = getDateRangeAndRegex(date);
+      const dateOr = [];
+      if (range) dateOr.push({ date: range });
+      if (regex) {
+        dateOr.push({ 'dateRaw.when': regex });
+        dateOr.push({ 'dateRaw.start_display': regex });
+        dateOr.push({ title: regex });
+        dateOr.push({ description: regex });
+      }
+
+      if (dateOr.length > 0) {
+        filterAnd.push({ $or: dateOr });
       }
     }
 
@@ -146,7 +179,7 @@ export const updateGenresAndFindEvents = async ({
       email: { $ne: user.email },
       _id: { $nin: matchedEventIds },
     };
-    
+
     const filterAnd = [];
     if (location) {
       const locationRegex = new RegExp(location.trim(), 'i');
@@ -156,21 +189,23 @@ export const updateGenresAndFindEvents = async ({
           { address: locationRegex },
           { venue: locationRegex },
           { description: locationRegex },
-        ]
+        ],
       });
     }
-    
+
     if (date) {
-      const dateContext = getDateKeywords(date);
-      if (dateContext.length > 0) {
-        filterAnd.push({
-          $or: [
-            { 'date.when': { $in: dateContext } },
-            { 'date.start_display': { $in: dateContext } },
-            { title: { $in: dateContext } },
-            { description: { $in: dateContext } },
-          ]
-        });
+      const { range, regex } = getDateRangeAndRegex(date);
+      const dateOr = [];
+      if (range) dateOr.push({ date: range });
+      if (regex) {
+        dateOr.push({ 'dateRaw.when': regex });
+        dateOr.push({ 'dateRaw.start_display': regex });
+        dateOr.push({ title: regex });
+        dateOr.push({ description: regex });
+      }
+
+      if (dateOr.length > 0) {
+        filterAnd.push({ $or: dateOr });
       }
     }
 

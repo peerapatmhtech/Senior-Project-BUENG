@@ -1,16 +1,15 @@
 import express from 'express';
 const router = express.Router();
 import User from '../model/userroom.js';
+import Friend from '../model/Friend.js';
 
 // ดึงข้อมูลเพื่อนของผู้ใช้
 router.get('/friends/:email', async (req, res) => {
   const { email } = req.params;
   try {
-    const user = await User.findOne({ email });
-    if (!user) return res.status(404).json({ success: false, message: 'ไม่พบผู้ใช้' });
-
-    // หากไม่มีข้อมูลเพื่อน ให้ส่งอาร์เรย์ว่าง
-    const friends = user.friends || [];
+    // ดึงรายชื่อเพื่อนจาก Friend model แทน userevents (User)
+    const friendData = await Friend.findOne({ email });
+    const friends = friendData ? friendData.friends : [];
 
     // ดึงข้อมูลเพื่อนเพิ่มเติมจาก User
     const friendDetails = [];
@@ -22,6 +21,7 @@ router.get('/friends/:email', async (req, res) => {
           displayName: friendData.displayName,
           photoURL: friendData.photoURL,
           roomId: friend.roomId,
+          eventId: friend.eventId,
         });
       }
     }
@@ -48,29 +48,25 @@ router.delete('/remove-friend', async (req, res) => {
   }
 
   try {
-    // ดึงข้อมูลผู้ใช้
-    const user = await User.findOne({ email: userEmail });
-    const friend = await User.findOne({ email: friendEmail });
+    // ดึงข้อมูลผู้ใช้จาก Friend model โดยตรง
+    const user = await Friend.findOne({ email: userEmail });
+    const friend = await Friend.findOne({ email: friendEmail });
 
     if (!user) {
-      return res.status(404).json({ success: false, message: 'ไม่พบผู้ใช้' });
+      return res.status(404).json({ success: false, message: 'ไม่พบข้อมูลผู้ใช้ในระบบเพื่อน' });
     }
 
     if (!friend) {
-      return res.status(404).json({ success: false, message: 'ไม่พบผู้ใช้ที่เป็นเพื่อน' });
+      return res.status(404).json({ success: false, message: 'ไม่พบข้อมูลเพื่อนในระบบเพื่อน' });
     }
 
     // ลบเพื่อนออกจากรายการเพื่อนของผู้ใช้
-    if (user.friends && user.friends.length > 0) {
-      user.friends = user.friends.filter((f) => f.email !== friendEmail);
-    }
+    user.friends = user.friends.filter((f) => f.email !== friendEmail);
 
     // ลบผู้ใช้ออกจากรายการเพื่อนของเพื่อน
-    if (friend.friends && friend.friends.length > 0) {
-      friend.friends = friend.friends.filter((f) => f.email !== userEmail);
-    }
+    friend.friends = friend.friends.filter((f) => f.email !== userEmail);
 
-    // บันทึกการเปลี่ยนแปลง
+    // บันทึกการเปลี่ยนแปลงใน Friend collection
     await user.save();
     await friend.save();
 

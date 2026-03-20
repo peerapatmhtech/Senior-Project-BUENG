@@ -3,6 +3,7 @@ import request from 'supertest';
 
 const mockFriend = {
   findOne: jest.fn(),
+  addFriend: jest.fn(),
 };
 
 await jest.unstable_mockModule('../../src/model/Friend.js', () => ({
@@ -24,19 +25,19 @@ describe('Friend API routes', () => {
         friends: [],
         save: jest.fn().mockResolvedValue(true),
       };
-      Friend.findOne.mockResolvedValue(mockUser);
+      Friend.addFriend.mockResolvedValue(mockUser);
       const res = await request(app)
         .post('/add-friend')
-        .send({ userEmail: 'user@example.com', friendEmail: 'friend@example.com' });
+        .send({ userEmail: 'user@example.com', friendEmail: 'friend@example.com', roomId: 'room123' });
       expect(res.statusCode).toBe(200);
       expect(mockUser.save).toHaveBeenCalled();
     });
 
     it('should handle server error', async () => {
-      Friend.findOne.mockRejectedValue(new Error('DB error'));
+      Friend.addFriend.mockRejectedValue(new Error('DB error'));
       const res = await request(app)
         .post('/add-friend')
-        .send({ userEmail: 'user@example.com', friendEmail: 'friend@example.com' });
+        .send({ userEmail: 'user@example.com', friendEmail: 'friend@example.com', roomId: 'room123' });
       expect(res.statusCode).toBe(500);
     });
   });

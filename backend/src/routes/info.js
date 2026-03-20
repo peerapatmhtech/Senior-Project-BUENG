@@ -2,7 +2,8 @@ import express from 'express';
 import { Info } from '../model/info.js';
 import { Gmail } from '../model/gmail.js';
 import { requireOwner } from '../middleware/required.js';
-import { matchByProfile, triggerInactiveUserMatch } from '../services/matchService.js';
+import { triggerInactiveUserMatch } from '../services/matchService.js';
+import matchEmitter from '../services/eventEmitter.js';
 const app = express.Router();
 
 //////////ดึงห้องที่ผู้ใช้เชื่อมต่อ/////////////////
@@ -66,10 +67,12 @@ app.post('/save-user-info', requireOwner, async (req, res) => {
       { new: true, upsert: true }
     );
 
-    // Trigger AI Matching in background (don't await to keep response fast)
-    matchByProfile(req.app, email, userInfo?.detail).catch(err => 
-      console.error('[AI Match Trigger] Error:', err)
-    );
+    // Trigger AI Matching via event emitter
+    matchEmitter.emit('userProfileUpdated', {
+      app: req.app,
+      email,
+      detail: userInfo?.detail,
+    });
 
     res.json({ message: 'User info saved', data: updatedUser });
   } catch (error) {

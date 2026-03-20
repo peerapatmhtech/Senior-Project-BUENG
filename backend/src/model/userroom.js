@@ -19,22 +19,7 @@ const UserSchema = new Schema(
       type: String,
       default: '',
     },
-    friends: [
-      {
-        email: {
-          type: String,
-          required: true,
-        },
-        roomId: {
-          type: String,
-          required: true,
-        },
-        addedAt: {
-          type: Date,
-          default: Date.now,
-        },
-      },
-    ],
+
     lastSeen: {
       type: Date,
       default: Date.now,

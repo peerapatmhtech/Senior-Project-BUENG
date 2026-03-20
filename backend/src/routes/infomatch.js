@@ -9,7 +9,7 @@ app.use('/aichat', aiChatRoutes);
 
 app.get('/infomatch/all', async (req, res) => {
   try {
-    const infoMatches = await InfoMatch.find({}).sort({ createdAt: -1 });
+    const infoMatches = await InfoMatch.find({}).sort({ chance: -1, lastMatchedAt: -1 });
 
     res.status(200).json({
       success: true,
@@ -38,26 +38,23 @@ app.get('/infomatch/:email', requireOwner, async (req, res) => {
         $match: {
           status: 'pending',
           $or: [{ email: email }, { usermatch: email }],
-          swipedBy: { $ne: email } // Only show cards NOT swiped by current user
-        }
+          swipedBy: { $ne: email }, // Only show cards NOT swiped by current user
+        },
       },
       {
         $addFields: {
           // Penalty: Reduce chance by 20% for each skipCount
           effectiveScore: {
-            $multiply: [
-              '$chance',
-              { $subtract: [1, { $multiply: ['$skipCount', 0.2] }] }
-            ]
-          }
-        }
+            $multiply: ['$chance', { $subtract: [1, { $multiply: ['$skipCount', 0.2] }] }],
+          },
+        },
       },
       {
-        $sort: { 
-          effectiveScore: -1, 
-          lastMatchedAt: -1 
-        }
-      }
+        $sort: {
+          effectiveScore: -1,
+          lastMatchedAt: -1,
+        },
+      },
     ]);
 
     if (!infoMatch || infoMatch.length === 0) {
@@ -111,7 +108,7 @@ app.get('/infomatch/user/:email', requireOwner, async (req, res) => {
     // หา InfoMatch ที่เกี่ยวข้องกับผู้ใช้และเพื่อน
     const infoMatches = await InfoMatch.find({
       $or: [{ email: { $in: friendEmails } }, { usermatch: { $in: friendEmails } }],
-    }).sort({ createdAt: -1 });
+    }).sort({ chance: -1, lastMatchedAt: -1 });
 
     res.status(200).json({
       success: true,
@@ -280,7 +277,7 @@ app.post('/infomatch/:id/interaction', requireOwner, async (req, res) => {
 
     res.status(200).json({
       success: true,
-      data: infoMatch
+      data: infoMatch,
     });
   } catch (error) {
     console.error('Error handling interaction:', error);

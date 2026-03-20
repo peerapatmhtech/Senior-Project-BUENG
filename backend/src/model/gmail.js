@@ -13,4 +13,6 @@ const userSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+userSchema.index({ lastActiveAt: 1 });
+
 export const Gmail = mongoose.model('gmails', userSchema);

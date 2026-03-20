@@ -39,6 +39,9 @@ const FriendRequestSchema = new Schema(
     roomId: {
       type: String,
     },
+    eventId: {
+      type: String,
+    },
     read: {
       type: Boolean,
       default: false,

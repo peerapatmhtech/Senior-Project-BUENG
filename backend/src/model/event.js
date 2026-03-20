@@ -5,7 +5,8 @@ import mongoose from 'mongoose';
 const eventSchema = new mongoose.Schema(
   {
     title: String,
-    date: mongoose.Schema.Types.Mixed,
+    date: Date, // Changed from Mixed to Date
+    dateRaw: mongoose.Schema.Types.Mixed, // Keep original date object for reference
     email: String,
     address: mongoose.Schema.Types.Mixed,
     genre: {
@@ -25,5 +26,7 @@ const eventSchema = new mongoose.Schema(
 );
 
 eventSchema.index({ title: 1, link: 1 }, { unique: true });
+// Add text index for search
+eventSchema.index({ title: 'text', description: 'text', address: 'text' });
 
 export const Event = mongoose.model('Event', eventSchema);

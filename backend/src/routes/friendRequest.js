@@ -11,7 +11,7 @@ import { requireOwner } from '../middleware/required.js';
 // API สำหรับส่งคำขอเป็นเพื่อน
 router.post('/friend-request', async (req, res) => {
   try {
-    const { from, to, requestId, timestamp, roomId } = req.body;
+    const { from, to, requestId, timestamp, roomId, eventId } = req.body;
 
     // 1. Validate Input
     if (!from?.email || !to) {
@@ -80,6 +80,7 @@ router.post('/friend-request', async (req, res) => {
       timestamp: timestamp || new Date(),
       status: 'pending',
       roomId,
+      eventId,
     });
 
     await newFriendRequest.save();
@@ -264,44 +265,20 @@ router.post('/friend-request-response', requireOwner, async (req, res) => {
 
     // ถ้าตอบรับ ให้เพิ่มเป็นเพื่อนในฐานข้อมูล
     if (response === 'accept') {
-      // ดึงข้อมูลผู้ใช้ทั้งสองคน
+      // ใช้ static method addFriend ที่ได้อัปเดตใหม่ให้ idempotent และรองรับ eventId
+      // roomId และ eventId อาจจะมาจาก request body หรือตัวคำขอเอง
+      const finalRoomId = roomId || friendRequest.roomId;
+      
+      // ลำดับความสำคัญของ eventId (จาก body > จาก request record > null)
+      const finalEventId = req.body.eventId || friendRequest.eventId || null;
+
+      // เพิ่มความสัมพันธ์เพื่อนทั้งสองฝั่ง (Source of Truth เดียวที่ Friend.js)
+      await Promise.all([
+        Friend.addFriend(userEmail, friendEmail, finalRoomId, finalEventId),
+        Friend.addFriend(friendEmail, userEmail, finalRoomId, finalEventId)
+      ]);
+
       const user = await Friend.findOne({ email: userEmail });
-      const friend = await Friend.findOne({ email: friendEmail });
-      if (!user) {
-        await Friend.addFriend(userEmail, friendEmail, roomId);
-      }
-      if (!friend) {
-        await Friend.addFriend(friendEmail, userEmail, roomId);
-      }
-
-      // เพิ่มเพื่อนให้กับทั้งสองฝ่าย
-      // ตรวจสอบว่ามีอาร์เรย์เพื่อนหรือไม่ ถ้าไม่มีให้สร้างใหม่
-      if (!user.friends) user.friends = [];
-      if (!friend.friends) friend.friends = [];
-
-      // ตรวจสอบว่าเป็นเพื่อนกันอยู่แล้วหรือไม่
-      const userAlreadyFriend = user.friends.some((f) => f.email === friendEmail);
-      const friendAlreadyFriend = friend.friends.some((f) => f.email === userEmail);
-
-      // เพิ่มเพื่อนให้กับผู้ใช้ถ้ายังไม่เป็นเพื่อนกัน
-      if (!userAlreadyFriend) {
-        user.friends.push({
-          email: friendEmail,
-          roomId: roomId || friendRequest.roomId,
-        });
-      }
-
-      // เพิ่มเพื่อนให้กับเพื่อนถ้ายังไม่เป็นเพื่อนกัน
-      if (!friendAlreadyFriend) {
-        friend.friends.push({
-          email: userEmail,
-          roomId: roomId || friendRequest.roomId,
-        });
-      }
-
-      // บันทึกข้อมูลลงฐานข้อมูล
-      await user.save();
-      await friend.save();
 
       // ส่งการแจ้งเตือนผ่าน socket server
       if (req.app.get('io')) {
