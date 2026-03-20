@@ -29,4 +29,26 @@ eventSchema.index({ title: 1, link: 1 }, { unique: true });
 // Add text index for search
 eventSchema.index({ title: 'text', description: 'text', address: 'text' });
 
+// Cascade Delete: เมื่อลบ Event ให้ลบ Like และ InfoMatch ที่เกี่ยวข้องด้วย
+eventSchema.pre('findOneAndDelete', async function (next) {
+  const eventId = this.getQuery()._id;
+  if (eventId) {
+    await mongoose.model('Like').deleteMany({ eventId });
+    await mongoose.model('InfoMatch').deleteMany({ eventId });
+  }
+  next();
+});
+
+// สำหรับ deleteMany (ถ้ามี)
+eventSchema.pre('deleteMany', async function (next) {
+  const query = this.getQuery();
+  const events = await this.model.find(query).select('_id');
+  const eventIds = events.map((e) => e._id);
+  if (eventIds.length > 0) {
+    await mongoose.model('Like').deleteMany({ eventId: { $in: eventIds } });
+    await mongoose.model('InfoMatch').deleteMany({ eventId: { $in: eventIds } });
+  }
+  next();
+});
+
 export const Event = mongoose.model('Event', eventSchema);
