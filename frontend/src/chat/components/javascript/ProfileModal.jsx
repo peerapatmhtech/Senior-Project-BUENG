@@ -78,11 +78,11 @@ const ProfileModal = ({ isOpen, onClose, user, userImage, followers, following, 
   const matchedUser = getMatchedUser();
 
   const profilePhotoUrl =
-    userPhotosData?.[0]?.url ||
     matchedUser?.photoURL ||
-    user.photoURL ||
+    user?.photoURL ||
+    userPhotosData?.[0]?.url ||
     userImage?.photoURL ||
-    userImage.image;
+    userImage?.image;
 
   const getDeleteType = () => {
     if (userImage?.usermatch) return 'match';

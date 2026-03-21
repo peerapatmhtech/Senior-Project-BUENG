@@ -370,3 +370,51 @@
   .categories-drawer { bottom: 0; top: auto; left: 0; transform: none; width: 100%; border-radius: 24px 24px 0 0; max-height: 90vh; }
   .btn-label { display: block !important; }
 }
+
+/* --- Custom Keyword Search Suggestion --- */
+.no-matches-suggestion {
+  background: var(--primary-light);
+  border: 1px dashed var(--primary-color);
+  padding: 1.5rem;
+  border-radius: 20px;
+  text-align: center;
+  margin-bottom: 2rem;
+  animation: fadeIn 0.4s ease;
+}
+
+.no-matches-suggestion p {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.custom-keyword-search-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--primary-color), #6366f1);
+  color: white;
+  border: none;
+  padding: 0.8rem 1.5rem;
+  border-radius: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+}
+
+.custom-keyword-search-btn:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 6px 20px rgba(79, 70, 229, 0.4);
+}
+
+.dark-mode .no-matches-suggestion {
+  background: rgba(49, 46, 129, 0.3);
+}
+
+@media (max-width: 768px) {
+  .no-matches-suggestion {
+    padding: 1rem;
+    border-radius: 16px;
+  }
+}

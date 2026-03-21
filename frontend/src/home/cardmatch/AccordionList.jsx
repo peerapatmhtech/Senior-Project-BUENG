@@ -131,6 +131,12 @@ const AccordionList = ({ items, setWaiting }) => {
 
       const subGenresObj = {};
       selectedLabels.forEach((sel) => {
+        if (sel.key === 'custom-keyword') {
+          const cat = 'Search';
+          if (!subGenresObj[cat]) subGenresObj[cat] = [];
+          if (!subGenresObj[cat].includes(sel.label)) subGenresObj[cat].push(sel.label);
+          return;
+        }
         const [itemIdx, genreIdx] = sel.key.split('-').map(Number);
         const item = items[itemIdx];
         if (item && item.genres && item.genres[genreIdx]) {
@@ -200,7 +206,17 @@ const AccordionList = ({ items, setWaiting }) => {
     ));
   }, [items, selectedLabels, handleTabSelect, genreSearch]);
 
-
+  const hasMatches = useMemo(() => {
+    if (!genreSearch || !items) return true;
+    return items.some(item => 
+      item.genres?.some(genre => 
+        genre.tabs?.some(tab => {
+          const label = typeof tab === 'string' ? tab : tab.label;
+          return label.toLowerCase().includes(genreSearch.toLowerCase());
+        })
+      )
+    );
+  }, [items, genreSearch]);
 
   return (
     <div className="filter-bar-container" ref={containerRef}>
@@ -304,6 +320,24 @@ const AccordionList = ({ items, setWaiting }) => {
             </div>
 
             <div className="drawer-scroll-content">
+              {genreSearch && !hasMatches && (
+                <div className="no-matches-suggestion">
+                  <p>ไม่พบหมวดหมู่ที่ตรงกัน</p>
+                  <button 
+                    className="custom-keyword-search-btn"
+                    onClick={() => {
+                      if (!selectedLabels.some(s => s.label === genreSearch)) {
+                        setSelectedLabels(prev => [...prev.slice(0, 1), { key: 'custom-keyword', label: genreSearch }]);
+                      }
+                      setGenreSearch('');
+                      setIsDrawerOpen(false);
+                    }}
+                  >
+                    <FaSearch style={{ marginRight: '8px' }} />
+                    ค้นหา {`"${genreSearch}"`} บน Google Events
+                  </button>
+                </div>
+              )}
               {genreSections}
             </div>
 

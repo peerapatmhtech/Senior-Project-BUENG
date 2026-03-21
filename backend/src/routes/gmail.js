@@ -59,31 +59,44 @@ app.get('/users', async (req, res) => {
 
     const infoMap = new Map(allInfos.map(info => [info.email, info.nickname]));
 
-    // Optimization: Batch fetch photos for users with custom order
+    // 1. Processing existing photosOrder
     const photoIds = users
       .filter((u) => u.photosOrder && u.photosOrder.length > 0)
       .map((u) => u.photosOrder[0]);
 
     if (photoIds.length > 0) {
-      const photos = await UserPhoto.find({ _id: { $in: photoIds } })
-        .select('_id url')
-        .lean();
+      const photos = await UserPhoto.find({ _id: { $in: photoIds } }).select('_id url').lean();
       const photoMap = new Map(photos.map((p) => [p._id.toString(), p.url]));
-
       users.forEach((user) => {
         if (user.photosOrder && user.photosOrder.length > 0) {
-          const customPhotoUrl = photoMap.get(user.photosOrder[0]);
-          if (customPhotoUrl) user.photoURL = customPhotoUrl;
+          const customUrl = photoMap.get(user.photosOrder[0]);
+          if (customUrl) user.photoURL = customUrl;
         }
       });
     }
 
-    // Update displayName with nickname if available
+    // 2. Fallback for users without order (find latest upload)
+    const usersNeedFallback = users.filter((u) => !u.photosOrder || u.photosOrder.length === 0);
+    if (usersNeedFallback.length > 0) {
+      const fallbackEmails = usersNeedFallback.map((u) => u.email);
+      const latestPhotos = await UserPhoto.aggregate([
+        { $match: { email: { $in: fallbackEmails } } },
+        { $sort: { createdAt: -1 } },
+        { $group: { _id: '$email', url: { $first: '$url' } } },
+      ]);
+      const fallbackMap = new Map(latestPhotos.map((p) => [p._id, p.url]));
+      users.forEach((user) => {
+        if (!user.photosOrder || user.photosOrder.length === 0) {
+          const recentPhoto = fallbackMap.get(user.email);
+          if (recentPhoto) user.photoURL = recentPhoto;
+        }
+      });
+    }
+
+    // 3. Update displayNames
     users.forEach(user => {
       const nickname = infoMap.get(user.email);
-      if (nickname) {
-        user.displayName = nickname;
-      }
+      if (nickname) user.displayName = nickname;
     });
 
     res.json(users);
@@ -96,32 +109,27 @@ app.get('/users', async (req, res) => {
 app.get('/users/:email', async (req, res) => {
   const { email } = req.params;
   try {
-    if (!email) {
-      return res.status(400).send('Email is required.');
-    }
+    if (!email) return res.status(400).send('Email is required.');
+    
     const [user, info] = await Promise.all([
       Gmail.findOne({ email }).lean(),
       mongoose.model('Info').findOne({ email }).select('nickname').lean()
     ]);
-    
     if (!user) return res.status(404).send('User not found');
 
-    // Check for custom photo order
+    // Priority: photosOrder[0] -> most recent fallback -> existing photoURL
     if (user.photosOrder && user.photosOrder.length > 0) {
       const photo = await UserPhoto.findById(user.photosOrder[0]).select('url').lean();
-      if (photo) {
-        user.photoURL = photo.url;
-      }
+      if (photo) user.photoURL = photo.url;
+    } else {
+      const recentPhoto = await UserPhoto.findOne({ email }).sort({ createdAt: -1 }).select('url').lean();
+      if (recentPhoto) user.photoURL = recentPhoto.url;
     }
     
-    // Override displayName with nickname if available
-    if (info && info.nickname) {
-      user.displayName = info.nickname;
-    }
-    
+    if (info?.nickname) user.displayName = info.nickname;
     res.json(user);
   } catch (error) {
-    console.error('Error fetching friends:', error);
+    console.error('Error fetching user:', error);
     res.status(500).send('Server error');
   }
 });
@@ -129,44 +137,56 @@ app.get('/users/:email', async (req, res) => {
 // สำหรับดึงข้อมูลเพื่อน (usersfriends)
 app.get('/usersfriends', async (req, res) => {
   try {
-    const email = JSON.parse(decodeURIComponent(req.query.emails));
+    const emails = JSON.parse(decodeURIComponent(req.query.emails));
     const [users, allInfos] = await Promise.all([
-      Gmail.find({ email: { $in: email } }).lean(),
-      mongoose.model('Info').find({ email: { $in: email } }).select('email nickname').lean()
+      Gmail.find({ email: { $in: emails } }).lean(),
+      mongoose.model('Info').find({ email: { $in: emails } }).select('email nickname').lean()
     ]);
 
     const infoMap = new Map(allInfos.map(info => [info.email, info.nickname]));
 
-    // Optimization: Batch fetch photos
+    // Batch process photosOrder
     const photoIds = users
       .filter((u) => u.photosOrder && u.photosOrder.length > 0)
       .map((u) => u.photosOrder[0]);
 
     if (photoIds.length > 0) {
-      const photos = await UserPhoto.find({ _id: { $in: photoIds } })
-        .select('_id url')
-        .lean();
+      const photos = await UserPhoto.find({ _id: { $in: photoIds } }).select('_id url').lean();
       const photoMap = new Map(photos.map((p) => [p._id.toString(), p.url]));
-
       users.forEach((user) => {
         if (user.photosOrder && user.photosOrder.length > 0) {
-          const customPhotoUrl = photoMap.get(user.photosOrder[0]);
-          if (customPhotoUrl) user.photoURL = customPhotoUrl;
+          const customUrl = photoMap.get(user.photosOrder[0]);
+          if (customUrl) user.photoURL = customUrl;
         }
       });
     }
 
-    // Update displayName with nickname if available
+    // Fallback for friends
+    const needsFallback = users.filter((u) => !u.photosOrder || u.photosOrder.length === 0);
+    if (needsFallback.length > 0) {
+      const fallbackEmails = needsFallback.map((u) => u.email);
+      const latestPhotos = await UserPhoto.aggregate([
+        { $match: { email: { $in: fallbackEmails } } },
+        { $sort: { createdAt: -1 } },
+        { $group: { _id: '$email', url: { $first: '$url' } } },
+      ]);
+      const fallbackMap = new Map(latestPhotos.map((p) => [p._id, p.url]));
+      users.forEach((user) => {
+        if (!user.photosOrder || user.photosOrder.length === 0) {
+          const recentPhoto = fallbackMap.get(user.email);
+          if (recentPhoto) user.photoURL = recentPhoto;
+        }
+      });
+    }
+
     users.forEach(user => {
       const nickname = infoMap.get(user.email);
-      if (nickname) {
-        user.displayName = nickname;
-      }
+      if (nickname) user.displayName = nickname;
     });
 
     res.json(users);
   } catch (error) {
-    console.error(error);
+    console.error('Error fetching friends:', error);
     res.status(500).send('Server error');
   }
 });
