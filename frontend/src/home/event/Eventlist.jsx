@@ -99,13 +99,15 @@ const EventListContent = ({
               {event.date && (
                 <p className="event-date" style={{ marginBottom: '0.5rem' }}>
                   <FiCalendar style={{ marginRight: '0.5rem', verticalAlign: 'text-bottom' }} />
-                  {typeof event.date === 'object' && event.date.when
+                  {event.date?.when
                     ? event.date.when
-                    : new Date(event.date).toLocaleDateString('th-TH', {
+                    : !isNaN(new Date(event.date).getTime())
+                    ? new Date(event.date).toLocaleDateString('th-TH', {
                         year: 'numeric',
                         month: 'long',
                         day: 'numeric',
-                      })}
+                      })
+                    : 'N/A'}
                 </p>
               )}
               {(event.venue || (event.address && event.address.length > 0)) && (
