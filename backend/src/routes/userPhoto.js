@@ -71,6 +71,15 @@ router.post('/upload-user-photo', upload.single('photo'), async (req, res) => {
 
       await newPhoto.save();
 
+      // Update Gmail collection: prepend new photo and set as primary photoURL
+      await Gmail.updateOne(
+        { email },
+        { 
+          $push: { photosOrder: { $each: [newPhoto._id], $position: 0 } },
+          $set: { photoURL: publicUrl }
+        }
+      );
+
       res.status(201).json({
         success: true,
         message: 'อัปโหลดรูปภาพสำเร็จ',
@@ -172,8 +181,24 @@ router.delete('/user-photo/:photoId', async (req, res) => {
     // 2. ลบจาก MongoDB
     await UserPhoto.deleteOne({ _id: photoId });
 
-    // 3. ลบ ID ออกจาก photosOrder
-    await Gmail.updateOne({ email }, { $pull: { photosOrder: photoId } });
+    // 3. ลบ ID ออกจาก photosOrder และตรวจสอบรูปใหม่เพื่อตั้งเป็นรูปหลัก
+    const updatedUser = await Gmail.findOneAndUpdate(
+      { email },
+      { $pull: { photosOrder: photoId } },
+      { new: true }
+    );
+
+    // ถ้ามีรูปเหลืออยู่ ให้เอารูปแรกใน list ใหม่มาตั้งเป็นรูปหลัก
+    if (updatedUser && updatedUser.photosOrder && updatedUser.photosOrder.length > 0) {
+      const nextMainPhoto = await UserPhoto.findById(updatedUser.photosOrder[0]);
+      if (nextMainPhoto) {
+        await Gmail.updateOne({ email }, { photoURL: nextMainPhoto.url });
+      }
+    } else {
+      // หรือถ้าไม่เหลือรูปเลย อาจจะกลับไปใช้รูปเริ่มต้นจาก google (เก็บไว้ในฟิลด์อื่นถ้ามี) หรือปล่อยว่าง
+      // ในที่นี้เราปล่อยให้แสดงรูปเงาคน (UserAvatar handle นี้อยู่แล้ว)
+      await Gmail.updateOne({ email }, { photoURL: '' });
+    }
 
     res.json({ success: true, message: 'Photo deleted successfully' });
   } catch (error) {
@@ -187,6 +212,14 @@ router.post('/user-photos/reorder', async (req, res) => {
     const email = req.user.email;
     const { photoIds } = req.body;
     const result = await Gmail.updateOne({ email }, { photosOrder: photoIds });
+    
+    // Update permanent photoURL in Gmail collection for global visibility
+    if (photoIds.length > 0) {
+      const firstPhoto = await UserPhoto.findById(photoIds[0]);
+      if (firstPhoto) {
+        await Gmail.updateOne({ email }, { photoURL: firstPhoto.url });
+      }
+    }
 
     if (result.matchedCount === 0) {
       return res.status(404).json({ success: false, message: 'User not found' });

@@ -4,6 +4,7 @@ import { MdSend, MdLightbulbOutline, MdAutoAwesome } from 'react-icons/md';
 import { RiRobot2Fill } from 'react-icons/ri';
 import api from '../../../server/api';
 import { toast } from 'react-toastify';
+import UserAvatar from '../../../components/UserAvatar';
 import '../css/ChatAI.css';
 import PropTypes from 'prop-types';
 
@@ -186,9 +187,9 @@ const ChatContainerAI = ({ isAiChatOpen, defaultProfileImage, roomId, disabled, 
           return (
             <div key={msg._id} className={`chat-message ${isAI ? 'other-message' : 'my-message'}`}>
               {isAI ? (
-                <img src={aiProfileImage} alt="AI" className="message-avatar" />
+                <UserAvatar src={aiProfileImage} alt="AI" className="message-avatar" />
               ) : (
-                <img src={defaultProfileImage} alt="User" className="message-avatar" />
+                <UserAvatar src={localStorage.getItem('userPhoto') || defaultProfileImage} alt="User" className="message-avatar" />
               )}
               <div className={`message-content ${isAI ? 'other' : 'current'}`}>
                 <div className="colum-message">
@@ -207,7 +208,7 @@ const ChatContainerAI = ({ isAiChatOpen, defaultProfileImage, roomId, disabled, 
 
         {(isAiThinking || mutation.isPending) && (
           <div className="chat-message other-message">
-            <img src={aiProfileImage} alt="AI" className="message-avatar" />
+            <UserAvatar src={aiProfileImage} alt="AI" className="message-avatar" />
             <div className="message-content other">
               <div className="colum-message">
                 <div className="message-bubble other">

@@ -2,6 +2,7 @@ import { FaChevronDown, FaChevronRight, FaUsers } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { fetchAllRooms, fetchUserRooms } from "../../../lib/queries";
+import UserAvatar from "../../../components/UserAvatar";
 
 const CommunityList = ({
   setActiveUser,
@@ -88,11 +89,8 @@ const CommunityList = ({
                     }}
                   >
                     <div className="commu-mobile">
-                      <img
-                        src={
-                          room.image ||
-                          "https://images.squarespace-cdn.com/content/v1/557adc8ae4b05fe7bf13f9f0/1440602294667-276CNPQ99Q205NXV17BH/image-asset.jpeg"
-                        }
+                      <UserAvatar
+                        src={room.image}
                         alt={room.name}
                         className="friend-photo"
                       />
