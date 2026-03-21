@@ -41,13 +41,15 @@ export default function (io) {
       }
 
       // Pre-fetch filters for Jaccard calculation
-      const otherEmails = [...new Set(otherUserLikes.map(l => l.userEmail))];
+      const otherEmails = [...new Set(otherUserLikes.map((l) => l.userEmail))];
       const [myFilter, otherFilters] = await Promise.all([
         Filter.findOne({ email }).lean(),
-        Filter.find({ email: { $in: otherEmails } }).lean()
+        Filter.find({ email: { $in: otherEmails } }).lean(),
       ]);
 
-      const mySubGenres = new Set(myFilter?.subGenres ? Object.values(myFilter.subGenres).flat() : []);
+      const mySubGenres = new Set(
+        myFilter?.subGenres ? Object.values(myFilter.subGenres).flat() : []
+      );
       const filterMap = otherFilters.reduce((acc, f) => {
         acc[f.email] = new Set(f.subGenres ? Object.values(f.subGenres).flat() : []);
         return acc;
@@ -69,7 +71,9 @@ export default function (io) {
       // Optimization: Fetch existing matches to avoid re-matching matched pairs
       const existingMatches = await InfoMatch.find({
         $or: [{ email: email }, { usermatch: email }],
-      }).select('email usermatch status').lean();
+      })
+        .select('email usermatch status')
+        .lean();
 
       const matchedPartners = new Set();
       existingMatches.forEach((m) => {
@@ -88,9 +92,9 @@ export default function (io) {
 
         // Calculate Jaccard Similarity (Interest overlapping)
         const otherSubGenres = filterMap[targetEmail] || new Set();
-        const intersection = new Set([...mySubGenres].filter(x => otherSubGenres.has(x)));
+        const intersection = new Set([...mySubGenres].filter((x) => otherSubGenres.has(x)));
         const union = new Set([...mySubGenres, ...otherSubGenres]);
-        
+
         let jaccardChance = 30; // Default base
         if (union.size > 0) {
           jaccardChance = Math.round((intersection.size / union.size) * 100);
@@ -98,7 +102,7 @@ export default function (io) {
 
         // Formula from user: Math.min(95, 30 + sharedLikeCount * 13)
         const likeBasedChance = Math.min(95, 30 + sharedLikeCount * 13);
-        
+
         // Composite: Take 70% from shared likes volume and 30% from interest similarity (Jaccard)
         const finalChance = Math.round(likeBasedChance * 0.7 + jaccardChance * 0.3);
 
@@ -107,32 +111,32 @@ export default function (io) {
             filter: {
               email: users[0],
               usermatch: users[1],
-              status: { $ne: 'matched' }
+              status: { $ne: 'matched' },
             },
             update: {
               $set: {
                 eventId: mainLike.eventId,
                 detail: mainLike.eventTitle,
                 chance: finalChance,
-                status: 'pending', 
+                status: 'pending',
                 initiatorEmail: email,
                 lastMatchedAt: new Date(),
-                university: university
-              }
+                university: university,
+              },
             },
-            upsert: true
-          }
+            upsert: true,
+          },
         });
 
         matchData.push({ targetEmail: targetEmail, title: mainLike.eventTitle });
       }
 
       const result = await InfoMatch.bulkWrite(bulkOps);
-      
+
       // Notify only for newly upserted matches
       if (io && result.upsertedCount > 0) {
         const userSockets = req.app.get('userSockets') || {};
-        
+
         // Note: bulkWrite result doesn't easily tell which specific one was upserted in order
         // For simplicity and correctness, we notify all intended targets if they are online
         // The frontend will de-duplicate via fetchNotifications anyway
@@ -142,7 +146,7 @@ export default function (io) {
             io.to(recipientSocket).emit('notify-match', {
               type: 'event',
               eventTitle: target.title,
-              from: email
+              from: email,
             });
           }
         }

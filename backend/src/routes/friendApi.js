@@ -29,13 +29,11 @@ router.get('/friends/:email', async (req, res) => {
     res.status(200).json({ success: true, friends: friendDetails });
   } catch (error) {
     console.error('เกิดข้อผิดพลาดในการดึงข้อมูลเพื่อน:', error);
-    res
-      .status(500)
-      .json({
-        success: false,
-        message: 'เกิดข้อผิดพลาดในการดึงข้อมูลเพื่อน',
-        error: error.message,
-      });
+    res.status(500).json({
+      success: false,
+      message: 'เกิดข้อผิดพลาดในการดึงข้อมูลเพื่อน',
+      error: error.message,
+    });
   }
 });
 

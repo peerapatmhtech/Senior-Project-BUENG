@@ -92,9 +92,9 @@ router.post('/friend-request', async (req, res) => {
       const recipientSocket = userSockets[to];
 
       if (recipientSocket) {
-        io.to(recipientSocket).emit('notify-friend-request', { 
+        io.to(recipientSocket).emit('notify-friend-request', {
           from: from.email,
-          to: to 
+          to: to,
         });
       }
     }
@@ -162,22 +162,26 @@ router.get('/friend-requests/:userEmail', requireOwner, async (req, res) => {
     const requests = await FriendRequest.find({
       to: userEmail,
       status: 'pending',
-    }).sort({ timestamp: -1 }).lean();
+    })
+      .sort({ timestamp: -1 })
+      .lean();
 
     if (requests.length === 0) {
       return res.status(200).json({ success: true, requests: [] });
     }
 
     // 2. ดึงข้อมูลล่าสุดของผู้ส่งทุกคน
-    const fromEmails = [...new Set(requests.map(r => r.from.email))];
-    
+    const fromEmails = [...new Set(requests.map((r) => r.from.email))];
+
     const [usersData, infosData] = await Promise.all([
       Gmail.find({ email: { $in: fromEmails } }).lean(),
-      Info.find({ email: { $in: fromEmails } }).select('email nickname').lean()
+      Info.find({ email: { $in: fromEmails } })
+        .select('email nickname')
+        .lean(),
     ]);
 
-    const infoMap = new Map(infosData.map(i => [i.email, i.nickname]));
-    
+    const infoMap = new Map(infosData.map((i) => [i.email, i.nickname]));
+
     // 3. จัดการเรื่องรูปภาพล่าสุด (เหมือนที่ทำใน /api/users)
     const photoIdStrings = usersData
       .filter((u) => u.photosOrder && u.photosOrder.length > 0)
@@ -186,23 +190,25 @@ router.get('/friend-requests/:userEmail', requireOwner, async (req, res) => {
     let photoMap = new Map();
     if (photoIdStrings.length > 0) {
       // แปลงเป็น ObjectId เพื่อความชัวร์ในการ Query ให้ตรงกับ _id ใน MongoDB
-      const photoIds = photoIdStrings.map(id => new mongoose.Types.ObjectId(id));
-      
-      const photos = await UserPhoto.find({ _id: { $in: photoIds } }).select('_id url').lean();
+      const photoIds = photoIdStrings.map((id) => new mongoose.Types.ObjectId(id));
+
+      const photos = await UserPhoto.find({ _id: { $in: photoIds } })
+        .select('_id url')
+        .lean();
       photoMap = new Map(photos.map((p) => [p._id.toString(), p.url]));
     }
 
     const userDataMap = new Map();
-    usersData.forEach(user => {
+    usersData.forEach((user) => {
       let finalPhotoURL = user.photoURL;
       if (user.photosOrder && user.photosOrder.length > 0) {
         const customPhoto = photoMap.get(user.photosOrder[0].toString());
         if (customPhoto) finalPhotoURL = customPhoto;
       }
-      
+
       userDataMap.set(user.email, {
         displayName: infoMap.get(user.email) || user.displayName,
-        photoURL: finalPhotoURL
+        photoURL: finalPhotoURL,
       });
     });
 
@@ -210,7 +216,7 @@ router.get('/friend-requests/:userEmail', requireOwner, async (req, res) => {
     const enrichedRequests = requests.map((req) => {
       const email = req.from.email;
       const latest = userDataMap.get(email);
-      
+
       return {
         requestId: req.requestId,
         from: {
@@ -268,14 +274,14 @@ router.post('/friend-request-response', requireOwner, async (req, res) => {
       // ใช้ static method addFriend ที่ได้อัปเดตใหม่ให้ idempotent และรองรับ eventId
       // roomId และ eventId อาจจะมาจาก request body หรือตัวคำขอเอง
       const finalRoomId = roomId || friendRequest.roomId;
-      
+
       // ลำดับความสำคัญของ eventId (จาก body > จาก request record > null)
       const finalEventId = req.body.eventId || friendRequest.eventId || null;
 
       // เพิ่มความสัมพันธ์เพื่อนทั้งสองฝั่ง (Source of Truth เดียวที่ Friend.js)
       await Promise.all([
         Friend.addFriend(userEmail, friendEmail, finalRoomId, finalEventId),
-        Friend.addFriend(friendEmail, userEmail, finalRoomId, finalEventId)
+        Friend.addFriend(friendEmail, userEmail, finalRoomId, finalEventId),
       ]);
 
       const user = await Friend.findOne({ email: userEmail });
@@ -287,9 +293,9 @@ router.post('/friend-request-response', requireOwner, async (req, res) => {
         const recipientSocket = userSockets[friendEmail];
 
         if (recipientSocket) {
-          io.to(recipientSocket).emit('notify-friend-accept', { 
+          io.to(recipientSocket).emit('notify-friend-accept', {
             from: userEmail,
-            to: friendEmail 
+            to: friendEmail,
           });
         }
       }
@@ -336,7 +342,7 @@ router.get('/friend-accepts/:userEmail', requireOwner, async (req, res) => {
     // ดึงข้อมูลผู้ใช้ที่ยอมรับคำขอ (จากแหล่งข้อมูลหลัก)
     const [acceptedGmail, acceptedInfo] = await Promise.all([
       Gmail.findOne({ email: latestAccept.to }).lean(),
-      Info.findOne({ email: latestAccept.to }).select('email nickname').lean()
+      Info.findOne({ email: latestAccept.to }).select('email nickname').lean(),
     ]);
 
     if (!acceptedGmail) {

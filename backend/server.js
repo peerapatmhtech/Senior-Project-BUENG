@@ -36,7 +36,6 @@ import { authMiddleware } from './src/middleware/authMiddleware.js';
 import { limiter } from './src/middleware/ratelimit.js'; // Strings must use singlequote.
 // import { Gmail } from './src/model/gmail.js';
 
-
 const allowedOrigins = process.env.VITE_APP_WEB_BASE_URL;
 
 const __filename = fileURLToPath(import.meta.url);
@@ -140,8 +139,9 @@ io.on('connection', (socket) => {
     }
     onlineUsers.get(email).add(socket.id);
 
+    const userEmail = email.toLowerCase();
     // เก็บ socket ID ล่าสุดของผู้ใช้สำหรับการส่งการแจ้งเตือนส่วนตัว
-    userSockets[email] = socket.id;
+    userSockets[userEmail] = socket.id;
 
     // ลบเวลาออฟไลน์ล่าสุด (เพราะตอนนี้ออนไลน์แล้ว)
     lastSeenTimes.delete(email);
@@ -251,7 +251,7 @@ app.post('/api/update-genres', limiter, genreController.updateGenres);
 
 app.use('/api', MakeRoutes(io));
 app.use('/api', userPhotoRoutes);
-app.use('/api', infoMatchRoutes);
+app.use('/api', infoMatchRoutes(io));
 app.use('/api', aiRoute);
 app.use('/api', eventRoutes(io));
 app.use('/api', friendRequestRoutes);
@@ -272,7 +272,10 @@ app.get('/api/debug/routes', (req, res) => {
     } else if (middleware.name === 'router') {
       middleware.handle.stack.forEach((handler) => {
         if (handler.route) {
-          routes.push({ path: '/api' + handler.route.path, methods: Object.keys(handler.route.methods) });
+          routes.push({
+            path: '/api' + handler.route.path,
+            methods: Object.keys(handler.route.methods),
+          });
         }
       });
     }

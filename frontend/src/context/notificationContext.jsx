@@ -1,13 +1,7 @@
-import {
-  createContext,
-  useState,
-  useContext,
-  useEffect,
-  useCallback,
-} from "react";
-import io from "socket.io-client";
-import api from "../server/api";
-import { toast } from "react-toastify";
+import { createContext, useState, useContext, useEffect, useCallback } from 'react';
+import io from 'socket.io-client';
+import api from '../server/api';
+import { toast } from 'react-toastify';
 
 // สร้าง socket instance พร้อม options เพื่อแก้ปัญหาการเชื่อมต่อ
 const socket = io(import.meta.env.VITE_APP_API_BASE_URL);
@@ -19,8 +13,7 @@ export const NotificationProvider = ({ children }) => {
   const [notifications, setNotifications] = useState([]);
   const [newFriendRequest, setNewFriendRequest] = useState(null);
   const [friends, setFriends] = useState([]);
-  const [showNotificationDropdown, setShowNotificationDropdown] =
-    useState(false);
+  const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   /////////////เก็บสถานะผู้ใช้ออนไลน์///////////
@@ -30,9 +23,9 @@ export const NotificationProvider = ({ children }) => {
   const [isConnected, setIsConnected] = useState(false);
 
   // ข้อมูลผู้ใช้จาก localStorage
-  const userEmail = localStorage.getItem("userEmail");
-  const displayName = localStorage.getItem("userName");
-  const photoURL = localStorage.getItem("userPhoto");
+  const userEmail = localStorage.getItem('userEmail');
+  const displayName = localStorage.getItem('userName');
+  const photoURL = localStorage.getItem('userPhoto');
 
   ///////functions call friend request and matches///////
   const fetchNotifications = useCallback(async () => {
@@ -40,7 +33,7 @@ export const NotificationProvider = ({ children }) => {
     try {
       // 1. ดึงข้อมูลคำขอเพื่อนล่าสุดผ่าน REST API
       const friendResponse = await api.get(`/api/friend-requests/${userEmail}`);
-      
+
       // 2. ดึงข้อมูลการจับคู่ (Matches) ล่าสุด
       const matchResponse = await api.get(`/api/infomatch/${userEmail}`);
 
@@ -50,7 +43,7 @@ export const NotificationProvider = ({ children }) => {
       if (friendResponse.data && friendResponse.data.requests) {
         const friendNotifications = friendResponse.data.requests.map((request) => ({
           id: request.requestId || `${request.from?.email}-${request.timestamp}`,
-          type: "friend-request",
+          type: 'friend-request',
           from: request.from,
           to: request.to,
           timestamp: request.timestamp,
@@ -63,8 +56,8 @@ export const NotificationProvider = ({ children }) => {
       if (matchResponse.data && matchResponse.data.success && matchResponse.data.data) {
         const matchNotifications = matchResponse.data.data.map((match) => ({
           id: match._id,
-          type: "match",
-          matchType: match.eventId ? "event" : "profile",
+          type: 'match',
+          matchType: match.eventId ? 'event' : 'profile',
           detail: match.detail,
           from: { email: match.initiatorEmail }, // ในเบื้องต้นอาจมีแค่ email
           timestamp: match.createdAt,
@@ -80,12 +73,12 @@ export const NotificationProvider = ({ children }) => {
       setNotifications(allNotifications);
 
       // ตั้งค่า newFriendRequest (หรืออาจเปลี่ยนชื่อเป็น newNotification)
-      const latestUnread = allNotifications.find(n => !n.read);
+      const latestUnread = allNotifications.find((n) => !n.read);
       if (latestUnread) {
         setNewFriendRequest(latestUnread);
       }
     } catch (error) {
-      console.error("❌ Error fetching notifications:", error);
+      console.error('❌ Error fetching notifications:', error);
       if (error.response && error.response.status !== 404) {
         // toast.error("ไม่สามารถโหลดการแจ้งเตือนได้");
       }
@@ -97,19 +90,17 @@ export const NotificationProvider = ({ children }) => {
   // ปรับปรุง handleNotifyFriendRequest function
   const handleNotifyFriendRequest = useCallback(
     async (data) => {
-
       // ตรวจสอบว่า notification นี้เป็นของผู้ใช้ปัจจุบันหรือไม่
       if (data?.to === userEmail || data?.targetEmail === userEmail) {
-
         // เพิ่ม delay เล็กน้อยเพื่อให้ backend process เสร็จก่อน
         setTimeout(async () => {
           try {
             await fetchNotifications();
           } catch (error) {
-            console.error("❌ Error fetching notifications:", error);
+            console.error('❌ Error fetching notifications:', error);
           }
         }, 500);
-      } 
+      }
     },
     [userEmail, fetchNotifications]
   );
@@ -118,22 +109,19 @@ export const NotificationProvider = ({ children }) => {
   // ปรับปรุง handleNotifyFriendAccept function
   const handleNotifyFriendAccept = useCallback(
     async (data) => {
-
       if (data?.to === userEmail || data?.targetEmail === userEmail) {
-
         // Refresh notifications
         setTimeout(async () => {
           try {
             await fetchNotifications();
 
             // แสดง toast success
-            toast.success("คำขอเป็นเพื่อนของคุณได้รับการยอมรับแล้ว!", {
-              position: "bottom-right",
+            toast.success('คำขอเป็นเพื่อนของคุณได้รับการยอมรับแล้ว!', {
+              position: 'bottom-right',
               autoClose: 3000,
             });
-
           } catch (error) {
-            console.error("❌ Error processing friend accept:", error);
+            console.error('❌ Error processing friend accept:', error);
           }
         }, 500);
       }
@@ -143,20 +131,38 @@ export const NotificationProvider = ({ children }) => {
 
   // ฟังการแจ้งเตือนเมื่อมีการจับคู่ใหม่
   const handleNotifyMatch = useCallback(
-    async (_) => {
+    async (data) => {
       // Refresh notifications and show toast
       setTimeout(async () => {
         try {
           await fetchNotifications();
-          toast.info(
-            <div className="match-toast">
-              <span style={{ fontSize: "1.2rem", marginRight: "8px" }}>🔥</span>
-              <strong>ยินดีด้วย!</strong> มีคนสนใจแมตช์กับคุณ
-            </div>,
-            { position: "bottom-right", autoClose: 5000 }
-          );
+
+          if (data?.type === 'mutual-match') {
+            toast.success(
+              <div className="match-toast">
+                <span style={{ fontSize: '1.5rem', marginRight: '10px' }}>💖</span>
+                <strong>It&apos;s a Match!</strong> คุณและเพื่อนใจตรงกันแล้ว เริ่มคุยกันได้เลย!
+              </div>,
+              {
+                position: 'top-center',
+                autoClose: 10000,
+                hideProgressBar: false,
+                closeOnClick: true,
+                pauseOnHover: true,
+                draggable: true,
+              }
+            );
+          } else {
+            toast.info(
+              <div className="match-toast">
+                <span style={{ fontSize: '1.2rem', marginRight: '8px' }}>🔥</span>
+                <strong>ยินดีด้วย!</strong> มีคนสนใจแมตช์กับคุณ
+              </div>,
+              { position: 'bottom-right', autoClose: 5000 }
+            );
+          }
         } catch (error) {
-          console.error("❌ Error processing match notification:", error);
+          console.error('❌ Error processing match notification:', error);
         }
       }, 500);
     },
@@ -167,19 +173,14 @@ export const NotificationProvider = ({ children }) => {
   useEffect(() => {
     if (userEmail) {
       // โหลดจาก localStorage ก่อน
-      const savedNotifications = localStorage.getItem(
-        `notifications_${userEmail}`
-      );
+      const savedNotifications = localStorage.getItem(`notifications_${userEmail}`);
       if (savedNotifications) {
         try {
           const parsedNotifications = JSON.parse(savedNotifications);
 
           setNotifications(parsedNotifications);
         } catch (error) {
-          console.error(
-            "❌ Error parsing notifications from localStorage:",
-            error
-          );
+          console.error('❌ Error parsing notifications from localStorage:', error);
         }
       }
 
@@ -192,10 +193,7 @@ export const NotificationProvider = ({ children }) => {
   useEffect(() => {
     if (userEmail && notifications.length >= 0) {
       // เปลี่ยนจาก > 0 เป็น >= 0 เพื่อบันทึก array ว่างด้วย
-      localStorage.setItem(
-        `notifications_${userEmail}`,
-        JSON.stringify(notifications)
-      );
+      localStorage.setItem(`notifications_${userEmail}`, JSON.stringify(notifications));
     }
   }, [notifications, userEmail]);
 
@@ -203,9 +201,7 @@ export const NotificationProvider = ({ children }) => {
   useEffect(() => {
     if (userEmail && notifications.length > 0) {
       // ค้นหาคำขอเพื่อนที่ยังไม่ได้อ่าน
-      const unreadFriendRequest = notifications.find(
-        (n) => n.type === "friend-request" && !n.read
-      );
+      const unreadFriendRequest = notifications.find((n) => n.type === 'friend-request' && !n.read);
 
       // ถ้ามีคำขอเพื่อนที่ยังไม่ได้อ่าน ให้แสดงใน newFriendRequest
       if (
@@ -238,44 +234,44 @@ export const NotificationProvider = ({ children }) => {
       };
 
       // เมื่อเชื่อมต่อสำเร็จ
-      socket.on("connect", () => {
+      socket.on('connect', () => {
         setIsConnected(true);
         // แจ้งเซิร์ฟเวอร์ว่าผู้ใช้ออนไลน์
-        socket.emit("user-online", { displayName, photoURL, email: userEmail });
+        socket.emit('user-online', { displayName, photoURL, email: userEmail });
       });
 
       ////////ผู้ใช้ขาดการเชื่อมต่อ///////////
-      socket.on("disconnect", () => {
+      socket.on('disconnect', () => {
         setIsConnected(false);
       });
 
       // ตั้งค่า ping interval
       const pingInterval = setInterval(() => {
         if (socket.connected) {
-          socket.emit("user-ping", { email: userEmail });
+          socket.emit('user-ping', { email: userEmail });
         }
       }, 30000);
 
       // จัดการเมื่อปิดแอป
       const handleBeforeUnload = () => {
-        socket.emit("user-offline", { email: userEmail });
+        socket.emit('user-offline', { email: userEmail });
       };
 
-      window.addEventListener("beforeunload", handleBeforeUnload);
+      window.addEventListener('beforeunload', handleBeforeUnload);
       // Register event listeners
-      socket.on("notify-friend-request", handleFriendRequestEvent);
-      socket.on("notify-friend-accept", handleFriendAcceptEvent);
-      socket.on("notify-match", handleNotifyMatch);
+      socket.on('notify-friend-request', handleFriendRequestEvent);
+      socket.on('notify-friend-accept', handleFriendAcceptEvent);
+      socket.on('notify-match', handleNotifyMatch);
 
       // Cleanup function
       return () => {
-        window.removeEventListener("beforeunload", handleBeforeUnload);
+        window.removeEventListener('beforeunload', handleBeforeUnload);
         clearInterval(pingInterval);
         socket.close();
         // Unregister event listeners
-        socket.off("notify-friend-request", handleFriendRequestEvent);
-        socket.off("notify-friend-accept", handleFriendAcceptEvent);
-        socket.off("notify-match", handleNotifyMatch);
+        socket.off('notify-friend-request', handleFriendRequestEvent);
+        socket.off('notify-friend-accept', handleFriendAcceptEvent);
+        socket.off('notify-match', handleNotifyMatch);
       };
     } // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
@@ -294,26 +290,26 @@ export const NotificationProvider = ({ children }) => {
     const notificationElement = document.querySelector(
       `[data-notification-id="${notificationId}"]`
     );
-    const notification = notifications.find(n => n.id === notificationId);
+    const notification = notifications.find((n) => n.id === notificationId);
     try {
-      if (notification?.type === "match") {
+      if (notification?.type === 'match') {
         await api.patch(`/api/infomatch/${notificationId}/match`, { read: true });
       } else {
         await api.put(
           `/api/mark-friend-requests-read/${notificationId}`,
           { read: true },
-          { headers: { "Content-Type": "application/json" } }
+          { headers: { 'Content-Type': 'application/json' } }
         );
       }
     } catch (error) {
-      console.error("❌ Error marking notification as read:", error);
+      console.error('❌ Error marking notification as read:', error);
       // toast.error("ไม่สามารถทำเครื่องหมายว่าอ่านแล้วได้");
       // return; // Allow frontend update even if API fails to keep UI responsive
     }
 
     if (notificationElement) {
       // เพิ่มคลาสสำหรับแอนิเมชันการอ่าน
-      notificationElement.classList.add("just-read");
+      notificationElement.classList.add('just-read');
 
       // รอให้แอนิเมชันเสร็จก่อนที่จะอัพเดต state
       setTimeout(() => {
@@ -350,14 +346,11 @@ export const NotificationProvider = ({ children }) => {
 
   // ฟังก์ชันสุ่ม roomId (UUID v4 แบบง่าย)
   function generateRoomId() {
-    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(
-      /[xy]/g,
-      function (c) {
-        const r = (Math.random() * 16) | 0,
-          v = c === "x" ? r : (r & 0x3) | 0x8;
-        return v.toString(16);
-      }
-    );
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+      const r = (Math.random() * 16) | 0,
+        v = c === 'x' ? r : (r & 0x3) | 0x8;
+      return v.toString(16);
+    });
   }
 
   // ฟังก์ชันสำหรับจัดการกับการตอบกลับคำขอเป็นเพื่อน
@@ -365,7 +358,7 @@ export const NotificationProvider = ({ children }) => {
     // ทำเครื่องหมายว่าอ่านแล้ว
     markNotificationAsRead(requestId);
     // ถ้าตอบรับเป็นเพื่อน
-    if (response === "accept") {
+    if (response === 'accept') {
       // แจ้งกลับไปยังผู้ส่งคำขอว่าได้ตอบรับแล้ว
       const notification = notifications.find((n) => n.id === requestId);
       if (notification) {
@@ -380,7 +373,7 @@ export const NotificationProvider = ({ children }) => {
               requestId: requestId,
               userEmail: userEmail,
               friendEmail: notification.from.email,
-              response: "accept",
+              response: 'accept',
               roomId: finalRoomId,
               from: {
                 email: userEmail,
@@ -392,7 +385,7 @@ export const NotificationProvider = ({ children }) => {
             },
             {
               headers: {
-                "Content-Type": "application/json",
+                'Content-Type': 'application/json',
               },
             }
           );
@@ -406,7 +399,7 @@ export const NotificationProvider = ({ children }) => {
             },
             {
               headers: {
-                "Content-Type": "application/json",
+                'Content-Type': 'application/json',
               },
             }
           );
@@ -423,7 +416,7 @@ export const NotificationProvider = ({ children }) => {
             );
             // Emit socket event
             if (socket.connected) {
-              socket.emit("notify-friend-accept", {
+              socket.emit('notify-friend-accept', {
                 to: notification.from.email,
                 from: userEmail,
               });
@@ -455,8 +448,8 @@ export const NotificationProvider = ({ children }) => {
             return true;
           }
         } catch (error) {
-          console.error("❌ Error accepting friend request:", error);
-          toast.error("ไม่สามารถตอบรับคำขอเพื่อนได้");
+          console.error('❌ Error accepting friend request:', error);
+          toast.error('ไม่สามารถตอบรับคำขอเพื่อนได้');
           return false;
         }
       }
@@ -474,9 +467,7 @@ export const NotificationProvider = ({ children }) => {
       if (notification) {
         // ส่งคำขอไปยัง API เพื่อลบคำขอเพื่อน
         await api.delete(
-          `${
-            import.meta.env.VITE_APP_API_BASE_URL
-          }/api/friend-request/${requestId}`
+          `${import.meta.env.VITE_APP_API_BASE_URL}/api/friend-request/${requestId}`
         );
 
         // อัพเดต UI โดยการลบคำขอนี้ออกจาก notifications
@@ -484,13 +475,10 @@ export const NotificationProvider = ({ children }) => {
           prevNotifications.filter((n) => n.id !== requestId)
         );
 
-        toast.info(
-          `คุณได้ปฏิเสธคำขอเป็นเพื่อนจาก ${notification.from.displayName} แล้ว`,
-          {
-            position: "bottom-right",
-            autoClose: 3000,
-          }
-        );
+        toast.info(`คุณได้ปฏิเสธคำขอเป็นเพื่อนจาก ${notification.from.displayName} แล้ว`, {
+          position: 'bottom-right',
+          autoClose: 3000,
+        });
 
         // Fetch ข้อมูลใหม่เพื่อให้แน่ใจว่า sync กับ database
         setTimeout(() => fetchNotifications(), 1000);
@@ -499,8 +487,8 @@ export const NotificationProvider = ({ children }) => {
       }
       return false;
     } catch (error) {
-      console.error("❌ Error deleting friend request:", error);
-      toast.error("ไม่สามารถลบคำขอเพื่อนได้");
+      console.error('❌ Error deleting friend request:', error);
+      toast.error('ไม่สามารถลบคำขอเพื่อนได้');
       return false;
     }
   };
@@ -527,7 +515,7 @@ export const NotificationProvider = ({ children }) => {
   // ฟังก์ชันตั้งค่า onlineUsers จากข้อมูลที่ได้รับจากเซิร์ฟเวอร์
   const setupSocketListeners = (socket) => {
     // รับข้อมูลการอัปเดตสถานะผู้ใช้
-    socket.on("update-users", (data) => {
+    socket.on('update-users', (data) => {
       if (Array.isArray(data)) {
         const updatedUsers = {};
         data.forEach((user) => {
@@ -573,7 +561,7 @@ export const NotificationProvider = ({ children }) => {
     });
 
     // ฟังเมื่อมีผู้ใช้ออฟไลน์
-    socket.on("user-offline", (userData) => {
+    socket.on('user-offline', (userData) => {
       if (userData && userData.email) {
         setOnlineUsers((prev) => ({
           ...prev,
@@ -587,7 +575,7 @@ export const NotificationProvider = ({ children }) => {
     });
 
     // ฟังเมื่อมีผู้ใช้ออนไลน์
-    socket.on("user-online", (userData) => {
+    socket.on('user-online', (userData) => {
       if (userData && userData.email) {
         setOnlineUsers((prev) => ({
           ...prev,
@@ -636,9 +624,7 @@ export const NotificationProvider = ({ children }) => {
 export const useNotifications = () => {
   const context = useContext(NotificationContext);
   if (context === undefined) {
-    throw new Error(
-      "useNotifications must be used within a NotificationProvider"
-    );
+    throw new Error('useNotifications must be used within a NotificationProvider');
   }
   return context;
 };

@@ -45,10 +45,21 @@ export const matchByProfile = async (app, userEmail, profileDescription) => {
       // Step 2-8: (Aggregation Pipeline logic as before...)
       { $lookup: { from: 'gmails', localField: 'email', foreignField: 'email', as: 'account' } },
       { $unwind: { path: '$account', preserveNullAndEmptyArrays: true } },
-      { $lookup: { from: 'likes', localField: 'email', foreignField: 'userEmail', as: 'userLikes' } },
-      { $lookup: { from: 'filters', localField: 'email', foreignField: 'email', as: 'userFilter' } },
+      {
+        $lookup: { from: 'likes', localField: 'email', foreignField: 'userEmail', as: 'userLikes' },
+      },
+      {
+        $lookup: { from: 'filters', localField: 'email', foreignField: 'email', as: 'userFilter' },
+      },
       { $unwind: { path: '$userFilter', preserveNullAndEmptyArrays: true } },
-      { $lookup: { from: 'friends', localField: 'email', foreignField: 'email', as: 'friendRecord' } },
+      {
+        $lookup: {
+          from: 'friends',
+          localField: 'email',
+          foreignField: 'email',
+          as: 'friendRecord',
+        },
+      },
       { $unwind: { path: '$friendRecord', preserveNullAndEmptyArrays: true } },
       {
         $lookup: {
@@ -60,7 +71,12 @@ export const matchByProfile = async (app, userEmail, profileDescription) => {
                 $expr: {
                   $and: [
                     { $or: [{ $eq: ['$email', userEmail] }, { $eq: ['$usermatch', userEmail] }] },
-                    { $or: [{ $eq: ['$email', '$$otherEmail'] }, { $eq: ['$usermatch', '$$otherEmail'] }] },
+                    {
+                      $or: [
+                        { $eq: ['$email', '$$otherEmail'] },
+                        { $eq: ['$usermatch', '$$otherEmail'] },
+                      ],
+                    },
                   ],
                 },
               },
@@ -94,20 +110,83 @@ export const matchByProfile = async (app, userEmail, profileDescription) => {
             ],
           },
           activityCount: { $size: '$userLikes' },
-          mutualFriendsCount: { $size: { $setIntersection: [{ $ifNull: ['$friendRecord.friends.email', []] }, myFriends] } },
+          mutualFriendsCount: {
+            $size: {
+              $setIntersection: [{ $ifNull: ['$friendRecord.friends.email', []] }, myFriends],
+            },
+          },
         },
       },
       {
         $addFields: {
-          eventScore: { $multiply: [{ $cond: [{ $gt: [{ $size: '$userLikes' }, 0] }, { $divide: ['$eventOverlapCount', { $max: [{ $size: '$userLikes' }, 1] }] }, 0] }, 35] },
-          genreScore: { $multiply: [{ $cond: [{ $gt: [{ $size: { $ifNull: [mySubGenres, []] } }, 0] }, { $min: [{ $divide: ['$genreOverlapCount', { $max: [{ $size: { $ifNull: [mySubGenres, []] } }, 1] }] }, 1] }, 0] }, 25] },
+          eventScore: {
+            $multiply: [
+              {
+                $cond: [
+                  { $gt: [{ $size: '$userLikes' }, 0] },
+                  { $divide: ['$eventOverlapCount', { $max: [{ $size: '$userLikes' }, 1] }] },
+                  0,
+                ],
+              },
+              35,
+            ],
+          },
+          genreScore: {
+            $multiply: [
+              {
+                $cond: [
+                  { $gt: [{ $size: { $ifNull: [mySubGenres, []] } }, 0] },
+                  {
+                    $min: [
+                      {
+                        $divide: [
+                          '$genreOverlapCount',
+                          { $max: [{ $size: { $ifNull: [mySubGenres, []] } }, 1] },
+                        ],
+                      },
+                      1,
+                    ],
+                  },
+                  0,
+                ],
+              },
+              25,
+            ],
+          },
           recencyScore: { $cond: [{ $lt: ['$daysSinceActive', 7] }, 10, 0] },
           activityScore: { $multiply: [{ $min: [{ $divide: ['$activityCount', 10] }, 1] }, 5] },
         },
       },
-      { $addFields: { signalBaseScore: { $add: ['$eventScore', '$genreScore', '$recencyScore', '$activityScore'] } } },
-      { $addFields: { signalBaseScore: { $cond: [{ $gt: ['$mutualFriendsCount', 0] }, { $min: [100, { $add: ['$signalBaseScore', 10] }] }, '$signalBaseScore'] } } },
-      { $addFields: { skipPenalty: { $max: [0.1, { $subtract: [1, { $multiply: [{ $ifNull: ['$existingMatch.skipCount', 0] }, 0.15] }] }] } } },
+      {
+        $addFields: {
+          signalBaseScore: {
+            $add: ['$eventScore', '$genreScore', '$recencyScore', '$activityScore'],
+          },
+        },
+      },
+      {
+        $addFields: {
+          signalBaseScore: {
+            $cond: [
+              { $gt: ['$mutualFriendsCount', 0] },
+              { $min: [100, { $add: ['$signalBaseScore', 10] }] },
+              '$signalBaseScore',
+            ],
+          },
+        },
+      },
+      {
+        $addFields: {
+          skipPenalty: {
+            $max: [
+              0.1,
+              {
+                $subtract: [1, { $multiply: [{ $ifNull: ['$existingMatch.skipCount', 0] }, 0.15] }],
+              },
+            ],
+          },
+        },
+      },
       { $addFields: { finalSignalScore: { $multiply: ['$signalBaseScore', '$skipPenalty'] } } },
       { $sort: { finalSignalScore: -1 } },
       { $limit: 20 },
@@ -142,24 +221,39 @@ Output Format: JSON
     const aiMatches = aiResponse.matches || [];
 
     // 3. Final Composite Score Calculation
-    const finalMatches = aiMatches.map((match) => {
-      const otherAggregated = otherUsersAggregated.find((u) => u.email === match.email);
-      if (!otherAggregated) return null;
-      const aiContribution = (match.aiScore || 0) * 0.25;
-      const signalContribution = otherAggregated.finalSignalScore * 0.75;
-      const finalChance = Math.round(signalContribution + aiContribution);
-      return { email: match.email, chance: finalChance, reason: match.reason };
-    }).filter((m) => m && m.chance > 30);
+    const finalMatches = aiMatches
+      .map((match) => {
+        const otherAggregated = otherUsersAggregated.find((u) => u.email === match.email);
+        if (!otherAggregated) return null;
+        const aiContribution = (match.aiScore || 0) * 0.25;
+        const signalContribution = otherAggregated.finalSignalScore * 0.75;
+        const finalChance = Math.round(signalContribution + aiContribution);
+        return { email: match.email, chance: finalChance, reason: match.reason };
+      })
+      .filter((m) => m && m.chance > 30);
 
     // 4. Persistence
     const bulkOps = finalMatches.map((match) => {
       const users = [userEmail, match.email].sort();
       return {
         updateOne: {
-          filter: { email: users[0], usermatch: users[1], eventId: null, status: { $ne: 'matched' } },
+          filter: {
+            email: users[0],
+            usermatch: users[1],
+            eventId: null,
+            status: { $ne: 'matched' },
+          },
           update: {
-            $set: { detail: match.reason, chance: match.chance, status: 'pending', initiatorEmail: userEmail, lastMatchedAt: new Date() },
-            $setOnInsert: { university: emailDomain.includes('bu') ? 'Bangkok University' : 'Other' },
+            $set: {
+              detail: match.reason,
+              chance: match.chance,
+              status: 'pending',
+              initiatorEmail: userEmail,
+              lastMatchedAt: new Date(),
+            },
+            $setOnInsert: {
+              university: emailDomain.includes('bu') ? 'Bangkok University' : 'Other',
+            },
           },
           upsert: true,
         },
@@ -174,7 +268,11 @@ Output Format: JSON
     if (io && finalMatches.length > 0) {
       for (const match of finalMatches) {
         if (userSockets[match.email]) {
-          io.to(userSockets[match.email]).emit('notify-match', { type: 'profile', from: userEmail, reason: match.reason });
+          io.to(userSockets[match.email]).emit('notify-match', {
+            type: 'profile',
+            from: userEmail,
+            reason: match.reason,
+          });
         }
       }
       io.emit('match_updated');
@@ -192,18 +290,18 @@ export const triggerInactiveUserMatch = async (app, userEmail) => {
   if (!account) return;
 
   const diffDays = (new Date() - new Date(account.lastActiveAt)) / (1000 * 60 * 60 * 24);
-  
+
   // If inactive for more than 7 days, trigger re-match
   if (diffDays >= 7) {
     const profile = await Info.findOne({ email: userEmail });
     if (profile?.userInfo?.detail) {
-      console.info(`[AI Trigger] User ${userEmail} returned after ${Math.floor(diffDays)} days. Triggering match...`);
+      console.info(
+        `[AI Trigger] User ${userEmail} returned after ${Math.floor(diffDays)} days. Triggering match...`
+      );
       await matchByProfile(app, userEmail, profile.userInfo.detail);
     }
   }
-  
+
   // Always update lastActiveAt
   await Gmail.updateOne({ email: userEmail }, { $set: { lastActiveAt: new Date() } });
 };
-
-

@@ -71,9 +71,10 @@ const RoomMatch = ({ accordionComponent }) => {
   });
 
   const skipMutation = useMutation({
-    mutationFn: (roomId) => api.post(`/api/infomatch/${roomId}/interaction`, {
-      action: 'skip'
-    }),
+    mutationFn: (roomId) =>
+      api.post(`/api/infomatch/${roomId}/interaction`, {
+        action: 'skip',
+      }),
     onSuccess: (_data) => {
       queryClient.invalidateQueries({ queryKey: ['rooms', userEmail] });
     },
