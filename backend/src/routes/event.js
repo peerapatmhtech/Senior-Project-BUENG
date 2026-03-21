@@ -48,17 +48,37 @@ export default function (io) {
       // 2. Extract all eventIds from the userEvents.
       const eventIds = userEvents.map((ue) => ue.eventId);
 
-      // Get total count for pagination calculation
-      const totalEvents = await Event.countDocuments({ _id: { $in: eventIds } });
+      // 3. Build event query — filter by user's saved genre preferences
+      const eventQuery = { _id: { $in: eventIds } };
 
-      // 3. Find all events from the Event collection that match the extracted eventIds.
-      const events = await Event.find({ _id: { $in: eventIds } })
+      const userFilter = await Filter.findOne({ email }).lean();
+      if (userFilter?.subGenres && Object.keys(userFilter.subGenres).length > 0) {
+        const genreConditions = [];
+        for (const [category, subList] of Object.entries(userFilter.subGenres)) {
+          const trimmed = category.trim();
+          if (!trimmed) continue;
+          if (Array.isArray(subList) && subList.length > 0) {
+            genreConditions.push({ [`genre.${trimmed}`]: { $in: subList } });
+          } else {
+            genreConditions.push({ [`genre.${trimmed}`]: { $exists: true } });
+          }
+        }
+        if (genreConditions.length > 0) {
+          eventQuery.$or = genreConditions;
+        }
+      }
+
+      // Get total count for pagination calculation
+      const totalEvents = await Event.countDocuments(eventQuery);
+
+      // 4. Find all events from the Event collection that match the query.
+      const events = await Event.find(eventQuery)
         .sort({ createdAt: -1 })
         .limit(limitNum)
         .skip(skip)
         .lean();
 
-      // 4. Attach score and reason from userEvents to each event object
+      // 5. Attach score and reason from userEvents to each event object
       const userEventMap = new Map(userEvents.map((ue) => [ue.eventId.toString(), ue]));
       const eventsWithScore = events.map((event) => {
         const ue = userEventMap.get(event._id.toString());
