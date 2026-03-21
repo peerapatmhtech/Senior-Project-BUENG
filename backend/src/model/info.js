@@ -52,6 +52,5 @@ infoSchema.statics.joinRoom = async function (userEmail, roomId, roomName) {
   return user;
 };
 
-infoSchema.index({ email: 1 });
 
 export const Info = mongoose.model('Info', infoSchema);

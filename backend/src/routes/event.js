@@ -55,10 +55,22 @@ export default function (io) {
       const events = await Event.find({ _id: { $in: eventIds } })
         .sort({ createdAt: -1 })
         .limit(limitNum)
-        .skip(skip);
+        .skip(skip)
+        .lean();
+
+      // 4. Attach score and reason from userEvents to each event object
+      const userEventMap = new Map(userEvents.map((ue) => [ue.eventId.toString(), ue]));
+      const eventsWithScore = events.map((event) => {
+        const ue = userEventMap.get(event._id.toString());
+        return {
+          ...event,
+          matchScore: ue?.matchScore || 0,
+          matchReason: ue?.matchReason || '',
+        };
+      });
 
       return res.status(200).json({
-        events,
+        events: eventsWithScore,
         totalPages: Math.ceil(totalEvents / limitNum),
         currentPage: pageNum,
         totalEvents,

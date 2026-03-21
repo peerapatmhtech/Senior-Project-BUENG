@@ -58,6 +58,15 @@ const EventListContent = ({
               width="200"
               loading="lazy"
             />
+            {/* Match Compatibility Badge */}
+            {event.matchScore > 0 && (
+              <div className="match-badge" title={event.matchReason}>
+                <div className="match-badge-content">
+                  <span className="match-percent">{event.matchScore}%</span>
+                  <span className="match-text">Match</span>
+                </div>
+              </div>
+            )}
             {/* Social Proof: Show friends who liked this event */}
             {localStorage.getItem('userEmail') && (
               <SocialProof 

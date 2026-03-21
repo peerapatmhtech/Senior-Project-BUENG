@@ -19,6 +19,14 @@ const userEventSchema = new Schema(
       default: 'active',
       index: true,
     },
+    matchScore: {
+      type: Number,
+      default: 0,
+    },
+    matchReason: {
+      type: String,
+      default: '',
+    },
   },
   { timestamps: true }
 );

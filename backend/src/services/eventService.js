@@ -1,7 +1,7 @@
 import { Event } from '../model/event.js';
 import { UserEvent } from '../model/userevent.model.js';
-
-
+import { Info } from '../model/info.js';
+import { getModel } from './gemini.js';
 
 /**
  * Parses various date formats from SerpApi into a Date object.
@@ -84,7 +84,9 @@ export const saveEventsFromSource = async ({ data, email, subGenres }) => {
 
     // 2. Fetch all event IDs for mapping
     const titles = validItems.map((item) => item.title);
-    const events = await Event.find({ title: { $in: titles } }).select('_id title').lean();
+    const events = await Event.find({ title: { $in: titles } })
+      .select('_id title')
+      .lean();
     const eventMap = new Map(events.map((e) => [e.title, e._id]));
 
     // 3. Prepare UserEvent Bulk Operations (Link Users to Events)
@@ -108,7 +110,14 @@ export const saveEventsFromSource = async ({ data, email, subGenres }) => {
       await UserEvent.bulkWrite(userEventOps);
     }
 
-    // 4. Return the associated activities
+    // 4. Calculate AI Compatibility Score and Matching Logic
+    try {
+      await calculateEventCompatibility({ email, validItems, eventMap, subGenres });
+    } catch (aiError) {
+      console.error('[AI Event Scoring Error]:', aiError);
+    }
+
+    // 5. Return the associated activities
     return await UserEvent.find({
       email,
       eventId: { $in: Array.from(eventMap.values()) },
@@ -116,5 +125,70 @@ export const saveEventsFromSource = async ({ data, email, subGenres }) => {
   } catch (error) {
     console.error('Error in saveEventsFromSource (Bulk):', error);
     throw error;
+  }
+};
+
+/**
+ * Assistant function to calculate event compatibility in bulk.
+ */
+const calculateEventCompatibility = async ({ email, validItems, eventMap, subGenres }) => {
+  const userProfile = await Info.findOne({ email }).select('userInfo.detail').lean();
+  const profileText = userProfile?.userInfo?.detail || '';
+
+  if (profileText.length < 5) return;
+
+  const eventsForAI = validItems
+    .map((item) => ({
+      title: item.title,
+      description: item.description,
+    }))
+    .slice(0, 15);
+
+  const systemPrompt = `
+    Role: BUENG AI Event Curator
+    Task: วิเคราะห์ความน่าสนใจของกิจกรรมเมื่อเทียบกับ "About Me" ของนักศึกษา
+    Goal: ส่งคืนคะแนน Semantic Similarity (0-100) และเหตุผลสั้นๆ 
+    Output as JSON only.
+    Format: { "scores": [{ "title": "...", "score": 85, "reason": "เชื่อมโยงกับความชอบด้าน..." }] }
+  `;
+
+  const model = getModel('RECOMMENDATION', { systemInstruction: systemPrompt });
+  const promptText = `User Profile: "${profileText}"\nEvents: ${JSON.stringify(eventsForAI)}`;
+
+  const result = await model.generateContent({
+    contents: [{ role: 'user', parts: [{ text: promptText }] }],
+    generationConfig: { responseMimeType: 'application/json', temperature: 0.1 },
+  });
+
+  const aiOutput = JSON.parse(result.response.text());
+  const aiScoresMap = new Map((aiOutput.scores || []).map((s) => [s.title, s]));
+
+  const finalUpdateOps = [];
+  const mySubGenresArr = Object.values(subGenres).flat();
+
+  for (const item of validItems) {
+    const eventId = eventMap.get(item.title);
+    if (!eventId) continue;
+
+    const aiMatch = aiScoresMap.get(item.title);
+    const aiScore = aiMatch?.score || 0;
+    const aiReason = aiMatch?.reason || 'แนะนำตามความสนใจส่วนตัวของคุณ';
+
+    // Weighted Score: 75% Pre-filtered Signal + 25% AI Semantic
+    const baseSignal = mySubGenresArr.length > 0 ? 80 : 50;
+    const finalScore = Math.round(baseSignal * 0.75 + aiScore * 0.25);
+
+    finalUpdateOps.push({
+      updateOne: {
+        filter: { email, eventId },
+        update: {
+          $set: { matchScore: finalScore, matchReason: aiReason },
+        },
+      },
+    });
+  }
+
+  if (finalUpdateOps.length > 0) {
+    await UserEvent.bulkWrite(finalUpdateOps);
   }
 };
