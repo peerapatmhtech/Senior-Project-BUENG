@@ -21,6 +21,14 @@ app.post('/like', async (req, res) => {
     const like = new Like({ userEmail, eventId, eventTitle });
     await like.save();
 
+    // Trigger AI Matching via event emitter
+    matchEmitter.emit('userLikedEvent', {
+      app: req.app,
+      email: userEmail,
+      eventId: eventId,
+      eventTitle: eventTitle,
+    });
+
     // Trigger update lastActive status
     await triggerInactiveUserMatch(req.app, userEmail);
 

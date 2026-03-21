@@ -5,7 +5,14 @@ import { Like } from '../model/like.js';
 import { Filter } from '../model/filter.js';
 import { Friend } from '../model/Friend.js';
 import { Gmail } from '../model/gmail.js';
-// import { GEMINI_MODEL } from '../constants/index.js';
+import { EventEmitter } from 'events';
+
+// Create a singleton emitter for internal matching events
+export const internalMatchEmitter = new EventEmitter();
+
+// Throttling: track last run time per user to avoid redundant heavy calculations
+const lastMatchExecution = new Map();
+const THROTTLE_MS = 10000; // 10 seconds
 
 /**
  * Perform semantic matching between a user and other users based on their "About Me" descriptions.
@@ -13,6 +20,12 @@ import { Gmail } from '../model/gmail.js';
  */
 export const matchByProfile = async (app, userEmail, profileDescription) => {
   try {
+    // 1. Throttle check
+    const now = Date.now();
+    const lastRun = lastMatchExecution.get(`profile:${userEmail}`) || 0;
+    if (now - lastRun < THROTTLE_MS) return;
+    lastMatchExecution.set(`profile:${userEmail}`, now);
+
     // Update active status for current user
     await Gmail.findOneAndUpdate({ email: userEmail }, { lastActiveAt: new Date() });
 
@@ -279,6 +292,137 @@ Output Format: JSON
     }
   } catch (error) {
     console.error('[AI Match Service Error]:', error);
+  }
+};
+
+/**
+ * Triggered when a user likes an event. Find others who liked the same event and create InfoMatches.
+ * Refactored from eventmatch.js for better performance and decoupling.
+ */
+export const matchByLikedEvent = async (app, userEmail, eventId, eventTitle) => {
+  try {
+    // 1. Throttle check
+    const now = Date.now();
+    const lastRun = lastMatchExecution.get(`event:${userEmail}:${eventId}`) || 0;
+    if (now - lastRun < THROTTLE_MS) return;
+    lastMatchExecution.set(`event:${userEmail}:${eventId}`, now);
+
+    console.info(`[Match Service] Matching for ${userEmail} on event ${eventTitle || eventId}...`);
+
+    // 2. Find likes from other users that match the specific eventId passed here for immediate feedback
+    const otherUserLikes = await Like.find({
+      userEmail: { $ne: userEmail },
+      eventId: eventId,
+    }).lean();
+
+    if (!otherUserLikes || otherUserLikes.length === 0) return;
+
+    // 3. Pre-fetch filters for overlapping interest calculation
+    const otherEmails = [...new Set(otherUserLikes.map((l) => l.userEmail))];
+    const [myFilter, otherFilters] = await Promise.all([
+      Filter.findOne({ email: userEmail }).lean(),
+      Filter.find({ email: { $in: otherEmails } }).lean(),
+    ]);
+
+    const mySubGenres = new Set(
+      myFilter?.subGenres ? Object.values(myFilter.subGenres).flat() : []
+    );
+    const filterMap = otherFilters.reduce((acc, f) => {
+      acc[f.email] = new Set(f.subGenres ? Object.values(f.subGenres).flat() : []);
+      return acc;
+    }, {});
+
+    const bulkOps = [];
+    const matchData = [];
+
+    const emailDomain = userEmail.split('@')[1];
+    const university = emailDomain.includes('bu') ? 'Bangkok University' : 'Other';
+
+    // 4. Group matches by user
+    const likesByEmailMap = otherUserLikes.reduce((acc, l) => {
+      if (!acc[l.userEmail]) acc[l.userEmail] = [];
+      acc[l.userEmail].push(l);
+      return acc;
+    }, {});
+
+    // Check existing matched statuses
+    const existingMatches = await InfoMatch.find({
+      $or: [{ email: userEmail }, { usermatch: userEmail }],
+      status: 'matched',
+    }).lean();
+
+    const matchedPartners = new Set();
+    existingMatches.forEach((m) => {
+      const partner = m.email === userEmail ? m.usermatch : m.email;
+      matchedPartners.add(partner);
+    });
+
+    for (const [targetEmail, sharedLikes] of Object.entries(likesByEmailMap)) {
+      if (matchedPartners.has(targetEmail)) continue;
+
+      const users = [userEmail, targetEmail].sort();
+      const sharedLikeCount = sharedLikes.length;
+
+      // Interest similarity (Jaccard)
+      const otherSubGenres = filterMap[targetEmail] || new Set();
+      const intersection = new Set([...mySubGenres].filter((x) => otherSubGenres.has(x)));
+      const union = new Set([...mySubGenres, ...otherSubGenres]);
+
+      let jaccardChance = 30;
+      if (union.size > 0) {
+        jaccardChance = Math.round((intersection.size / union.size) * 100);
+      }
+
+      const likeBasedChance = Math.min(95, 30 + sharedLikeCount * 13);
+      const finalChance = Math.round(likeBasedChance * 0.7 + jaccardChance * 0.3);
+
+      bulkOps.push({
+        updateOne: {
+          filter: {
+            email: users[0],
+            usermatch: users[1],
+            status: { $ne: 'matched' }, // Don't overwrite established matches
+          },
+          update: {
+            $set: {
+              eventId: eventId,
+              detail: eventTitle || 'Shared Event Interest',
+              chance: finalChance,
+              status: 'pending',
+              initiatorEmail: userEmail,
+              lastMatchedAt: new Date(),
+              university: university,
+            },
+          },
+          upsert: true,
+        },
+      });
+
+      matchData.push({ targetEmail, title: eventTitle });
+    }
+
+    if (bulkOps.length > 0) {
+      const result = await InfoMatch.bulkWrite(bulkOps);
+
+      // 5. Notifications
+      const io = app.get('io');
+      const userSockets = app.get('userSockets') || {};
+      if (io && result.upsertedCount > 0) {
+        for (const target of matchData) {
+          const recipientSocket = userSockets[target.targetEmail];
+          if (recipientSocket) {
+            io.to(recipientSocket).emit('notify-match', {
+              type: 'event',
+              eventTitle: target.title,
+              from: userEmail,
+            });
+          }
+        }
+        io.emit('match_updated');
+      }
+    }
+  } catch (error) {
+    console.error('[Match By Like Error]:', error);
   }
 };
 

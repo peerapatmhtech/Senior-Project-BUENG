@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../server/api';
 import './Eventlist.css';
@@ -274,33 +274,7 @@ const EventList = ({ waiting }) => {
     staleTime: 1000 * 60 * 2,
   });
 
-  const pendingFavoritesRef = React.useRef([]);
-  const debounceTimeoutRef = React.useRef(null);
 
-  const sendPendingFavoritesToWebhook = async () => {
-    const pendingArr = pendingFavoritesRef.current;
-    if (!Array.isArray(pendingArr) || pendingArr.length === 0) return;
-    try {
-      await api.post(`/api/events/match`, {
-        email: email,
-        action: { eventsId: pendingArr }, // ส่ง eventId ไปตรงๆ
-      });
-      // await axios.post(import.meta.env.VITE_APP_MAKE_WEBHOOK_MATCH_URL, {
-      //   email: email,
-      //   actions: pendingArr.map((event) => ({ event: event.eventId })),
-      // });
-      pendingFavoritesRef.current = [];
-    } catch (error) {
-      console.error('Error sending to webhook', error);
-    }
-  };
-
-  const debouncedSendWebhook = () => {
-    if (debounceTimeoutRef.current) {
-      clearTimeout(debounceTimeoutRef.current);
-    }
-    debounceTimeoutRef.current = setTimeout(sendPendingFavoritesToWebhook, 5000);
-  };
 
   // Socket listener removed as per direct API response refactor
   // -----------------------------------------------------------
@@ -394,8 +368,6 @@ const EventList = ({ waiting }) => {
   const handleLike = (eventId) => {
     // Ensure events is an array before using it
     likeMutation.mutate({ userEmail: email, eventId });
-    pendingFavoritesRef.current.push(eventId); // เก็บ eventId เป็น string ตรงๆ
-    debouncedSendWebhook();
   };
 
   const handleUnlike = (eventId) => {
