@@ -59,14 +59,29 @@ export default function (io) {
       const emailDomain = email.split('@')[1];
       const university = emailDomain.includes('bu') ? 'Bangkok University' : 'Other';
 
-      // Group other likes by email to count total shared events between users
+      // Group other likes by email to count total shared events
       const likesByEmailMap = otherUserLikes.reduce((acc, l) => {
         if (!acc[l.userEmail]) acc[l.userEmail] = [];
         acc[l.userEmail].push(l);
         return acc;
       }, {});
 
+      // Optimization: Fetch existing matches to avoid re-matching matched pairs
+      const existingMatches = await InfoMatch.find({
+        $or: [{ email: email }, { usermatch: email }],
+      }).select('email usermatch status').lean();
+
+      const matchedPartners = new Set();
+      existingMatches.forEach((m) => {
+        if (m.status === 'matched') {
+          const partner = m.email === email ? m.usermatch : m.email;
+          matchedPartners.add(partner);
+        }
+      });
+
       for (const [targetEmail, sharedLikes] of Object.entries(likesByEmailMap)) {
+        if (matchedPartners.has(targetEmail)) continue; // Skip if already matched
+
         const users = [email, targetEmail].sort();
         const sharedLikeCount = sharedLikes.length;
         const mainLike = sharedLikes[0]; // Representative event for the match record

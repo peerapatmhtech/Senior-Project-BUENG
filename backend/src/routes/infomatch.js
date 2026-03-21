@@ -260,10 +260,13 @@ app.post('/infomatch/:id/interaction', requireOwner, async (req, res) => {
     }
 
     if (action === 'like') {
-      // If the other user already swiped (and it wasn't a skip), it's a match!
-      // Current simulation: if initiator liked, and now recipient likes -> match
-      // For simplicity in this logic: if it's the person who DIDN'T initiate, it's a mutual match
-      if (infoMatch.initiatorEmail !== email) {
+      if (!infoMatch.likedBy) infoMatch.likedBy = [];
+      if (!infoMatch.likedBy.includes(email)) {
+        infoMatch.likedBy.push(email);
+      }
+      
+      // Mutual Match: Both users must have 'like' in their likedBy array
+      if (infoMatch.likedBy.includes(infoMatch.email) && infoMatch.likedBy.includes(infoMatch.usermatch)) {
         infoMatch.status = 'matched';
       }
     } else if (action === 'skip') {

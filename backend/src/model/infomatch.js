@@ -57,6 +57,10 @@ const infoMatchSchema = new Schema(
       type: [String],
       default: [],
     },
+    likedBy: {
+      type: [String],
+      default: [],
+    },
   },
   { timestamps: true }
 );
