@@ -1,7 +1,9 @@
 import express from 'express';
 import { Event } from '../model/event.js';
 import { Filter } from '../model/filter.js';
+import mongoose from 'mongoose';
 import { Gmail } from '../model/gmail.js';
+import { UserPhoto } from '../model/userPhoto.js';
 import { UserEvent } from '../model/userevent.model.js';
 import { Friend } from '../model/Friend.js';
 import { Like } from '../model/like.js';
@@ -182,15 +184,79 @@ export default function (io) {
         genres: { $in: user.genres },
       });
       const matchEmails = matches.map((m) => m.email);
-      const gmailUsers = await Gmail.find({ email: { $in: matchEmails } });
+
+      const [gmailUsers, allInfos] = await Promise.all([
+        Gmail.find({ email: { $in: matchEmails } })
+          .select('email displayName photoURL photosOrder')
+          .lean(),
+        mongoose
+          .model('Info')
+          .find({ email: { $in: matchEmails } })
+          .select('email nickname')
+          .lean(),
+      ]);
+
+      const infoMap = new Map(allInfos.map((info) => [info.email, info.nickname]));
+
+      // Resolve actual profile pictures
+      const photoIdStrings = [];
+      gmailUsers.forEach((u) => {
+        if (u.photosOrder && u.photosOrder.length > 0) {
+          photoIdStrings.push(u.photosOrder[0]);
+        }
+      });
+
+      const photoMap = new Map();
+      if (photoIdStrings.length > 0) {
+        const validPhotoIds = photoIdStrings
+          .filter((id) => id && mongoose.isValidObjectId(id))
+          .map((id) => new mongoose.Types.ObjectId(id));
+
+        if (validPhotoIds.length > 0) {
+          const photos = await UserPhoto.find({ _id: { $in: validPhotoIds } })
+            .select('_id url')
+            .lean();
+          photos.forEach((p) => photoMap.set(p._id.toString(), p.url));
+        }
+      }
+
+      // Fallback logic for photos
+      const usersNeedFallback = gmailUsers.filter((u) => !u.photosOrder || u.photosOrder.length === 0);
+      if (usersNeedFallback.length > 0) {
+        const fallbackEmails = usersNeedFallback.map((u) => u.email);
+        const latestPhotos = await UserPhoto.aggregate([
+          { $match: { email: { $in: fallbackEmails } } },
+          { $sort: { createdAt: -1 } },
+          { $group: { _id: '$email', url: { $first: '$url' } } },
+        ]);
+        const fallbackMap = new Map(latestPhotos.map((p) => [p._id, p.url]));
+        gmailUsers.forEach((u) => {
+          if (!u.photosOrder || u.photosOrder.length === 0) {
+            const recentPhoto = fallbackMap.get(u.email);
+            if (recentPhoto) u.photoURL = recentPhoto;
+          }
+        });
+      }
+
       const combinedMatches = matches.map((match) => {
         const gmailUser = gmailUsers.find((g) => g.email === match.email);
+        let finalPhotoURL = gmailUser?.photoURL || '';
+        if (gmailUser?.photosOrder && gmailUser.photosOrder.length > 0) {
+          const customPhoto = photoMap.get(gmailUser.photosOrder[0].toString());
+          if (customPhoto) finalPhotoURL = customPhoto;
+        }
+
+        let finalDisplayName = gmailUser?.displayName || '';
+        const nickname = infoMap.get(match.email);
+        if (nickname) finalDisplayName = nickname;
+
         return {
           ...match.toObject(),
-          displayName: gmailUser?.displayName || '',
-          photoURL: gmailUser?.photoURL || '',
+          displayName: finalDisplayName,
+          photoURL: finalPhotoURL,
         };
       });
+
       // Ensure results are unique by email
       const uniqueMatches = Array.from(
         new Map(combinedMatches.map((item) => [item.email, item])).values()
@@ -228,9 +294,78 @@ export default function (io) {
       const matchingFriendEmails = likes.map((l) => l.userEmail);
 
       // 3. Get profile info for these friends
-      const friendProfiles = await Gmail.find({
-        email: { $in: matchingFriendEmails },
-      }).select('email displayName photoURL');
+      const [friendProfilesData, allInfos] = await Promise.all([
+        Gmail.find({ email: { $in: matchingFriendEmails } })
+          .select('email displayName photoURL photosOrder')
+          .lean(),
+        mongoose
+          .model('Info')
+          .find({ email: { $in: matchingFriendEmails } })
+          .select('email nickname')
+          .lean(),
+      ]);
+
+      const infoMap = new Map(allInfos.map((info) => [info.email, info.nickname]));
+
+      // Resolve the actual profile pictures by checking the newest UserPhoto if photosOrder is used
+      const photoIdStrings = [];
+      friendProfilesData.forEach((u) => {
+        if (u.photosOrder && u.photosOrder.length > 0) {
+          photoIdStrings.push(u.photosOrder[0]);
+        }
+      });
+
+      const photoMap = new Map();
+      if (photoIdStrings.length > 0) {
+        const validPhotoIds = photoIdStrings
+          .filter((id) => id && mongoose.isValidObjectId(id))
+          .map((id) => new mongoose.Types.ObjectId(id));
+
+        if (validPhotoIds.length > 0) {
+          const photos = await UserPhoto.find({ _id: { $in: validPhotoIds } })
+            .select('_id url')
+            .lean();
+          photos.forEach((p) => photoMap.set(p._id.toString(), p.url));
+        }
+      }
+
+      // Fallback logic for photos
+      const usersNeedFallback = friendProfilesData.filter(
+        (u) => !u.photosOrder || u.photosOrder.length === 0
+      );
+      if (usersNeedFallback.length > 0) {
+        const fallbackEmails = usersNeedFallback.map((u) => u.email);
+        const latestPhotos = await UserPhoto.aggregate([
+          { $match: { email: { $in: fallbackEmails } } },
+          { $sort: { createdAt: -1 } },
+          { $group: { _id: '$email', url: { $first: '$url' } } },
+        ]);
+        const fallbackMap = new Map(latestPhotos.map((p) => [p._id, p.url]));
+        friendProfilesData.forEach((u) => {
+          if (!u.photosOrder || u.photosOrder.length === 0) {
+            const recentPhoto = fallbackMap.get(u.email);
+            if (recentPhoto) u.photoURL = recentPhoto;
+          }
+        });
+      }
+
+      const friendProfiles = friendProfilesData.map((user) => {
+        let finalPhotoURL = user.photoURL;
+        if (user.photosOrder && user.photosOrder.length > 0) {
+          const customPhoto = photoMap.get(user.photosOrder[0].toString());
+          if (customPhoto) finalPhotoURL = customPhoto;
+        }
+
+        let finalDisplayName = user.displayName || '';
+        const nickname = infoMap.get(user.email);
+        if (nickname) finalDisplayName = nickname;
+
+        return {
+          email: user.email,
+          displayName: finalDisplayName,
+          photoURL: finalPhotoURL,
+        };
+      });
 
       const totalCount = await Like.countDocuments({
         eventId: eventId,
