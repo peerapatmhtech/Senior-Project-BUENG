@@ -32,25 +32,71 @@ const fetchFavoriteEvents = async (email) => {
   return Array.isArray(res.data) ? res.data.map((like) => like.eventId) : [];
 };
 
+// Helper function to fetch matched events ids
+const fetchMatchedEventIds = async (email) => {
+  try {
+    const res = await api.get(`/api/infomatch/matched-events/${email}`);
+    return Array.isArray(res.data) ? res.data : [];
+  } catch (error) {
+    console.error('Failed to fetch matched events', error);
+    return [];
+  }
+};
+
 // Moved EventListContent outside of EventList to prevent re-mounting on re-renders.
 const EventListContent = ({
   isDarkMode,
   events,
   favoriteEvents,
+  matchedEventIds,
+  filterType,
+  setFilterType,
   handleUnlike,
   handleLike,
   handleDelete,
   handleDeleteAll,
-}) => (
-  <div className={`event-container ${isDarkMode ? 'dark-mode' : ''}`}>
-    {events.length === 0 ? ( // Fixed bug: was events.length < 0
-      <div className="eventlist-empty-loading">
-        <div className="eventlist-empty-text">ยังไม่มีกิจกรรมในขณะนี้</div>
+}) => {
+  const filteredEvents = (Array.isArray(events) ? events : []).filter((event) => {
+    if (filterType === 'liked') {
+      return favoriteEvents.includes(event._id) && !matchedEventIds.includes(event._id);
+    } else if (filterType === 'matched') {
+      return favoriteEvents.includes(event._id) && matchedEventIds.includes(event._id);
+    }
+    return true; // 'all'
+  });
+
+  return (
+    <div className={`event-container ${isDarkMode ? 'dark-mode' : ''}`}>
+      {/* Filter Buttons */}
+      <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', justifyContent: 'center', flexWrap: 'wrap' }}>
+        <button 
+          onClick={() => setFilterType('all')}
+          style={{ padding: '8px 16px', borderRadius: '20px', border: '1px solid #ccc', background: filterType === 'all' ? '#000' : 'transparent', color: filterType === 'all' ? '#fff' : 'inherit', cursor: 'pointer', fontWeight: 'bold' }}
+        >
+          ทั้งหมด
+        </button>
+        <button 
+          onClick={() => setFilterType('liked')}
+          style={{ padding: '8px 16px', borderRadius: '20px', border: '1px solid #ccc', background: filterType === 'liked' ? '#000' : 'transparent', color: filterType === 'liked' ? '#fff' : 'inherit', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 'bold' }}
+        >
+          <MdFavoriteBorder size={18} /> ถูกใจ
+        </button>
+        <button 
+          onClick={() => setFilterType('matched')}
+          style={{ padding: '8px 16px', borderRadius: '20px', border: '1px solid #ccc', background: filterType === 'matched' ? '#ff4b4b' : 'transparent', color: filterType === 'matched' ? '#fff' : 'inherit', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 'bold' }}
+        >
+          <MdFavorite size={18} color={filterType === 'matched' ? '#fff' : '#ff4b4b'} /> Match
+        </button>
       </div>
-    ) : (
-      <div className="event-list">
-        {events.map((event) => (
-          <div key={event._id} className="event-card">
+
+      {filteredEvents.length === 0 ? ( // Fixed bug: was events.length < 0
+        <div className="eventlist-empty-loading">
+          <div className="eventlist-empty-text">ไม่พบกิจกรรมในหมวดหมู่นี้</div>
+        </div>
+      ) : (
+        <div className="event-list">
+          {filteredEvents.map((event) => (
+            <div key={event._id} className="event-card">
             <img
               className="event-image"
               src={event.image || event.thumbnail}
@@ -225,9 +271,10 @@ const EventListContent = ({
           </button>
         </div>
       </div>
-    )}
-  </div>
-);
+      )}
+    </div>
+  );
+};
 
 const SkeletonCard = () => (
   <div className="event-card">
@@ -273,6 +320,15 @@ const EventList = ({ waiting }) => {
     enabled: !!email,
     staleTime: 1000 * 60 * 2,
   });
+
+  const { data: matchedEventIds = [] } = useQuery({
+    queryKey: ['matchedEvents', email],
+    queryFn: () => fetchMatchedEventIds(email),
+    enabled: !!email,
+    staleTime: 1000 * 60 * 2,
+  });
+
+  const [filterType, setFilterType] = useState('all');
 
 
 
@@ -413,6 +469,9 @@ const EventList = ({ waiting }) => {
           isDarkMode={isDarkMode}
           events={Array.isArray(events) ? events : []}
           favoriteEvents={favoriteEvents}
+          matchedEventIds={matchedEventIds}
+          filterType={filterType}
+          setFilterType={setFilterType}
           handleUnlike={handleUnlike}
           handleLike={handleLike}
           handleDelete={handleDelete}
@@ -443,6 +502,9 @@ const EventList = ({ waiting }) => {
               isDarkMode={isDarkMode}
               events={Array.isArray(events) ? events : []}
               favoriteEvents={favoriteEvents}
+              matchedEventIds={matchedEventIds}
+              filterType={filterType}
+              setFilterType={setFilterType}
               handleUnlike={handleUnlike}
               handleLike={handleLike}
               handleDelete={handleDelete}

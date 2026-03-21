@@ -34,60 +34,59 @@ export default function (io) {
       const limitNum = parseInt(limit, 10);
       const skip = (pageNum - 1) * limitNum;
 
-      // 1. Find all active UserEvent documents for the given email.
-      const userEvents = await UserEvent.find({ email: email, status: 'active' });
-
-      // If no user events are found, it's not an error, just means the user has no active events.
-      if (!userEvents || userEvents.length === 0) {
-        return res.status(200).json({
-          events: [],
-          totalPages: 0,
-          currentPage: 1,
-          totalEvents: 0,
-        });
-      }
-
-      // 2. Extract all eventIds from the userEvents.
-      const eventIds = userEvents.map((ue) => ue.eventId);
-
-      // 3. Build event query — filter by user's saved genre preferences
-      const eventQuery = { _id: { $in: eventIds } };
-
       const userFilter = await Filter.findOne({ email }).lean();
+      const genreConditions = [];
       if (userFilter?.subGenres && Object.keys(userFilter.subGenres).length > 0) {
-        const genreConditions = [];
         for (const [category, subList] of Object.entries(userFilter.subGenres)) {
           const trimmed = category.trim();
           if (!trimmed) continue;
           if (Array.isArray(subList) && subList.length > 0) {
-            genreConditions.push({ [`genre.${trimmed}`]: { $in: subList } });
+            genreConditions.push({ [`event.genre.${trimmed}`]: { $in: subList } });
           } else {
-            genreConditions.push({ [`genre.${trimmed}`]: { $exists: true } });
+            genreConditions.push({ [`event.genre.${trimmed}`]: { $exists: true } });
           }
-        }
-        if (genreConditions.length > 0) {
-          eventQuery.$or = genreConditions;
         }
       }
 
-      // Get total count for pagination calculation
-      const totalEvents = await Event.countDocuments(eventQuery);
+      // 1. Initial Match & Sort by UserEvent.updatedAt to get recently found events first
+      const pipeline = [
+        { $match: { email: email, status: 'active' } },
+        { $sort: { updatedAt: -1 } },
+        {
+          $lookup: {
+            from: 'events',
+            localField: 'eventId',
+            foreignField: '_id',
+            as: 'event'
+          }
+        },
+        { $unwind: '$event' }
+      ];
 
-      // 4. Find all events from the Event collection that match the query.
-      const events = await Event.find(eventQuery)
-        .sort({ createdAt: -1 })
-        .limit(limitNum)
-        .skip(skip)
-        .lean();
+      // 2. Add Match for Genre Filter (if any)
+      if (genreConditions.length > 0) {
+        pipeline.push({ $match: { $or: genreConditions } });
+      }
 
-      // 5. Attach score and reason from userEvents to each event object
-      const userEventMap = new Map(userEvents.map((ue) => [ue.eventId.toString(), ue]));
-      const eventsWithScore = events.map((event) => {
-        const ue = userEventMap.get(event._id.toString());
+      // 3. Count total matching events
+      const countPipeline = [...pipeline, { $count: 'total' }];
+      const countResult = await UserEvent.aggregate(countPipeline);
+      const totalEvents = countResult.length > 0 ? countResult[0].total : 0;
+
+      // 4. Implement Pagination
+      pipeline.push({ $skip: skip });
+      pipeline.push({ $limit: limitNum });
+
+      // 5. Execute Pipeline
+      const aggregatedResults = await UserEvent.aggregate(pipeline);
+
+      const eventsWithScore = aggregatedResults.map(res => {
+        // Unfold 'event' object and attach matchScore & reason
+        const ev = res.event;
         return {
-          ...event,
-          matchScore: ue?.matchScore || 0,
-          matchReason: ue?.matchReason || '',
+          ...ev,
+          matchScore: res.matchScore || 0,
+          matchReason: res.matchReason || ''
         };
       });
 

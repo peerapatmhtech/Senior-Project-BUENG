@@ -80,6 +80,29 @@ export default function (io) {
     }
   });
 
+  // READ - ดึงรายการ eventId ที่ผู้ใช้เคยแมตช์แล้ว
+  app.get('/infomatch/matched-events/:email', requireOwner, async (req, res) => {
+    try {
+      const email = req.user.email;
+      const matchedInfos = await InfoMatch.find({
+        $or: [{ email: email }, { usermatch: email }],
+        status: 'matched',
+      })
+        .select('eventId')
+        .lean();
+
+      // Ensure IDs are returned as strings and filter out nulls
+      const matchedEventIds = matchedInfos
+        .map((info) => (info.eventId ? info.eventId.toString() : null))
+        .filter(Boolean);
+
+      res.status(200).json(matchedEventIds);
+    } catch (error) {
+      console.error('Error fetching matched events:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // READ - ดึงข้อมูล InfoMatch ตาม email และเพื่อน
   app.get('/infomatch/user/:email', requireOwner, async (req, res) => {
     try {
